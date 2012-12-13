@@ -21,7 +21,9 @@ public class MongoDownloader implements DownloaderPlugin {
 		return m.get(parameters);
 	}
 	
-	
+	public String getFileName(String parameters){
+		return m.getFileName(parameters);
+	}
 	
 
 }

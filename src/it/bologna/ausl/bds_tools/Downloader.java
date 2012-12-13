@@ -53,7 +53,10 @@ public class Downloader extends HttpServlet {
 			throw new ServletException(e);
 		} 
 		InputStream in=d.getFile(file);
+		String fileName=d.getFileName(file);
 		OutputStream out=response.getOutputStream();
+		response.addHeader("Content-disposition","attachment;filename="+fileName);
+		
 		byte[] buff=new byte[4096];
 		while (in.read(buff)>0){
 			out.write(buff);
