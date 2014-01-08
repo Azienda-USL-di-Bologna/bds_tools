@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context antiJARLocking="true" path="/bds_tools">
+    <Resource name="jdbc/argo" auth="Container" type="javax.sql.DataSource"
+        maxActive="100" maxIdle="30" maxWait="10000"
+        username="argo" password="siamofreschi" driverClassName="org.postgresql.Driver"
+        url="jdbc:postgresql://gdml:5432/argo" validationQuery="select 1"
+    />
+</Context>
