@@ -31,6 +31,14 @@
         <servlet-name>ProctonPecManager</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ProctonPecManager</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>GetFascicoloSpecialeId</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.GetFascicoloSpecialeId</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>UploadGdDocInFascicolo</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.UploadGdDocInFascicolo</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Downloader</servlet-name>
         <url-pattern>/Downloader</url-pattern>
@@ -46,6 +54,14 @@
     <servlet-mapping>
         <servlet-name>ProctonPecManager</servlet-name>
         <url-pattern>/ProctonPecManager</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GetFascicoloSpecialeId</servlet-name>
+        <url-pattern>/GetFascicoloSpecialeId</url-pattern>
+    </servlet-mapping>
+      <servlet-mapping>
+        <servlet-name>UploadGdDocInFascicolo</servlet-name>
+        <url-pattern>/UploadGdDocInFascicolo</url-pattern>
     </servlet-mapping>
     <resource-ref>
         <description>DB Connection</description>
@@ -90,12 +106,36 @@
         <param-value>bds_tools.spedizioni_pec</param-value>
     </context-param>
     <context-param>
+        <param-name>FascicoliTableName</param-name>
+        <param-value>gd.fascicoligd</param-value>
+    </context-param>
+    <context-param>
+        <param-name>ParametersTableName</param-name>
+        <param-value>bds_tools.parametri_pubblici</param-value>
+    </context-param>
+    <context-param>
+        <param-name>GdDocsTableName</param-name>
+        <param-value>gd.gddocs</param-value>
+    </context-param>
+    <context-param>
+        <param-name>SottoDocumentiTableName</param-name>
+        <param-value>gd.sotto_documenti</param-value>
+    </context-param>
+    <context-param>
+        <param-name>FascicoliGdDocsTableName</param-name>
+        <param-value>gd.fascicoli_gddocs</param-value>
+    </context-param>
+     <context-param>
+        <param-name>UploadGdDocMongoPath</param-name>
+        <param-value>/Procton/Upload Gd Doc</param-value>
+    </context-param>
+    <context-param>
         <param-name>redis.host</param-name>
         <param-value>babelservice1</param-value>
     </context-param>
     <context-param>
         <param-name>mongogdml</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3,procton4/doc</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3/doc</param-value>
     </context-param>
     <context-param>
         <param-name>redisgdml</param-name>
@@ -103,7 +143,7 @@
     </context-param>
     <context-param>
         <param-name>mongoarena</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3,procton4/arena</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3/arena</param-value>
     </context-param>
     <context-param>
         <param-name>redisarena</param-name>
