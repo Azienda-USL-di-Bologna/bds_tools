@@ -71,4 +71,23 @@ private static Logger log = Logger.getLogger(UtilityFunctions.class);
             builder.append(separator).append(array[i].toString());
         return builder.toString();
     }
+    
+   
+      public static String getExtensionFromFileName(String fileName) {
+        String res = "";
+        int pos = fileName.lastIndexOf(".");
+        if (pos > 0) {
+            res = fileName.substring(pos + 1, fileName.length());
+        }
+        return res;
+    }
+    
+     public static String removeExtensionFromFileName(String fileName) {
+        String res = fileName;
+        int pos = fileName.lastIndexOf(".");
+        if (pos > 0) {
+            res = res.substring(0, pos);
+        }
+        return res;
+    }
 }
