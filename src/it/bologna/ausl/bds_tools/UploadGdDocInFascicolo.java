@@ -451,7 +451,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
         String ger = numerazioneSenzaAnno.substring(0,2);               
 //        String gerarchia = null;
         numerazioneSenzaAnno.split(ger);
-        System.out.println("asfasf: " + anno + "_" + numerazioneSenzaAnno.replace("-", "/"));
+//        System.out.println("asfasf: " + anno + "_" + numerazioneSenzaAnno.replace("-", "/"));
         return anno + "_" + numerazioneSenzaAnno.replace("-", "/");        
 //        if(ger.equals("-1"))
 //        {
