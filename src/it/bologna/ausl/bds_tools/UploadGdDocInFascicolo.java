@@ -5,19 +5,16 @@
  */
 package it.bologna.ausl.bds_tools;
 
-import com.mongodb.MongoException;
+import com.sun.activation.registries.MimeTypeEntry;
+import it.bologna.ausl.bds_tools.exceptions.RequestException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
-import it.bologna.ausl.mongowrapper.MongoWrapperException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.UnknownHostException;
-import java.rmi.ServerException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -27,7 +24,6 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.Level;
-import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -39,7 +35,8 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.apache.tomcat.util.buf.TimeStamp;
+import org.apache.tomcat.util.http.MimeMap;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 /**
  *
@@ -47,7 +44,7 @@ import org.apache.tomcat.util.buf.TimeStamp;
  */
 public class UploadGdDocInFascicolo extends HttpServlet {
 
-    private static final Logger log = Logger.getLogger(GetFascicoloSpecialeId.class);
+    private static final Logger log = Logger.getLogger(UploadGdDocInFascicolo.class);
     private Connection dbConn = null;
 
     private MongoWrapper mongo;
@@ -70,12 +67,12 @@ public class UploadGdDocInFascicolo extends HttpServlet {
      * @throws IOException if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws ServletException, IOException, RequestException {
 
         request.setCharacterEncoding("utf-8");
         PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
         // configuro il logger per la console
-        //BasicConfigurator.configure();
+        BasicConfigurator.configure();
 
         log.info("--------------------------------");
         log.info("Avvio servlet: " + getClass().getSimpleName());
@@ -111,7 +108,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             for (int elementIndex = 0; elementIndex < fileItems.size(); elementIndex++) {
 
                 FileItem item = (FileItem) fileItems.get(elementIndex);
-                if (item.isFormField() && item.getFieldName().equals("idFascicolo")) {
+                if (item.isFormField() && item.getFieldName().equals("idfascicolo")) {
                     idFascicolo = item.getString();
                     System.out.println(idFascicolo);
 
@@ -124,7 +121,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 } else if (!item.isFormField() && item.getFieldName().equals("file") && item.getSize() > 0) {
                     try {
                         
-                        createdFile = File.createTempFile(getClass().getSimpleName()+"_", null, tempDir);
+                        createdFile = File.createTempFile(getClass().getSimpleName() + "_", null, tempDir);
                         createFile(item.getInputStream(), createdFile);
                         receivedFileName = item.getName();
                         System.out.println(receivedFileName);
@@ -151,27 +148,29 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             
             if(createdFile != null)
                 createdFile.delete();        
+
+            throw new RequestException(HttpServletResponse.SC_BAD_REQUEST, message);
             
-            throw new ServletException(message);
-            
-        } else if (idFascicolo == null) 
+        }
+        else if (idFascicolo == null) 
         {
-            String message = "IdFascicolo non passato.";
+            String message = "idfascicolo non passato.";
             log.error(message);
             
             if(createdFile != null)
                 createdFile.delete();        
                         
-            throw new ServletException(message);
+            throw new RequestException(HttpServletResponse.SC_BAD_REQUEST, message);
             
-        } else if (receivedFileName == null) {
-            String message = "File non passato.";
+        }
+        else if (receivedFileName == null) {
+            String message = "file non passato.";
             log.error(message);
             
             if(createdFile != null)
                 createdFile.delete();        
             
-            throw new ServletException(message);
+            throw new RequestException(HttpServletResponse.SC_BAD_REQUEST, message);
         }
 
        //Carico il file su Mongo
@@ -186,14 +185,17 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 try {
                     dbConn.close();
-                } catch (Exception ex) {
+                }
+                catch (Exception ex) {
                 }
                 
                 if(createdFile != null )
                     createdFile.delete();        
-                                
-                return;
-            } else 
+
+                String message = "Accesso negato";
+                throw new RequestException(HttpServletResponse.SC_FORBIDDEN, message);
+            }
+            else 
             {
                 GregorianCalendar calendar = new GregorianCalendar();
                 int year = calendar.get(GregorianCalendar.YEAR);
@@ -201,20 +203,22 @@ public class UploadGdDocInFascicolo extends HttpServlet {
 
                 String[] datiFascicolo = getNomeFascicolo(idFascicolo);
                 String nomeFascicolo = datiFascicolo[0];
+                if (nomeFascicolo == null || nomeFascicolo.equals("")) 
+                {
+                    String message = "Fascicolo " + idFascicolo + " non trovato";
+                    throw new RequestException(HttpServletResponse.SC_NOT_FOUND, message);
+                }
                 String annoFascicolo = datiFascicolo[2];
                 String pathMongoNumerazioneGerarchica = getGerarchiaFascicoli(datiFascicolo[1], annoFascicolo);
                 
                 System.out.println(pathMongoNumerazioneGerarchica);
                 
-                if (nomeFascicolo == null || nomeFascicolo.equals("")) 
-                {
-                     throw new ServletException("Fascicolo non trovato.");
-                }
+
 
                 String fileName = UtilityFunctions.removeExtensionFromFileName(receivedFileName);
                 String fileExt = UtilityFunctions.getExtensionFromFileName(receivedFileName);
                 String endFileExt = "";
-                        // il nome del file sarÃ : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
+                        // il nome del file sarà : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
                 if(fileExt != null)
                     endFileExt="." + fileExt;
                                    
@@ -270,7 +274,8 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                     dbConn.rollback();
                 }
             }
-        } catch (Exception ex) {
+        }
+        catch (Exception ex) {
             log.fatal("Errore", ex);
             log.info("dati ricevuti:");
             log.info("idapplicazione: " + idapplicazione);
@@ -288,9 +293,13 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 ex = sqlEx;
             }
 
-            throw new ServletException(ex);
+            if (ex instanceof RequestException)
+                throw (RequestException) ex;
+            else
+                throw new ServletException(ex);
 
-        } finally {
+        }
+        finally {
             try {
                 dbConn.close();
                 
@@ -319,6 +328,18 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             out.close();
         }
     }
+    
+    private void handleRequestException(RequestException requestException, HttpServletResponse response) {
+        try {
+            response.setStatus(requestException.getHttpStatusCode());
+            response.setContentType("plain/text");
+            response.getWriter().print(requestException.getMessage());
+            //response.sendError(requestException.getHttpStatusCode(), requestException.getMessage());
+        }
+        catch (IOException ex) {
+        }
+            
+    }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
@@ -330,9 +351,17 @@ public class UploadGdDocInFascicolo extends HttpServlet {
      * @throws IOException if an I/O error occurs
      */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            processRequest(request, response);
+        }
+        catch (RequestException ex) {
+            handleRequestException(ex, response);
+        }
+        catch (ServletException ex) {
+            RequestException requestException = new RequestException(500, ex);
+            handleRequestException(requestException, response);
+        }
     }
 
     /**
@@ -344,9 +373,17 @@ public class UploadGdDocInFascicolo extends HttpServlet {
      * @throws IOException if an I/O error occurs
      */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            processRequest(request, response);
+        }
+        catch (RequestException ex) {
+            handleRequestException(ex, response);
+        }
+        catch (ServletException ex) {
+            RequestException requestException = new RequestException(500, ex);
+            handleRequestException(requestException, response);
+        }
     }
 
     /**
@@ -412,26 +449,37 @@ public class UploadGdDocInFascicolo extends HttpServlet {
         
         //Devo controllare se è il fascicolo speciale. Se inizia con il "-1" allora il primo "-" non devo toglierlo
         String ger = numerazioneSenzaAnno.substring(0,2);               
-        String gerarchia = null;
+//        String gerarchia = null;
+        numerazioneSenzaAnno.split(ger);
+        System.out.println("asfasf: " + anno + "_" + numerazioneSenzaAnno.replace("-", "/"));
+        return anno + "_" + numerazioneSenzaAnno.replace("-", "/");        
+//        if(ger.equals("-1"))
+//        {
+//            String s = numerazioneSenzaAnno.substring(3);
+//           // 2-54-26
+//           // -1-54-26
+//           // 2
+//            //-1
+//            // 2-54
+//            // -1-2
+//            // -1-2-54
+//            
+//            //2014_-1/54/26
+//            
+//            s = "/" + anno + "_" + ger + "/" + s.replace("-", "/");
+//            System.out.println(s);
+//            gerarchia = s;
+//        }
+//        else
+//        {
+//            gerarchia = "/" + anno + "_" + numerazioneSenzaAnno.replace("-","/" );
+//        } 
+//                    
+//       // gerarchia = numerazioneSenzaAnno.replace("-","/" );
         
-        if(ger.equals("-1"))
-        {
-            String s = numerazioneSenzaAnno.substring(3);
-                                   
-            s = "/" + anno + "_" + ger + "/" + s.replace("-", "/");
-            System.out.println(s);
-            gerarchia = s;
-        }
-        else
-        {
-            gerarchia = "/" + anno + "_" + numerazioneSenzaAnno.replace("-","/" );
-        } 
-                    
-       // gerarchia = numerazioneSenzaAnno.replace("-","/" );
+//        System.out.println("gerarchia " + gerarchia);
         
-        System.out.println("gerarchia " + gerarchia);
-        
-        return gerarchia;
+//        return gerarchia;
     }
 
     private String generateKey(int lenght)
