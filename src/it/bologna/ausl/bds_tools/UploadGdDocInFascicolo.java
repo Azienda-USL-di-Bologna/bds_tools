@@ -5,7 +5,6 @@
  */
 package it.bologna.ausl.bds_tools;
 
-import com.sun.activation.registries.MimeTypeEntry;
 import it.bologna.ausl.bds_tools.exceptions.RequestException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
@@ -23,7 +22,6 @@ import java.sql.Timestamp;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Level;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -35,8 +33,6 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.apache.tomcat.util.http.MimeMap;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 /**
  *
