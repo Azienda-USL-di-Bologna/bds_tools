@@ -153,7 +153,7 @@ private static Logger log = Logger.getLogger(SetDocumentNumber.class);
             log.fatal("Errore", ex);
             log.info("dati ricevuti:");
             log.info("idapplicazione: " + idapplicazione);
-            log.info("iddetermina: " + iddocumento);
+            log.info("iddocumento: " + iddocumento);
             log.info("nomeregistro: " + nomesequenza);
             try {
                 if (dbConn != null && dbConn.getAutoCommit() == false)

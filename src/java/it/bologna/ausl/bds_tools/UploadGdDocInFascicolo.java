@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package it.bologna.ausl.bds_tools;
 
 import it.bologna.ausl.bds_tools.exceptions.RequestException;
@@ -44,9 +39,8 @@ public class UploadGdDocInFascicolo extends HttpServlet {
     private Connection dbConn = null;
 
     private MongoWrapper mongo;
-    
-    private final java.util.Date date= new java.util.Date();    
-    private final Timestamp currentDate = new Timestamp(date.getTime());
+     
+    private Timestamp currentDate;
      
     private String idGdDocInserito = null;
     private String fileNameToCreate = null;
@@ -61,6 +55,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
+     * @throws it.bologna.ausl.bds_tools.exceptions.RequestException
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, RequestException {
@@ -106,21 +101,16 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 FileItem item = (FileItem) fileItems.get(elementIndex);
                 if (item.isFormField() && item.getFieldName().equals("idfascicolo")) {
                     idFascicolo = item.getString();
-                    System.out.println(idFascicolo);
-
                 } else if (item.isFormField() && item.getFieldName().equals("idapplicazione")) {
                     idapplicazione = item.getString();
-                    System.out.println(idapplicazione);
                 } else if (item.isFormField() && item.getFieldName().equals("tokenapplicazione")) {
                     tokenapplicazione = item.getString();
-                    System.out.println(tokenapplicazione);
                 } else if (!item.isFormField() && item.getFieldName().equals("file") && item.getSize() > 0) {
                     try {
                         
                         createdFile = File.createTempFile(getClass().getSimpleName() + "_", null, tempDir);
                         createFile(item.getInputStream(), createdFile);
                         receivedFileName = item.getName();
-                        System.out.println(receivedFileName);
                         
                     } catch (Exception ex) {
                         
@@ -138,6 +128,10 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             return;
         }
 
+        log.info("Dati ricevuti: ");
+        log.info("idFascicolo: " + idFascicolo);
+        log.info("received: " + receivedFileName);
+        
         if (idapplicazione == null || tokenapplicazione == null) {
             String message = "Dati di autenticazione errati, specificare i parametri \"idapplicazione\" e \"tokenapplicazione\" nella richiesta";
             log.error(message);
@@ -193,6 +187,9 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             }
             else 
             {
+                
+                currentDate = new Timestamp(System.currentTimeMillis());
+
                 GregorianCalendar calendar = new GregorianCalendar();
                 int year = calendar.get(GregorianCalendar.YEAR);
                 String prefixSeparator = "_";
@@ -206,15 +203,12 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 }
                 String annoFascicolo = datiFascicolo[2];
                 String pathMongoNumerazioneGerarchica = getGerarchiaFascicoli(datiFascicolo[1], annoFascicolo);
-                
-                System.out.println(pathMongoNumerazioneGerarchica);
-                
-
 
                 String fileName = UtilityFunctions.removeExtensionFromFileName(receivedFileName);
                 String fileExt = UtilityFunctions.getExtensionFromFileName(receivedFileName);
                 String endFileExt = "";
-                        // il nome del file sarà : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
+                
+                // il nome del file sarà : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
                 if(fileExt != null)
                     endFileExt="." + fileExt;
                                    
@@ -233,8 +227,9 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                     exists = mongo.existsObjectbyPath(cartellaFascicolo + "/" + fileNameToCreate);                          
                 }
                 
-                File newFile = new File(fileNameToCreate);
-                
+                File newFile = new File(createdFile.getParentFile(), fileNameToCreate);
+//                log.info(createdFile.getAbsolutePath());
+//                log.info(newFile.getAbsolutePath());
                 if(createdFile.renameTo(newFile))
                 {
                     createdFile= newFile;
@@ -249,8 +244,8 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 //PARTE DI CARICAMENTO SU MONGO
                 //**************************************
                 
-                uuidUploadedFile = mongo.put(createdFile, createdFile.getName(), cartellaFascicolo);
-                System.out.println(cartellaFascicolo);
+                uuidUploadedFile = mongo.put(createdFile, createdFile.getName(), cartellaFascicolo, true);
+                log.info("cartella del fascicolo su mongo: " + cartellaFascicolo);
                 
                 //Disabilito l'autoCommit per fare il rollback in caso fallisca l'inserimento
                 dbConn.setAutoCommit(false);
@@ -275,6 +270,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             log.fatal("Errore", ex);
             log.info("dati ricevuti:");
             log.info("idapplicazione: " + idapplicazione);
+            log.info("id fascicolo: " + idFascicolo);
 
             if (uuidUploadedFile != null) {
                 mongo.delete(uuidUploadedFile);
@@ -415,23 +411,15 @@ public class UploadGdDocInFascicolo extends HttpServlet {
         String query = "SELECT nome_fascicolo, numerazione_gerarchica, anno_fascicolo FROM " + parametersTable + " WHERE id_fascicolo = ? ";
         
         PreparedStatement ps = dbConn.prepareStatement(query);
-        
         ps.setString(1, idFascicolo);
         
-        System.out.println(ps.toString());
-        
+        log.info("esegui la query: " + ps.toString());        
         ResultSet result = ps.executeQuery();
-        String value = null;
 
         if (result != null && result.next() == true) {
-            campiFascicolo[0] = result.getString(1);
-            System.out.println(campiFascicolo[0]);
-                    
+            campiFascicolo[0] = result.getString(1);    
             campiFascicolo[1] = result.getString(2);
-            System.out.println(campiFascicolo[1]);
-            
             campiFascicolo[2] = result.getString(3);
-            System.out.println(campiFascicolo[2]);
         }
 
         return campiFascicolo;
@@ -444,9 +432,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
         String numerazioneSenzaAnno = numerazioneGerarchica.substring(0, pos);      
         
         //Devo controllare se è il fascicolo speciale. Se inizia con il "-1" allora il primo "-" non devo toglierlo
-        String ger = numerazioneSenzaAnno.substring(0,2);               
 //        String gerarchia = null;
-        numerazioneSenzaAnno.split(ger);
 //        System.out.println("asfasf: " + anno + "_" + numerazioneSenzaAnno.replace("-", "/"));
         return anno + "_" + numerazioneSenzaAnno.replace("-", "/");        
 //        if(ger.equals("-1"))
@@ -512,7 +498,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             ps.setInt(8, 1);
             ps.setTimestamp(9, currentDate);
             
-            System.out.println(ps.toString());
+            log.info("eseguo la query: " + ps.toString() + "...");
             
            int rows = ps.executeUpdate();
            
@@ -554,7 +540,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             ps.setString(4, uuidUploaFile);
             ps.setString(5, uuidUploaFile);
             
-            System.out.println(ps.toString());
+            log.info("eseguo la query: " + ps.toString() + "...");
             
             int rows = ps.executeUpdate();
            
@@ -598,7 +584,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             ps.setTimestamp(5, currentDate);
             ps.setInt(6, -1);
             
-            System.out.println(ps.toString());
+            log.info("eseguo la query: " + ps.toString() + "...");
             
             int rows = ps.executeUpdate();
            

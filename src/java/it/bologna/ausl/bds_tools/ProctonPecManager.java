@@ -135,13 +135,14 @@ private static Logger log = Logger.getLogger(ProctonPecManager.class);
 
             // compongo la query
             String sqlText = "INSERT INTO " + spedizioniPecTableName + 
-                      " (guid_oggetto, stato, id_attivita_stepon, tipo_oggetto)" + 
-                      " VALUES(?, ?, ?, ?)";
+                      " (guid_oggetto, stato, id_attivita_stepon, tipo_oggetto, id_applicazione)" + 
+                      " VALUES(?, ?, ?, ?, ?)";
             ps = dbConn.prepareStatement(sqlText);
             ps.setString(1, guidoggetto);
             ps.setString(2, stato);
             ps.setString(3, idattivitastepon);
             ps.setString(4, tipooggetto);
+            ps.setString(5, idapplicazione);
             try {
                 String query = ps.toString();
                 log.debug("eseguo la query: " + query + " ...");

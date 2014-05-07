@@ -1,30 +1,18 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package it.bologna.ausl.bds_tools;
 
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.rmi.ServerException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.logging.Level;
-import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import sun.misc.IOUtils;
 
 /**
  *
@@ -32,7 +20,7 @@ import sun.misc.IOUtils;
  */
 public class GetFascicoloSpecialeId extends HttpServlet {
 
-    private static Logger log = Logger.getLogger(GetFascicoloSpecialeId.class);
+    private static final Logger log = Logger.getLogger(GetFascicoloSpecialeId.class);
     public enum TipiFascicoli{ATTI, REGISTRO, DETERMINE, DELIBERE};
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -79,10 +67,10 @@ public class GetFascicoloSpecialeId extends HttpServlet {
             }
             
             annoString = request.getParameter("anno");
-            nomeFascicolo = request.getParameter("tipoFascicolo");
+            nomeFascicolo = request.getParameter("nomefascicolo");
             log.info("Dati Ricevuti: ");
-            log.info("anno: "+annoString);
-            log.info("tipoFascicolo: "+nomeFascicolo);
+            log.info("anno: " + annoString);
+            log.info("nomefascicolo: " + nomeFascicolo);
             anno = Integer.parseInt(annoString);
                                 
             
