@@ -192,6 +192,13 @@ public class UploadGdDocInFascicolo extends HttpServlet {
 
                 GregorianCalendar calendar = new GregorianCalendar();
                 int year = calendar.get(GregorianCalendar.YEAR);
+                int month = calendar.get(GregorianCalendar.MONTH)+1;
+                int day = calendar.get(GregorianCalendar.DAY_OF_MONTH);
+                int hour = calendar.get(GregorianCalendar.HOUR_OF_DAY);
+                int minute = calendar.get(GregorianCalendar.MINUTE);
+                int second = calendar.get(GregorianCalendar.SECOND);
+                int millisecond = calendar.get(GregorianCalendar.MILLISECOND);
+                              
                 String prefixSeparator = "_";
 
                 String[] datiFascicolo = getNomeFascicolo(idFascicolo);
@@ -223,7 +230,11 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 
                 while(exists)
                 {
-                    fileNameToCreate = year + prefixSeparator + nomeFascicolo + prefixSeparator + fileName + prefixSeparator + generateKey(10) + endFileExt;
+                    //fileNameToCreate = year + prefixSeparator + nomeFascicolo + prefixSeparator + fileName + prefixSeparator + generateKey(10) + endFileExt;
+                    fileNameToCreate =  fileName + prefixSeparator + year + prefixSeparator + mettiZeroDavanti(month) + prefixSeparator + mettiZeroDavanti(day) 
+                            + prefixSeparator + mettiZeroDavanti(hour) + prefixSeparator + mettiZeroDavanti(minute) + prefixSeparator + mettiZeroDavanti(second) 
+                            + prefixSeparator + mettiZeroDavanti(millisecond) + endFileExt;
+                    
                     exists = mongo.existsObjectbyPath(cartellaFascicolo + "/" + fileNameToCreate);                          
                 }
                 
@@ -263,6 +274,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 else
                 {
                     dbConn.rollback();
+                    throw new ServletException("Errore nell'inserimento dei dati nella tabella di cross fascicoli_gddocs");
                 }
             }
         }
@@ -633,6 +645,18 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 }
             }
         }
+    }
+    
+    private String mettiZeroDavanti(int numero)
+    {
+        String numeroString = "";
+        
+        if(numero < 10)
+               numeroString = "0"+ numero;
+        else
+            numeroString = numero + "";
+             
+        return numeroString;
     }
 
 }
