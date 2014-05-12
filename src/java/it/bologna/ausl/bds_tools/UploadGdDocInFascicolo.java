@@ -227,11 +227,11 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + pathMongoNumerazioneGerarchica;
                 
                 boolean exists = true;
-                
+                                
                 while(exists)
                 {
                     //fileNameToCreate = year + prefixSeparator + nomeFascicolo + prefixSeparator + fileName + prefixSeparator + generateKey(10) + endFileExt;
-                    fileNameToCreate =  fileName + prefixSeparator + year + prefixSeparator + mettiZeroDavanti(month) + prefixSeparator + mettiZeroDavanti(day) 
+                    fileNameToCreate =  fileName + getSuffissoNomeFile(idapplicazione) + prefixSeparator + year + prefixSeparator + mettiZeroDavanti(month) + prefixSeparator + mettiZeroDavanti(day) 
                             + prefixSeparator + mettiZeroDavanti(hour) + prefixSeparator + mettiZeroDavanti(minute) + prefixSeparator + mettiZeroDavanti(second) 
                             + prefixSeparator + mettiZeroDavanti(millisecond) + endFileExt;
                     
@@ -657,6 +657,20 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             numeroString = numero + "";
              
         return numeroString;
+    }
+    
+    private String getSuffissoNomeFile(String idApplicazione)
+    {
+        String suffisso = "";
+        
+        if(idApplicazione == "procton")
+            suffisso = "_Pico";
+        else if(idApplicazione == "dete")
+            suffisso = "_Dete";
+        else if(idApplicazione == "deli")
+            suffisso = "_Deli";
+                
+        return suffisso;
     }
 
 }
