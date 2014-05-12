@@ -115,7 +115,7 @@ public class GetFascicoloSpecialeId extends HttpServlet {
             }
             else if(nomeFascicolo == null || nomeFascicolo.equals(""))
             {
-                String message = "Manca il parametro \"tipoFascicolo\". Indicarlo nei parametri della richiesta";
+                String message = "Manca il parametro \"nomefascicolo\". Indicarlo nei parametri della richiesta";
                 log.error(message);
                 throw new ServletException(message);
             }
