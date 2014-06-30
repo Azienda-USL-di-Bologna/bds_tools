@@ -106,6 +106,10 @@
         <param-value>deli_tools.set_current_activity</param-value>
     </context-param>
     <context-param>
+        <param-name>verbaSetCurrentActivityFunctionName</param-name>
+        <param-value>verba_tools.set_current_activity</param-value>
+    </context-param>
+    <context-param>
         <param-name>smistamentoSetCurrentActivityFunctionName</param-name>
         <param-value>bds_tools.set_current_activity</param-value>
     </context-param>
