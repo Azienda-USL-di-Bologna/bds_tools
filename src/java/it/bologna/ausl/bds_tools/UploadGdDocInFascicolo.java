@@ -224,7 +224,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
                 mongo = new MongoWrapper(mongoUri);
 
                 //Creo la cartella dove inserire i file su mongo-- è quella del fascicolo passato
-                String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + pathMongoNumerazioneGerarchica;
+                String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + "/" +pathMongoNumerazioneGerarchica;
                 
                 boolean exists = true;
                                 
