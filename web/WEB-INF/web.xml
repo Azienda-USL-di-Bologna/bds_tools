@@ -94,6 +94,14 @@
         <param-value>deli_tools.get_and_set_deli_number</param-value>
     </context-param>
     <context-param>
+        <param-name>verbaUpdateNumberFunctionName</param-name>
+        <param-value>verba_tools.get_and_set_verba_number</param-value>
+    </context-param>
+    <context-param>
+        <param-name>babelUpdateNumberFunctionName</param-name>
+        <param-value>gd_tools.get_and_set_gddoc_number</param-value>
+    </context-param>
+    <context-param>
         <param-name>proctonSetCurrentActivityFunctionName</param-name>
         <param-value>procton_tools.set_current_activity</param-value>
     </context-param>

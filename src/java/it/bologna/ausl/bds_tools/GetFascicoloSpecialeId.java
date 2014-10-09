@@ -136,11 +136,16 @@ public class GetFascicoloSpecialeId extends HttpServlet {
                 idFascicoloRootSpeciale = result.getString(1);
                 
                 //Compongo la query
-                String queryText =  "SELECT fp.id_fascicolo_figlio " +
-                                "FROM gd.fascicoli_patriarcato fp " +
-                                "JOIN gd.fascicoligd f on f.id_fascicolo = fp.id_fascicolo_figlio " +
-                                "WHERE fp.id_fascicolo = ? " +
-                                "AND f.nome_fascicolo = ? ";
+                String queryText =  "SELECT f.id_fascicolo as id_fascicolo_figlio " +
+                "FROM gd.patriarcato_fascicoli(?) pf " +
+                "JOIN gd.fascicoligd f on pf.id_fascicolo=f.id_fascicolo " + 
+                "WHERE f.nome_fascicolo = ?";
+
+//                String queryText =  "SELECT fp.id_fascicolo_figlio " +
+//                                "FROM gd.fascicoli_patriarcato fp " +
+//                                "JOIN gd.fascicoligd f on f.id_fascicolo = fp.id_fascicolo_figlio " +
+//                                "WHERE fp.id_fascicolo = ? " +
+//                                "AND f.nome_fascicolo = ? ";
             
                 ps = dbConn.prepareStatement(queryText);
                 ps.setString(1, idFascicoloRootSpeciale);
