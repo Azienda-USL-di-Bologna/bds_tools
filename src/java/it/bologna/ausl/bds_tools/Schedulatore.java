@@ -125,4 +125,14 @@ public class Schedulatore extends HttpServlet {
         return "Schedulatore Babel";
     }// </editor-fold>
 
+    @Override
+    public void destroy() {
+        super.destroy(); //To change body of generated methods, choose Tools | Templates.
+        try {
+            sched.shutdown();
+        } catch (SchedulerException ex) {
+            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
 }
