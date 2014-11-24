@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app id="WebApp_ID" version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
     <display-name>bds_tools</display-name>
+    <servlet-mapping>
+        <servlet-name>Schedulatore</servlet-name>
+        <url-pattern>/Schedulatore</url-pattern>
+    </servlet-mapping>
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>
@@ -42,6 +46,10 @@
     <servlet>
         <servlet-name>Debug</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.Debug</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>Schedulatore</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.Schedulatore</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>Downloader</servlet-name>
