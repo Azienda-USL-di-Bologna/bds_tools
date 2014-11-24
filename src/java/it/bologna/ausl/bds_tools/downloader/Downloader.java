@@ -9,6 +9,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.io.IOUtils;
 import redis.clients.jedis.Jedis;
 
 /**
@@ -77,10 +78,12 @@ private static final long serialVersionUID = 1L;
             n=in.read(buff);
         }	
         out.flush();
+        IOUtils.closeQuietly(in);
     }
 
     /**
-    * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+    * @see HttpServlet#doPo
+     * @param requestst(HttpServletRequest request, HttpServletResponse response)
     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
