@@ -11,5 +11,6 @@
             <dependency org="redis.clients" name="jedis" rev="2.6.+"/>
             <dependency org="commons-fileupload" name="commons-fileupload" rev="1.3.+"/>
             <dependency org="org.quartz-scheduler" name="quartz" rev="2.2.+"/>
+            <dependency org="joda-time" name="joda-time" rev="2.5"/>
     </dependencies>
 </ivy-module>

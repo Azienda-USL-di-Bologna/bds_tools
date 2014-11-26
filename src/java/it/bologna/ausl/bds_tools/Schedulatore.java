@@ -45,7 +45,10 @@ public class Schedulatore extends HttpServlet {
             sf.initialize(prop);
             sched = sf.getScheduler();
 
-            JobDetail job = newJob(PulitoreDownloadMongo.class).withIdentity("PulitoreDownloadMongo", "group1").build();
+            JobDetail job = newJob(PulitoreDownloadMongo.class).withIdentity("PulitoreDownloadMongo", "group1")
+                    .usingJobData("interval", 24).usingJobData("connectUri", "mongodb://argo:siamofreschi@procton3/downloadgdml")
+                    .build();
+
             Trigger trigger = newTrigger().withIdentity("trigger1", "group1").startNow()
                     .withSchedule(simpleSchedule()
                             .withIntervalInSeconds(10)
