@@ -60,7 +60,7 @@ public class Downloader extends HttpServlet {
             //    plugin:
             //    server:
             //    content_type:
-            //    download:
+            //    force_download:
             //    params:{file_id:,filename:}
             //    }
             //"Mongo{contentType:"p}:mongogdml:504db053b948897cc3354b25"
@@ -90,7 +90,7 @@ public class Downloader extends HttpServlet {
         } else {
             response.addHeader("Content-Type", "application/octet-stream");
         }
-        if (downloadParams.get("download") != null && (Boolean) downloadParams.get("download") == false) {
+        if (downloadParams.get("force_download") != null && (Boolean) downloadParams.get("download") == false) {
             response.addHeader("Content-disposition", "inline;filename=" + "\"" + fileName + "\"");
         } else {
             response.addHeader("Content-disposition", "attachment;filename=" + "\"" + fileName + "\"");
