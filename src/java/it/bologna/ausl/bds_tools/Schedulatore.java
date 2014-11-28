@@ -9,6 +9,7 @@ import it.bologna.ausl.bds_tools.jobs.PulitoreDownloadMongo;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Properties;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
@@ -17,12 +18,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import static org.quartz.JobBuilder.newJob;
 import org.quartz.JobDetail;
+import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import org.quartz.Trigger;
 import static org.quartz.TriggerBuilder.newTrigger;
 import org.quartz.impl.StdSchedulerFactory;
+import org.quartz.impl.matchers.GroupMatcher;
 
 /**
  *
@@ -82,8 +85,18 @@ public class Schedulatore extends HttpServlet {
             out.println("<head>");
             out.println("<title>Servlet Schedulatore</title>");
             out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
+            out.println("<body><table>");
+            try {
+                Set<JobKey> jobKeys = sched.getJobKeys(GroupMatcher.anyJobGroup());
+                for (JobKey jk : jobKeys) {
+                    JobDetail jobDetail = sched.getJobDetail(jk);
+                    out.println("<tr><td>" + jobDetail + "</td></tr>");
+
+                }
+            } catch (SchedulerException sk) {
+                out.println(sk);
+            }
+            out.println("</table><h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
         }
