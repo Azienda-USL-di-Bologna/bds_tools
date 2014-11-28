@@ -5,20 +5,21 @@ import it.bologna.ausl.mongowrapper.MongoWrapper;
 import it.bologna.ausl.mongowrapper.MongoWrapperException;
 import java.io.InputStream;
 import java.net.UnknownHostException;
-
+import org.json.simple.JSONObject;
 
 public class MongoDownloader implements DownloaderPlugin {
-private MongoWrapper m;
-	
+
+    private MongoWrapper m;
+
     public MongoDownloader(String mongoUri) throws UnknownHostException, MongoException, MongoWrapperException {
-        m=new MongoWrapper(mongoUri);
+        m = new MongoWrapper(mongoUri);
     }
 
-    public InputStream getFile(String parameters) {
-        return m.get(parameters);
+    public InputStream getFile(JSONObject parameters) {
+        return m.get((String) parameters.get("file_id"));
     }
 
-    public String getFileName(String parameters) {
-        return m.getFileName(parameters);
+    public String getFileName(JSONObject parameters) {
+        return m.getFileName((String) parameters.get("file_id"));
     }
 }

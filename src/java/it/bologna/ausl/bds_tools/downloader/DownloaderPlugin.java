@@ -1,10 +1,12 @@
 package it.bologna.ausl.bds_tools.downloader;
 
 import java.io.InputStream;
+import org.json.simple.JSONObject;
 
 public interface DownloaderPlugin {
 
-    public InputStream getFile(String parameters);
-    public String getFileName(String parameters);
+    public InputStream getFile(JSONObject parameters);
+
+    public String getFileName(JSONObject parameters);
 
 }
