@@ -32,33 +32,33 @@ public class Schedulatore extends HttpServlet {
 
     static Scheduler sched;
 
-    @Override
-    public void init() throws ServletException {
-        super.init();
-        StdSchedulerFactory sf = new StdSchedulerFactory();
-        Properties prop = new Properties();
-        prop.put("org.quartz.scheduler.instanceName", "BabelScheduler");
-        prop.put("org.quartz.threadPool.threadCount", "3");
-        prop.put("org.quartz.jobStore.class", "org.quartz.simpl.RAMJobStore");
-        System.out.println("Mongoschedulo");
-        try {
-            sf.initialize(prop);
-            sched = sf.getScheduler();
-
-            JobDetail job = newJob(PulitoreDownloadMongo.class).withIdentity("PulitoreDownloadMongo", "group1").build();
-            Trigger trigger = newTrigger().withIdentity("trigger1", "group1").startNow()
-                    .withSchedule(simpleSchedule()
-                            .withIntervalInSeconds(10)
-                            .repeatForever())
-                    .build();
-            sched.scheduleJob(job, trigger);
-            sched.start();
-        } catch (SchedulerException ex) {
-            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        System.out.println("Mongoschedulato !");
-
-    }
+//    @Override
+//    public void init() throws ServletException {
+//        super.init();
+//        StdSchedulerFactory sf = new StdSchedulerFactory();
+//        Properties prop = new Properties();
+//        prop.put("org.quartz.scheduler.instanceName", "BabelScheduler");
+//        prop.put("org.quartz.threadPool.threadCount", "3");
+//        prop.put("org.quartz.jobStore.class", "org.quartz.simpl.RAMJobStore");
+//        System.out.println("Mongoschedulo");
+//        try {
+//            sf.initialize(prop);
+//            sched = sf.getScheduler();
+//
+//            JobDetail job = newJob(PulitoreDownloadMongo.class).withIdentity("PulitoreDownloadMongo", "group1").build();
+//            Trigger trigger = newTrigger().withIdentity("trigger1", "group1").startNow()
+//                    .withSchedule(simpleSchedule()
+//                            .withIntervalInSeconds(10)
+//                            .repeatForever())
+//                    .build();
+//            sched.scheduleJob(job, trigger);
+//            //sched.start();
+//        } catch (SchedulerException ex) {
+//            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        System.out.println("Mongoschedulato !");
+//
+//    }
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -72,7 +72,8 @@ public class Schedulatore extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
+        PrintWriter out = response.getWriter();
+        try {
             /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
@@ -83,6 +84,9 @@ public class Schedulatore extends HttpServlet {
             out.println("<h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
+        }
+        finally {
+            out.close();
         }
     }
 
@@ -125,14 +129,14 @@ public class Schedulatore extends HttpServlet {
         return "Schedulatore Babel";
     }// </editor-fold>
 
-    @Override
-    public void destroy() {
-        super.destroy(); //To change body of generated methods, choose Tools | Templates.
-        try {
-            sched.shutdown();
-        } catch (SchedulerException ex) {
-            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+//    @Override
+//    public void destroy() {
+//        super.destroy(); //To change body of generated methods, choose Tools | Templates.
+//        try {
+//            sched.shutdown();
+//        } catch (SchedulerException ex) {
+//            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//    }
 
 }

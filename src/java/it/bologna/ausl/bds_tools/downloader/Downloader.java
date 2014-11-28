@@ -68,8 +68,10 @@ private static final long serialVersionUID = 1L;
         InputStream in=downloaderPluginInstance.getFile(file);
         String fileName=downloaderPluginInstance.getFileName(file);
         OutputStream out=response.getOutputStream();
-        response.addHeader("Content-disposition", "attachment;filename=" + "\"" + fileName + "\"");
-        response.addHeader("Content-Type", "application/octet-stream");
+        //response.addHeader("Content-disposition", "attachment;filename=" + "\"" + fileName + "\"");
+        //response.addHeader("Content-Type", "application/octet-stream");
+        //response.addHeader("Content-Type", "application/pdf");
+        
 
         byte[] buff=new byte[4096];
         int n=in.read(buff);
@@ -82,8 +84,8 @@ private static final long serialVersionUID = 1L;
     }
 
     /**
-    * @see HttpServlet#doPo
-     * @param requestst(HttpServletRequest request, HttpServletResponse response)
+    * @see HttpServlet#doPost
+     * @param request(HttpServletRequest request, HttpServletResponse response)
     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
