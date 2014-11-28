@@ -58,7 +58,7 @@ public class Schedulatore extends HttpServlet {
                             .repeatForever())
                     .build();
             sched.scheduleJob(job, trigger);
-            sched.start();
+            //sched.start();
         } catch (SchedulerException ex) {
             Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
         }
