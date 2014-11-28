@@ -84,13 +84,17 @@ public class Downloader extends HttpServlet {
         InputStream in = downloaderPluginInstance.getFile(pluginParams);
         String fileName = downloaderPluginInstance.getFileName(pluginParams);
         OutputStream out = response.getOutputStream();
-        //response.addHeader("Content-disposition", "attachment;filename=" + "\"" + fileName + "\"");
+
         if (downloadParams.get("content_type") != null) {
             response.addHeader("Content-Type", (String) downloadParams.get("content_type"));
         } else {
             response.addHeader("Content-Type", "application/octet-stream");
         }
-//response.addHeader("Content-Type", "application/pdf");
+        if (downloadParams.get("download") != null && (Boolean) downloadParams.get("download") == false) {
+            response.addHeader("Content-disposition", "inline;filename=" + "\"" + fileName + "\"");
+        } else {
+            response.addHeader("Content-disposition", "attachment;filename=" + "\"" + fileName + "\"");
+        }
 
         byte[] buff = new byte[4096];
         int n = in.read(buff);
