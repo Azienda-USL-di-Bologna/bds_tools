@@ -9,17 +9,22 @@ import org.json.simple.JSONObject;
 
 public class MongoDownloader implements DownloaderPlugin {
 
-    private MongoWrapper m;
+    private final MongoWrapper m;
 
     public MongoDownloader(String mongoUri) throws UnknownHostException, MongoException, MongoWrapperException {
         m = new MongoWrapper(mongoUri);
     }
 
+    @Override
     public InputStream getFile(JSONObject parameters) {
         return m.get((String) parameters.get("file_id"));
     }
 
+    @Override
     public String getFileName(JSONObject parameters) {
-        return m.getFileName((String) parameters.get("file_id"));
+        String fileName = (String) parameters.get("file_name");
+        if (fileName == null || fileName.equals(""))
+            fileName = m.getFileName((String) parameters.get("file_id"));
+        return fileName;
     }
 }
