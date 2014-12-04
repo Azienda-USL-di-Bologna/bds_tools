@@ -20,7 +20,7 @@ public class JobParams {
     private final Map<String, String> params;
 
     public JobParams() {
-        params = new HashMap<>();
+        params = new HashMap<String, String>();
     }
 
     @JsonIgnore
