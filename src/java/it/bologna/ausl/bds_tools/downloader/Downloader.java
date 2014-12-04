@@ -90,7 +90,7 @@ public class Downloader extends HttpServlet {
         } else {
             response.addHeader("Content-Type", "application/octet-stream");
         }
-        if (downloadParams.get("force_download") != null && (Boolean) downloadParams.get("download") == false) {
+        if (downloadParams.get("force_download") != null && (Boolean) downloadParams.get("force_download") == false) {
             response.addHeader("Content-disposition", "inline;filename=" + "\"" + fileName + "\"");
         } else {
             response.addHeader("Content-disposition", "attachment;filename=" + "\"" + fileName + "\"");
