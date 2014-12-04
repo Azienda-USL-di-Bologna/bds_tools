@@ -5,9 +5,13 @@
  */
 package it.bologna.ausl.bds_tools;
 
-import it.bologna.ausl.bds_tools.jobs.PulitoreDownloadMongo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import it.bologna.ausl.bds_tools.jobs.utils.JobDescriptor;
+import it.bologna.ausl.bds_tools.jobs.utils.JobList;
+import it.bologna.ausl.bds_tools.jobs.utils.JobParams;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Level;
@@ -16,6 +20,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.io.IOUtils;
+import org.quartz.Job;
+import org.quartz.JobBuilder;
 import static org.quartz.JobBuilder.newJob;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
@@ -43,26 +50,42 @@ public class Schedulatore extends HttpServlet {
         prop.put("org.quartz.scheduler.instanceName", "BabelScheduler");
         prop.put("org.quartz.threadPool.threadCount", "3");
         prop.put("org.quartz.jobStore.class", "org.quartz.simpl.RAMJobStore");
-        System.out.println("Mongoschedulo");
+        System.out.println("Schedulo");
         try {
             sf.initialize(prop);
             sched = sf.getScheduler();
 
-            JobDetail job = newJob(PulitoreDownloadMongo.class).withIdentity("PulitoreDownloadMongo", "group1")
-                    .usingJobData("interval", 24).usingJobData("connectUri", "mongodb://argo:siamofreschi@procton3/downloadgdml")
-                    .build();
+            //   URL jobConfURL = ClassLoader.getSystemClassLoader().getResource("it/bologna/ausl/bds_tools/conf/schedulatore_conf.json");
+            // URL jobConfURL = Schedulatore.class.getResource("it/bologna/ausl/bds_tools/conf/schedulatore_conf.json");
+            URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/schedulatore_conf.json");
 
-            Trigger trigger = newTrigger().withIdentity("trigger1", "group1").startNow()
-                    .withSchedule(simpleSchedule()
-                            .withIntervalInSeconds(10)
-                            .repeatForever())
-                    .build();
-            sched.scheduleJob(job, trigger);
-            //sched.start();
+            String jobString = IOUtils.toString(jobConfURL);
+            ObjectMapper mapper = new ObjectMapper();
+            JobList jobList = mapper.readValue(jobString, JobList.class);
+            for (JobDescriptor jd : jobList.getJobs()) {
+                JobParams jp = jd.getJobParams();
+                JobBuilder jb = newJob((Class< ? extends Job>) Class.forName("it.bologna.ausl.bds_tools.jobs." + jd.getClassz())).withIdentity(jd.getName(), "group1");
+                for (String k : jp.getParamNames()) {
+                    jb.usingJobData(k, jp.getParam(k));
+                }
+                JobDetail job = jb.build();
+                Trigger trigger = newTrigger().withIdentity("trigger" + jd.getName(), "group1").startNow()
+                        .withSchedule(simpleSchedule()
+                                .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
+                                .repeatForever())
+                        .build();
+                sched.scheduleJob(job, trigger);
+            }
+
+            sched.start();
         } catch (SchedulerException ex) {
             Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
         }
-        System.out.println("Mongoschedulato !");
+        System.out.println("Schedulato !");
 
     }
 

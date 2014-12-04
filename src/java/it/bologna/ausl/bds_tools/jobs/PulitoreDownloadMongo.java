@@ -69,4 +69,9 @@ public class PulitoreDownloadMongo implements Job {
     public void setInterval(int hour) {
         this.intervalHour = hour;
     }
+
+    public void setInterval(String hour) {
+        this.intervalHour = Integer.valueOf(hour);
+    }
+
 }
