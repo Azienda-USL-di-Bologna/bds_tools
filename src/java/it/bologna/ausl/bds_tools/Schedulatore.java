@@ -15,8 +15,6 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Properties;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -41,22 +39,27 @@ import org.quartz.impl.matchers.GroupMatcher;
  */
 public class Schedulatore extends HttpServlet {
 
+    private static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(ProctonPecManager.class);
     private static Scheduler sched;
     private static final String JOB_PACKAGE_SUFFIX = "jobs";
     private static final String CONF_PACKAGE_SUFFIX = "conf";
     private static String CONF_FILE_NAME = "schedulatore_conf.json";
     private static boolean active = false;
-    
+
     @Override
     public void init() throws ServletException {
         super.init();
-        String activeString = getServletContext().getInitParameter("schedulatore.active");       
-        if (activeString != null)
+        log.info("Inizio avvio Schedulatore");
+
+        String activeString = getServletContext().getInitParameter("schedulatore.active");
+        if (activeString != null) {
             active = Boolean.parseBoolean(activeString);
+        }
 
         String configFile = getServletContext().getInitParameter("schedulatore.configfile");
-        if (configFile != null)
+        if (configFile != null) {
             CONF_FILE_NAME = configFile;
+        }
         try {
             StdSchedulerFactory sf = new StdSchedulerFactory();
             Properties prop = new Properties();
@@ -69,20 +72,21 @@ public class Schedulatore extends HttpServlet {
             sched = sf.getScheduler();
             quarzInit();
         } catch (SchedulerException ex) {
-            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+            log.fatal(ex);
         } catch (IOException ex) {
-            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+            log.fatal(ex);
         } catch (ClassNotFoundException ex) {
-            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+            log.fatal(ex);
         }
 
-        System.out.println("Schedulato !");
+        log.info("Termine avvio Schedulatore");
 
     }
 
     private void quarzInit() throws SchedulerException, IOException, ClassNotFoundException {
-
         if (active) {
+            log.info("Inizializzazione schedulatore");
+
             if (sched.isStarted()) {
                 sched.standby();
                 sched.clear();
@@ -113,7 +117,7 @@ public class Schedulatore extends HttpServlet {
             sched.start();
         }
     }
-    
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -130,10 +134,9 @@ public class Schedulatore extends HttpServlet {
             try {
                 quarzInit();
             } catch (SchedulerException ex) {
-                Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
-                throw new ServletException("Errore ricaricando configurazione", ex);
+                log.fatal(ex);
             } catch (ClassNotFoundException ex) {
-                Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+                log.fatal(ex);
                 throw new ServletException("Errore ricaricando configurazione", ex);
             }
         }
@@ -160,8 +163,7 @@ public class Schedulatore extends HttpServlet {
                 }
                 out.println("</table><h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
                 out.println("<form><input type=\"hidden\" name=\"reload\" value=\"reload\"/><input type=\"submit\" value=\"Ricarica Configurazione\" /></form>");
-            }
-            else {
+            } else {
                 out.println("<h1>Schedulatore non attivo</h1>");
             }
             out.println("</body>");
@@ -217,8 +219,7 @@ public class Schedulatore extends HttpServlet {
             sched.shutdown();
 
         } catch (SchedulerException ex) {
-            Logger.getLogger(Schedulatore.class
-                    .getName()).log(Level.SEVERE, null, ex);
+            log.fatal(ex);
         }
     }
 
