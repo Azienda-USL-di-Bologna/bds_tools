@@ -6,7 +6,6 @@
 package it.bologna.ausl.bds_tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import static it.bologna.ausl.bds_tools.Schedulatore.sched;
 import it.bologna.ausl.bds_tools.jobs.utils.JobDescriptor;
 import it.bologna.ausl.bds_tools.jobs.utils.JobList;
 import it.bologna.ausl.bds_tools.jobs.utils.JobParams;
@@ -42,14 +41,22 @@ import org.quartz.impl.matchers.GroupMatcher;
  */
 public class Schedulatore extends HttpServlet {
 
-    static Scheduler sched;
-    static final String JOB_PACKAGE_SUFFIX = "jobs";
-    static final String CONF_PACKAGE_SUFFIX = "conf";
-    static final String CONF_FILE_NAME = "schedulatore_conf.json";
-
+    private static Scheduler sched;
+    private static final String JOB_PACKAGE_SUFFIX = "jobs";
+    private static final String CONF_PACKAGE_SUFFIX = "conf";
+    private static String CONF_FILE_NAME = "schedulatore_conf.json";
+    private static boolean active = false;
+    
     @Override
     public void init() throws ServletException {
         super.init();
+        String activeString = getServletContext().getInitParameter("schedulatore.active");       
+        if (activeString != null)
+            active = Boolean.parseBoolean(activeString);
+
+        String configFile = getServletContext().getInitParameter("schedulatore.configfile");
+        if (configFile != null)
+            CONF_FILE_NAME = configFile;
         try {
             StdSchedulerFactory sf = new StdSchedulerFactory();
             Properties prop = new Properties();
@@ -69,44 +76,44 @@ public class Schedulatore extends HttpServlet {
             Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        System.out.println(
-                "Schedulato !");
+        System.out.println("Schedulato !");
 
     }
 
     private void quarzInit() throws SchedulerException, IOException, ClassNotFoundException {
 
-        if (sched.isStarted()) {
-            sched.standby();
-            sched.clear();
-        }
-        URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
-        if (jobConfURL == null) {
-            throw new FileNotFoundException("Schedulatore configuration file not found");
-        }
-        String jobString = IOUtils.toString(jobConfURL);
-        ObjectMapper mapper = new ObjectMapper();
-        JobList jobList = mapper.readValue(jobString, JobList.class
-        );
-        for (JobDescriptor jd
-                : jobList.getJobs()) {
-            JobParams jp = jd.getJobParams();
-            JobBuilder jb = newJob((Class< ? extends Job>) Class.forName(this.getClass().getPackage().getName() + "." + JOB_PACKAGE_SUFFIX + "." + jd.getClassz())).withIdentity(jd.getName(), "group1");
-            for (String k : jp.getParamNames()) {
-                jb.usingJobData(k, jp.getParam(k));
+        if (active) {
+            if (sched.isStarted()) {
+                sched.standby();
+                sched.clear();
             }
-            JobDetail job = jb.build();
-            Trigger trigger = newTrigger().withIdentity("trigger" + jd.getName(), "group1").startNow()
-                    .withSchedule(simpleSchedule()
-                            .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
-                            .repeatForever())
-                    .build();
-            sched.scheduleJob(job, trigger);
+            URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
+            if (jobConfURL == null) {
+                throw new FileNotFoundException("Schedulatore configuration file not found");
+            }
+            String jobString = IOUtils.toString(jobConfURL);
+            ObjectMapper mapper = new ObjectMapper();
+            JobList jobList = mapper.readValue(jobString, JobList.class
+            );
+            for (JobDescriptor jd
+                    : jobList.getJobs()) {
+                JobParams jp = jd.getJobParams();
+                JobBuilder jb = newJob((Class< ? extends Job>) Class.forName(this.getClass().getPackage().getName() + "." + JOB_PACKAGE_SUFFIX + "." + jd.getClassz())).withIdentity(jd.getName(), "group1");
+                for (String k : jp.getParamNames()) {
+                    jb.usingJobData(k, jp.getParam(k));
+                }
+                JobDetail job = jb.build();
+                Trigger trigger = newTrigger().withIdentity("trigger" + jd.getName(), "group1").startNow()
+                        .withSchedule(simpleSchedule()
+                                .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
+                                .repeatForever())
+                        .build();
+                sched.scheduleJob(job, trigger);
+            }
+            sched.start();
         }
-
-        sched.start();
     }
-
+    
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -138,19 +145,25 @@ public class Schedulatore extends HttpServlet {
             out.println("<head>");
             out.println("<title>Servlet Schedulatore</title>");
             out.println("</head>");
-            out.println("<body><table>");
-            try {
-                Set<JobKey> jobKeys = sched.getJobKeys(GroupMatcher.anyJobGroup());
-                for (JobKey jk : jobKeys) {
-                    JobDetail jobDetail = sched.getJobDetail(jk);
-                    out.println("<tr><td>" + jobDetail + "</td></tr>");
+            out.println("<body>");
+            if (active) {
+                out.println("<table border='1'>");
+                try {
+                    Set<JobKey> jobKeys = sched.getJobKeys(GroupMatcher.anyJobGroup());
+                    for (JobKey jk : jobKeys) {
+                        JobDetail jobDetail = sched.getJobDetail(jk);
+                        out.println("<tr><td>" + jobDetail + "</td></tr>");
 
+                    }
+                } catch (SchedulerException sk) {
+                    out.println(sk);
                 }
-            } catch (SchedulerException sk) {
-                out.println(sk);
+                out.println("</table><h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
+                out.println("<form><input type=\"hidden\" name=\"reload\" value=\"reload\"/><input type=\"submit\" value=\"Ricarica Configurazione\" /></form>");
             }
-            out.println("</table><h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
-            out.println("<form><input type=\"hidden\" name=\"reload\" value=\"reload\"/><input type=\"submit\" value=\"Ricarica Configurazione\" /></form>");
+            else {
+                out.println("<h1>Schedulatore non attivo</h1>");
+            }
             out.println("</body>");
             out.println("</html>");
         } finally {

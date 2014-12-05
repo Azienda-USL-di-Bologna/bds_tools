@@ -1,0 +1,12 @@
+{
+  "jobs":[
+             {"name":"PulitoreMongoDownload",
+              "schedule":"3600",
+              "class":"PulitoreDownloadMongo",
+              "params":{
+                        "interval":"24",
+                        "connectUri":"mongodb://argo:siamofreschi@procton3,procton4/downloadarena?replicaset=rs0&safe=true"
+                        }
+              }
+      ]
+}

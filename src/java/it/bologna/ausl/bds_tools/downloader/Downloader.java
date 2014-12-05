@@ -29,6 +29,10 @@ public class Downloader extends HttpServlet {
     }
 
     /**
+     * @param request
+     * @param response
+     * @throws javax.servlet.ServletException
+     * @throws java.io.IOException
      * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
      * response) parametri:token=(key del token da recuperare da
      * redis)&deletetoken=true|false

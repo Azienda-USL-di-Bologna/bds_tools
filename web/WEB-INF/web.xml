@@ -197,4 +197,8 @@
         <param-name>redisprod</param-name>
         <param-value>babelservice1</param-value>
     </context-param>
+    <context-param>
+        <param-name>schedulatore.configfile</param-name>
+        <param-value>schedulatore_conf_gdml.json</param-value>
+    </context-param>
 </web-app>

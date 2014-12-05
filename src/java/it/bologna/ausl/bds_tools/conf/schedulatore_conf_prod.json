@@ -1,0 +1,12 @@
+{
+  "jobs":[
+             {"name":"PulitoreMongoDownload",
+              "schedule":"3600",
+              "class":"PulitoreDownloadMongo",
+              "params":{
+                        "interval":"24",
+                        "connectUri":"mongodb://argo:siamocaldi@babelmongo1,babelmongo2/downloadprod?safe=true&replicaSet=prod0"
+                        }
+              }
+      ]
+}
