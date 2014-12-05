@@ -6,9 +6,11 @@
 package it.bologna.ausl.bds_tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import static it.bologna.ausl.bds_tools.Schedulatore.sched;
 import it.bologna.ausl.bds_tools.jobs.utils.JobDescriptor;
 import it.bologna.ausl.bds_tools.jobs.utils.JobList;
 import it.bologna.ausl.bds_tools.jobs.utils.JobParams;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
@@ -41,43 +43,24 @@ import org.quartz.impl.matchers.GroupMatcher;
 public class Schedulatore extends HttpServlet {
 
     static Scheduler sched;
+    static final String JOB_PACKAGE_SUFFIX = "jobs";
+    static final String CONF_PACKAGE_SUFFIX = "conf";
+    static final String CONF_FILE_NAME = "schedulatore_conf.json";
 
     @Override
     public void init() throws ServletException {
         super.init();
-        StdSchedulerFactory sf = new StdSchedulerFactory();
-        Properties prop = new Properties();
-        prop.put("org.quartz.scheduler.instanceName", "BabelScheduler");
-        prop.put("org.quartz.threadPool.threadCount", "3");
-        prop.put("org.quartz.jobStore.class", "org.quartz.simpl.RAMJobStore");
-        System.out.println("Schedulo");
         try {
+            StdSchedulerFactory sf = new StdSchedulerFactory();
+            Properties prop = new Properties();
+            prop.put("org.quartz.scheduler.instanceName", "BabelScheduler");
+            prop.put("org.quartz.threadPool.threadCount", "3");
+            prop.put("org.quartz.jobStore.class", "org.quartz.simpl.RAMJobStore");
+            System.out.println("Schedulo");
+
             sf.initialize(prop);
             sched = sf.getScheduler();
-
-            //   URL jobConfURL = ClassLoader.getSystemClassLoader().getResource("it/bologna/ausl/bds_tools/conf/schedulatore_conf.json");
-            // URL jobConfURL = Schedulatore.class.getResource("it/bologna/ausl/bds_tools/conf/schedulatore_conf.json");
-            URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/schedulatore_conf.json");
-
-            String jobString = IOUtils.toString(jobConfURL);
-            ObjectMapper mapper = new ObjectMapper();
-            JobList jobList = mapper.readValue(jobString, JobList.class);
-            for (JobDescriptor jd : jobList.getJobs()) {
-                JobParams jp = jd.getJobParams();
-                JobBuilder jb = newJob((Class< ? extends Job>) Class.forName("it.bologna.ausl.bds_tools.jobs." + jd.getClassz())).withIdentity(jd.getName(), "group1");
-                for (String k : jp.getParamNames()) {
-                    jb.usingJobData(k, jp.getParam(k));
-                }
-                JobDetail job = jb.build();
-                Trigger trigger = newTrigger().withIdentity("trigger" + jd.getName(), "group1").startNow()
-                        .withSchedule(simpleSchedule()
-                                .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
-                                .repeatForever())
-                        .build();
-                sched.scheduleJob(job, trigger);
-            }
-
-            sched.start();
+            quarzInit();
         } catch (SchedulerException ex) {
             Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
@@ -85,8 +68,43 @@ public class Schedulatore extends HttpServlet {
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
         }
-        System.out.println("Schedulato !");
 
+        System.out.println(
+                "Schedulato !");
+
+    }
+
+    private void quarzInit() throws SchedulerException, IOException, ClassNotFoundException {
+
+        if (sched.isStarted()) {
+            sched.standby();
+            sched.clear();
+        }
+        URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
+        if (jobConfURL == null) {
+            throw new FileNotFoundException("Schedulatore configuration file not found");
+        }
+        String jobString = IOUtils.toString(jobConfURL);
+        ObjectMapper mapper = new ObjectMapper();
+        JobList jobList = mapper.readValue(jobString, JobList.class
+        );
+        for (JobDescriptor jd
+                : jobList.getJobs()) {
+            JobParams jp = jd.getJobParams();
+            JobBuilder jb = newJob((Class< ? extends Job>) Class.forName(this.getClass().getPackage().getName() + "." + JOB_PACKAGE_SUFFIX + "." + jd.getClassz())).withIdentity(jd.getName(), "group1");
+            for (String k : jp.getParamNames()) {
+                jb.usingJobData(k, jp.getParam(k));
+            }
+            JobDetail job = jb.build();
+            Trigger trigger = newTrigger().withIdentity("trigger" + jd.getName(), "group1").startNow()
+                    .withSchedule(simpleSchedule()
+                            .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
+                            .repeatForever())
+                    .build();
+            sched.scheduleJob(job, trigger);
+        }
+
+        sched.start();
     }
 
     /**
@@ -101,6 +119,17 @@ public class Schedulatore extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
+        if (request.getParameter("reload") != null) {
+            try {
+                quarzInit();
+            } catch (SchedulerException ex) {
+                Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+                throw new ServletException("Errore ricaricando configurazione", ex);
+            } catch (ClassNotFoundException ex) {
+                Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+                throw new ServletException("Errore ricaricando configurazione", ex);
+            }
+        }
         PrintWriter out = response.getWriter();
         try {
             /* TODO output your page here. You may use following sample code. */
@@ -121,6 +150,7 @@ public class Schedulatore extends HttpServlet {
                 out.println(sk);
             }
             out.println("</table><h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
+            out.println("<form><input type=\"hidden\" name=\"reload\" value=\"reload\"/><input type=\"submit\" value=\"Ricarica Configurazione\" /></form>");
             out.println("</body>");
             out.println("</html>");
         } finally {
@@ -172,8 +202,10 @@ public class Schedulatore extends HttpServlet {
         super.destroy(); //To change body of generated methods, choose Tools | Templates.
         try {
             sched.shutdown();
+
         } catch (SchedulerException ex) {
-            Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Schedulatore.class
+                    .getName()).log(Level.SEVERE, null, ex);
         }
     }
 
