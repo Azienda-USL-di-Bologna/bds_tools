@@ -17,7 +17,7 @@ public class JobList {
     private List<JobDescriptor> jobs;
 
     public JobList() {
-        jobs = new ArrayList<>();
+        jobs = new ArrayList<JobDescriptor>();
     }
 
     public List<JobDescriptor> getJobs() {
