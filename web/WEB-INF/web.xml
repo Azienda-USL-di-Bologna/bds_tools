@@ -10,6 +10,11 @@
         <welcome-file>default.jsp</welcome-file>
     </welcome-file-list>
     <servlet>
+        <servlet-name>ConfigureLog4J</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ConfigureLog4J</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <servlet>
         <description/>
         <display-name>Downloader</display-name>
         <servlet-name>Downloader</servlet-name>
@@ -46,7 +51,12 @@
     <servlet>
         <servlet-name>Schedulatore</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.Schedulatore</servlet-class>
+        <load-on-startup>1</load-on-startup>
     </servlet>
+    <servlet-mapping>
+        <servlet-name>ConfigureLog4J</servlet-name>
+        <url-pattern>/ConfigureLog4J</url-pattern>
+    </servlet-mapping>
     <servlet-mapping>
         <servlet-name>Downloader</servlet-name>
         <url-pattern>/Downloader</url-pattern>
@@ -78,6 +88,7 @@
     <servlet-mapping>
         <servlet-name>Schedulatore</servlet-name>
         <url-pattern>/Schedulatore</url-pattern>
+        <display-name>Schedulatore</display-name>
     </servlet-mapping>
     <resource-ref>
         <description>DB Connection</description>
@@ -163,11 +174,11 @@
     </context-param>
     <context-param>
         <param-name>mongogdml</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/doc</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/doc?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>mongodownloadgdml</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/downloadgdml</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/downloadgdml?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>redisgdml</param-name>
@@ -175,11 +186,11 @@
     </context-param>
     <context-param>
         <param-name>mongoarena</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/arena</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/arena?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>mongodownloadarena</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/downloadarena</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/downloadarena?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>redisarena</param-name>
@@ -196,9 +207,5 @@
     <context-param>
         <param-name>redisprod</param-name>
         <param-value>babelservice1</param-value>
-    </context-param>
-    <context-param>
-        <param-name>schedulatore.configfile</param-name>
-        <param-value>schedulatore_conf_gdml.json</param-value>
     </context-param>
 </web-app>
