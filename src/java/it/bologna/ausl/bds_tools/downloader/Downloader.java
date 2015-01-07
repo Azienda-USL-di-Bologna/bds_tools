@@ -97,7 +97,7 @@ public class Downloader extends HttpServlet {
         String fileName = downloaderPluginInstance.getFileName(pluginParams);
         OutputStream out = response.getOutputStream();
 
-        if (downloadParams.get("content_type") != null) {
+        if (downloadParams.get("content_type") != null && !downloadParams.get("content_type").equals("")) {
             response.addHeader("Content-Type", (String) downloadParams.get("content_type"));
         } else {
             response.addHeader("Content-Type", "application/octet-stream");
