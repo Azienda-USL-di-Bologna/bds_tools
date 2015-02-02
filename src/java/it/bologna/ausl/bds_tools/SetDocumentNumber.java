@@ -21,7 +21,7 @@ import org.apache.log4j.PropertyConfigurator;
  */
 public class SetDocumentNumber extends HttpServlet {
 
-private static Logger log = Logger.getLogger(SetDocumentNumber.class);
+private static final Logger log = Logger.getLogger(SetDocumentNumber.class);
     /** 
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
      * @param request servlet request
@@ -61,10 +61,22 @@ private static Logger log = Logger.getLogger(SetDocumentNumber.class);
             log.debug("idapplicazione: " + idapplicazione);
             log.debug("iddocumento: " + iddocumento);
             log.debug("nomesequenza: " + nomesequenza);
-
+            
             // controllo se mi sono stati passati i dati per l'autenticazione
             if (idapplicazione == null || tokenapplicazione == null) {
                 String message = "Dati di autenticazione errati, specificare i parametri \"idapplicazione\" e \"tokenapplicazione\" nella richiesta";
+                log.error(message);
+                throw new ServletException(message);
+            }
+            
+            if (iddocumento == null || iddocumento.equals("")) {
+                String message = "Dati errati, specificare il parametro \"iddocumento\" nella richiesta";
+                log.error(message);
+                throw new ServletException(message);
+            }
+            
+            if (nomesequenza == null || nomesequenza.equals("")) {
+                String message = "Dati errati, specificare il parametro \"nomesequenza\" nella richiesta";
                 log.error(message);
                 throw new ServletException(message);
             }
@@ -81,15 +93,17 @@ private static Logger log = Logger.getLogger(SetDocumentNumber.class);
 
             // leggo i parametri per l'esecuzione della query dal web.xml
             String authenticationTable = getServletContext().getInitParameter("AuthenticationTable");
-            String updateNumberFunctionName = getServletContext().getInitParameter(idapplicazione.toLowerCase() + "UpdateNumberFunctionName");
-
+            //String updateNumberFunctionName = getServletContext().getInitParameter(idapplicazione.toLowerCase() + "UpdateNumberFunctionName");
+            String updateNumberFunctionName = getServletContext().getInitParameter("UpdateNumberFunctionNameTemplate");
+            updateNumberFunctionName = updateNumberFunctionName.replace("[nome_sequenza]", nomesequenza);
+            
             if(authenticationTable == null || authenticationTable.equals("")) {
                 String message = "Manca il nome della tabella per l'autenticazione. Indicarlo nel file \"web.xml\"";
                 log.error(message);
                 throw new ServletException(message);
             }
             else if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {
-                String message = "Manca il nome della funzione che esegue l'aggiornamento del numero di determina. Indicarlo nel file \"web.xml\"";
+                String message = "Errore nel calcolo del nome della funzione che esegue l'aggiornamento del numero di documento";
                 log.error(message);
                 throw new ServletException(message);
             }

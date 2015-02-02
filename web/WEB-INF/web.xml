@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app id="WebApp_ID" version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
     <display-name>bds_tools</display-name>
-    <welcome-file-list>
-        <welcome-file>index.jsp</welcome-file>
-        <welcome-file>index.html</welcome-file>
-        <welcome-file>index.htm</welcome-file>
-        <welcome-file>default.html</welcome-file>
-        <welcome-file>default.htm</welcome-file>
-        <welcome-file>default.jsp</welcome-file>
-    </welcome-file-list>
     <servlet>
         <servlet-name>ConfigureLog4J</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ConfigureLog4J</servlet-class>
@@ -53,6 +45,10 @@
         <servlet-class>it.bologna.ausl.bds_tools.Schedulatore</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
+    <servlet>
+        <servlet-name>ReceiveFile</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ReceiveFile</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>ConfigureLog4J</servlet-name>
         <url-pattern>/ConfigureLog4J</url-pattern>
@@ -90,6 +86,10 @@
         <url-pattern>/Schedulatore</url-pattern>
         <display-name>Schedulatore</display-name>
     </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>ReceiveFile</servlet-name>
+        <url-pattern>/ReceiveFile</url-pattern>
+    </servlet-mapping>
     <resource-ref>
         <description>DB Connection</description>
         <res-ref-name>jdbc/argo</res-ref-name>
@@ -101,24 +101,8 @@
         <param-value>bds_tools.authorized_applications</param-value>
     </context-param>
     <context-param>
-        <param-name>proctonUpdateNumberFunctionName</param-name>
-        <param-value>procton_tools.get_and_set_protocol_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>deteUpdateNumberFunctionName</param-name>
-        <param-value>dete_tools.get_and_set_dete_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>deliUpdateNumberFunctionName</param-name>
-        <param-value>deli_tools.get_and_set_deli_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>verbaUpdateNumberFunctionName</param-name>
-        <param-value>verba_tools.get_and_set_verba_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>babelUpdateNumberFunctionName</param-name>
-        <param-value>gd_tools.get_and_set_gddoc_number</param-value>
+        <param-name>UpdateNumberFunctionNameTemplate</param-name>
+        <param-value>bds_tools.get_and_set_[nome_sequenza]_number</param-value>
     </context-param>
     <context-param>
         <param-name>proctonSetCurrentActivityFunctionName</param-name>
@@ -208,4 +192,12 @@
         <param-name>redisprod</param-name>
         <param-value>babelservice1</param-value>
     </context-param>
+        <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+        <welcome-file>index.html</welcome-file>
+        <welcome-file>index.htm</welcome-file>
+        <welcome-file>default.html</welcome-file>
+        <welcome-file>default.htm</welcome-file>
+        <welcome-file>default.jsp</welcome-file>
+    </welcome-file-list>
 </web-app>
