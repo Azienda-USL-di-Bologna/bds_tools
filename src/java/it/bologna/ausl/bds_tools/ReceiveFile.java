@@ -75,6 +75,15 @@ private static final Logger log = Logger.getLogger(ReceiveFile.class);
 
                 String uuid;
                 try {
+                    if (fileItemTemp == null) {
+                        response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Nessun file trovato nella richiesta");
+                        return;
+                    }
+                    
+                    if (params == null) {
+                        response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Manca il parametro \"params\"");
+                        return;
+                    }
                     responeWriter = response.getWriter();
                     fis = fileItemTemp.getInputStream();
                     String serverIdentifier = (String) params.get("serverIdentifier");
