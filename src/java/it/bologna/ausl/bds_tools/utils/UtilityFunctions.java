@@ -30,7 +30,7 @@ private static Logger log = Logger.getLogger(UtilityFunctions.class);
     public static boolean checkAuthentication(Connection dbConn, String authenticationTable, String idApplicazione, String token) {
     PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties")); 
     // configuro il logger per la console
-    BasicConfigurator.configure(); 
+//    BasicConfigurator.configure(); 
         try {
             String sqlText = "SELECT id_applicazione" +
                             " FROM " + authenticationTable +

@@ -33,7 +33,7 @@ private static Logger log = Logger.getLogger(SetCurrentActivity.class);
     request.setCharacterEncoding("utf-8");
     PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
 //     configuro il logger per la console
-    BasicConfigurator.configure();
+//    BasicConfigurator.configure();
     log.info("--------------------------------");
     log.info("Avvio servlet: " + getClass().getSimpleName());
     log.info("--------------------------------");
