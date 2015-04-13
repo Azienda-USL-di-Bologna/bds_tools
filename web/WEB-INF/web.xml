@@ -192,6 +192,12 @@
         <param-name>redisprod</param-name>
         <param-value>babelservice1</param-value>
     </context-param>
+    <context-param>
+        <param-name>getindeidurl</param-name>
+        <param-value>http://localhost/IndeUtilities/GetIndeId</param-value>
+    </context-param>
+    
+    
         <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>

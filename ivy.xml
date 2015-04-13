@@ -15,5 +15,6 @@
             <dependency org="com.fasterxml.jackson.core" name="jackson-annotations" rev="2.4.+"/>
             <dependency org="com.fasterxml.jackson.core" name="jackson-databind" rev="2.4.+"/>
             <dependency org="com.fasterxml.jackson.core" name="jackson-core" rev="2.4.+"/>
+			<dependency org="com.fasterxml.jackson.datatype" name="jackson-datatype-joda" rev="2.4.+"/>
     </dependencies>
 </ivy-module>
