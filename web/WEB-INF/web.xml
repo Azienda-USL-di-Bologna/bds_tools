@@ -41,6 +41,7 @@
         <servlet-class>it.bologna.ausl.bds_tools.Debug</servlet-class>
     </servlet>
     <servlet>
+        <display-name>Schedulatore</display-name>
         <servlet-name>Schedulatore</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.Schedulatore</servlet-class>
         <load-on-startup>1</load-on-startup>
@@ -84,7 +85,6 @@
     <servlet-mapping>
         <servlet-name>Schedulatore</servlet-name>
         <url-pattern>/Schedulatore</url-pattern>
-        <display-name>Schedulatore</display-name>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>ReceiveFile</servlet-name>
