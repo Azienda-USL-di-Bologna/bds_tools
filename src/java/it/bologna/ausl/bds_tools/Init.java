@@ -6,22 +6,32 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  *
  * @author gdm
  */
-public class ConfigureLog4J extends HttpServlet {
-private static Logger log = Logger.getLogger(ConfigureLog4J.class);
-
+public class Init extends HttpServlet {
+private static Logger log;
      @Override
     public void init() throws ServletException {
         super.init();
-        PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
+        initLog4J();
+        log = LogManager.getLogger(Init.class);
+        try {
+            ApplicationParams.initApplicationParams(getServletContext());
+        }
+        catch (Exception ex) {
+            throw new ServletException(ex);
+        }
     }
     
+    private void initLog4J() {
+        System.setProperty("log4j.configurationFile", Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j2.xml").getFile());
+    }
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -33,6 +43,7 @@ private static Logger log = Logger.getLogger(ConfigureLog4J.class);
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        init();
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
         try {

@@ -2,16 +2,12 @@ package it.bologna.ausl.bds_tools.ioda;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
+import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaDocumentException;
+import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaFileException;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimeZone;
 import org.joda.time.DateTime;
 
 /**
@@ -19,39 +15,37 @@ import org.joda.time.DateTime;
  * @author utente
  */
 public class GdDoc extends Document{
-    private String idOggettoOrigine; // id dell'oggetto nel sistema di chi sta versando
-    private String tipoOggettoOrigine; // tipo dell'oggetto nel sistema di chi sta versando
-    private String nome; // nella tabella nome_gddoc
-    private boolean record; // indica se è un record
+    private String nome; // obbligatorio, nella tabella nome_gddoc
+    private boolean record = true; // opzionale, se non passato = true. Indica se è un record
     
     @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ssZ")
-    private DateTime dataUltimaModifica; //si riferisce alla modifica nei loro sistemi
-    private boolean visibile; // indica se il gdDoc deve essere visibile
-    private String codice_registro; // opzionale, se è un record deve averlo
+    private DateTime dataUltimaModifica; //opzionale, si riferisce alla modifica nei loro sistemi
+    private boolean visibile = true; // opzionale, se non passato = true. indica se il gdDoc deve essere visibile
+    private String codiceRegistro; // obbligatorio se record = true
     
     @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ssZ")
-    private DateTime dataRegistrazione; // obbligatorio se è record
-    private String numeroRegistrazione; // obbligatorio se è record
+    private DateTime dataRegistrazione; // obbligatorio se record = true
+    private String numeroRegistrazione; // obbligatorio se record = true
     
-    private String xmlSpecificoParer; // opzionale per versamento parer
-    private boolean forzaConservazione; // opzionale per versamento parer
-    private boolean forzaAccettazione; // opzionale per versamento parer
-    private boolean forzaCollegamento; // opzionale per versamento parer
+    private String xmlSpecificoParer; // opzionale per versamento parer (se non passato il documento non viene versato. Il versamento avviene poi nel momento in cui il parametro viene passato)
+    private boolean forzaConservazione = false; // opzionale per versamento parer, se non passato = false
+    private boolean forzaAccettazione = false; // opzionale per versamento parer, se non passato = false
+    private boolean forzaCollegamento = false; // opzionale per versamento parer, se non passato = false
 
-    private List<SottoDocumento> sottoDocumenti;
+    private List<Fascicolo> fascicoli; // obbligatorio (almeno un elemento nella lista): fascicoli in cui il gddoc andrà inserito
+    private List<SottoDocumento> sottoDocumenti; // opzionale: i sottodocumenti del GdDoc
     
     public GdDoc() {
     }
-
-        
-    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, boolean record, DateTime dataUltimaModifica, boolean visibile, String codice_registro, DateTime dataRegistrazione, String numeroRegistrazione, String xmlSpecificoParer, boolean forzaConservazione, boolean forzaAccettazione, boolean forzaCollegamento) {
-        this.idOggettoOrigine = idOggettoOrigine;
-        this.tipoOggettoOrigine = tipoOggettoOrigine;
+  
+    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, boolean record, DateTime dataUltimaModifica, boolean visibile, String codiceRegistro, DateTime dataRegistrazione, String numeroRegistrazione, String xmlSpecificoParer, boolean forzaConservazione, boolean forzaAccettazione, boolean forzaCollegamento) {
+        super.idOggettoOrigine = idOggettoOrigine;
+        super.tipoOggettoOrigine = tipoOggettoOrigine;
         this.nome = nome;
         this.record = record;
         this.dataUltimaModifica = dataUltimaModifica;
         this.visibile = visibile;
-        this.codice_registro = codice_registro;
+        this.codiceRegistro = codiceRegistro;
         this.dataRegistrazione = dataRegistrazione;
         this.numeroRegistrazione = numeroRegistrazione;
         this.xmlSpecificoParer = xmlSpecificoParer;
@@ -60,34 +54,79 @@ public class GdDoc extends Document{
         this.forzaCollegamento = forzaCollegamento;
     }
 
-    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, boolean record, DateTime dataUltimaModifica, boolean visibile, String codice_registro, DateTime dataRegistrazione, String numeroRegistrazione) {
-        this.idOggettoOrigine = idOggettoOrigine;
-        this.tipoOggettoOrigine = tipoOggettoOrigine;
+    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, boolean record, DateTime dataUltimaModifica, boolean visibile, String codiceRegistro, DateTime dataRegistrazione, String numeroRegistrazione) {
+        super.idOggettoOrigine = idOggettoOrigine;
+        super.tipoOggettoOrigine = tipoOggettoOrigine;
         this.nome = nome;
         this.record = record;
         this.dataUltimaModifica = dataUltimaModifica;
         this.visibile = visibile;
-        this.codice_registro = codice_registro;
+        this.codiceRegistro = codiceRegistro;
         this.dataRegistrazione = dataRegistrazione;
         this.numeroRegistrazione = numeroRegistrazione;
     }
 
-    public String getIdOggettoOrigine() {
-        return idOggettoOrigine;
-    }
+    @JsonIgnore
+    public static GdDoc getGdDoc(String gdDocJson, DocumentOperationType operationType) throws IodaDocumentException, IOException, IodaFileException{
+        if (gdDocJson == null || gdDocJson.equals("")) {
+            throw new IodaDocumentException("json descrittivo del documento da inserire mancante");
+        }
 
-    public void setIdOggettoOrigine(String idOggettoOrigine) {
-        this.idOggettoOrigine = idOggettoOrigine;
-    }
+        GdDoc gdDoc = GdDoc.parse(gdDocJson, GdDoc.class);
+        gdDoc.check(operationType);
 
-    public String getTipoOggettoOrigine() {
-        return tipoOggettoOrigine;
+        return gdDoc;
     }
+    
+    @JsonIgnore
+    public static GdDoc getGdDoc(InputStream gdDocIs, DocumentOperationType operationType) throws IodaDocumentException, IOException {
+        if (gdDocIs == null) {
+            throw new IodaDocumentException("json descrittivo del documento da inserire mancante");
+        }
 
-    public void setTipoOggettoOrigine(String tipoOggettoOrigine) {
-        this.tipoOggettoOrigine = tipoOggettoOrigine;
+        GdDoc gdDoc = GdDoc.parse(gdDocIs, GdDoc.class);
+        gdDoc.check(operationType);
+
+        return gdDoc;
     }
-
+    
+    @JsonIgnore
+    public void check(DocumentOperationType operationType) throws IodaDocumentException {
+        if (getIdOggettoOrigine() == null || getIdOggettoOrigine().equals("")) {
+            throw new IodaDocumentException("idOggettoOrigine mancante");
+        }
+        else if (getTipoOggettoOrigine() == null || getTipoOggettoOrigine().equals("")) {
+            throw new IodaDocumentException("tipoOggettoOrigine mancante");
+        }
+        else if (operationType == DocumentOperationType.INSERT && (getNome() == null || getNome().equals(""))) {
+            throw new IodaDocumentException("nome mancante");
+        }
+        else if (operationType != DocumentOperationType.DELETE && isRecord()) {
+            if (getCodiceRegistro() == null || getCodiceRegistro().equals(""))
+                throw new IodaDocumentException("codiceRegistro mancante. Questo campo è obbligatorio se il documento è un record");
+            if (getNumeroRegistrazione() == null || getNumeroRegistrazione().equals(""))
+                throw new IodaDocumentException("numeroRegistrazione mancante. Questo campo è obbligatorio se il documento è un record");
+            if (getDataRegistrazione() == null)
+                throw new IodaDocumentException("dataRegistrazione mancante. Questo campo è obbligatorio se il documento è un record");
+        }
+        else if (operationType == DocumentOperationType.INSERT && (fascicoli == null || fascicoli.isEmpty())) {
+            throw new IodaDocumentException("fascicoli mancanti");
+        }
+        
+        // fascicoli
+        for (Fascicolo f : fascicoli) {
+            f.check(operationType);
+        }
+        
+        // sottodocumenti
+        if (sottoDocumenti != null && sottoDocumenti.size() > 0) {
+            // controllo sulla validità dei sottodocumenti
+            for (SottoDocumento sd : sottoDocumenti) {
+                sd.check(operationType);
+            }
+        }
+    }
+    
     public String getNome() {
         return nome;
     }
@@ -120,12 +159,12 @@ public class GdDoc extends Document{
         this.visibile = visibile;
     }
 
-    public String getCodice_registro() {
-        return codice_registro;
+    public String getCodiceRegistro() {
+        return codiceRegistro;
     }
 
-    public void setCodice_registro(String codice_registro) {
-        this.codice_registro = codice_registro;
+    public void setCodiceRegistro(String codiceRegistro) {
+        this.codiceRegistro = codiceRegistro;
     }
 
     public DateTime getDataRegistrazione() {
@@ -174,6 +213,14 @@ public class GdDoc extends Document{
 
     public void setForzaCollegamento(boolean forzaCollegamento) {
         this.forzaCollegamento = forzaCollegamento;
+    }
+
+    public List<Fascicolo> getFascicoli() {
+        return fascicoli;
+    }
+
+    public void setFascicoli(List<Fascicolo> fascicoli) {
+        this.fascicoli = fascicoli;
     }
 
     public List<SottoDocumento> getSottoDocumenti() {

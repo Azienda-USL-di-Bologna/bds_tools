@@ -1,13 +1,9 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package it.bologna.ausl.bds_tools.ioda;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.util.ArrayList;
+import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaDocumentException;
 import java.util.List;
 
 /**
@@ -16,12 +12,12 @@ import java.util.List;
  */
 public class SottoDocumento extends Document{
 
-    enum TipoFirma {
+    public static enum TipoFirma {
         GRAFOMETRICA("grafometrica"),
         DIGITALE("digitale"),
         AUTOGRAFA("autografa");
 
-        private String key;
+        private final String key;
 
         TipoFirma(String key) {
             this.key = key;
@@ -40,38 +36,136 @@ public class SottoDocumento extends Document{
         }
     }
 
-    private String tipo; // tipo del sotto documento. Il tipo deve essere concordato con noi. Come con i registri
-    private TipoFirma tipoFirma; // tipologia di firma: grafometrica, digitale
-    private List<String> firmatari;
-    private String mimeType; // del singolo 
-    private boolean principale;
-    private String codice;// codice identificativo del documento passatoci
-    private String nome;
-    private String uuid_mongo_pdf; // campo interno solo per noi, nei casi degli altri, calcoliamo noi in pdf, nel caso interno lo passiamo direttamente
-    private String uuid_mongo_firmato; // campo interno solo per noi, nei casi degli altri, carichiamo su mongo i file, nel caso interno lo passiamo direttamente
-    private String uuid_mongo_originale; // campo interno solo per noi, nei casi degli altri, carichiamo su mongo i file, nel caso interno lo passiamo direttamente
-    private String fileOriginale; // // (in base64) viene popolato quando arrivano dall'esterno
-    private String fileFirmato; // (in base64) viene popolato quando arrivano dall'esterno
-    // almeno uno tra 'fileOriginale' e 'fileFirmato' ci deve essere
+    private DocumentOperationType tipoOperazione; // obbligatorio: insert/update o delete. In caso di inserimento del GdDoc tutti i Sottodocumenti devono essere insert
+    private String codiceSottoDocumento; // obbligatorio: codice che identifica univocamente il SottoDocumento
+    private String tipo; // obbligatorio: tipo del sotto documento. Il tipo deve essere concordato con noi. Come con i registri
+    private TipoFirma tipoFirma; // opzionale (obbligatorio se firmatari.length() > 0) : tipologia di firma: grafometrica, digitale, autografa
+    private List<String> firmatari; // opzionale
+    private Boolean principale; // obbligatorio: indica se il sottodocumento è da considerarsi come principale del GdDoc
+    private String nome; // obbligatorio: nome del SottoDocumento
+    private String uuidMongoPdf; // opzionale: campo interno solo per noi, nei casi degli altri, calcoliamo noi in pdf, nel caso interno lo passiamo direttamente
+    private String uuidMongoFirmato; // opzionale:  campo interno solo per noi, nei casi degli altri, carichiamo su mongo i file, nel caso interno lo passiamo direttamente
+    private String uuidMongoOriginale; // opzionale:  campo interno solo per noi, nei casi degli altri, carichiamo su mongo i file, nel caso interno lo passiamo direttamente
+    private String nomePartFileOriginale; // obbligatorio uno tra fileOriginale e fileFirmato se non è stato passato nessuno tra uuid_mongo_originale, uuid_mongo_firmato: composto da (filename, valore in base64)
+    private String nomePartFileFirmato; // obbligatorio uno tra fileOriginale e fileFirmato se non è stato passato nessuno tra uuid_mongo_originale, uuid_mongo_firmato: composto da (filename, valore in base64)
 
+    private String mimeTypeFileOriginale; // opzionale, campo interno, da passare solo per noi. Comunque, se non passato, viene calcolato in automatico: mime type del file originale
+    private String mimeTypeFileFirmato; // opzionale, campo interno, da passare solo per noi. Comunque, se non passato, viene calcolato in automatico: mime type del file firmato
+
+    @JsonIgnore
+    private String nomeFileOriginale; // campo interno, non passare
+
+    @JsonIgnore
+    private String nomeFileFirmato; // campo interno, non passare
+    
     public SottoDocumento() {
     }
 
-    public SottoDocumento(String tipo, TipoFirma tipoFirma, List<String> firmatari, String mimeType, boolean principale, String codice, String nome, String uuid_mongo_pdf, String uuid_mongo_firmato, String uuid_mongo_originale, String fileOriginale, String fileFirmato) {
+    public SottoDocumento(String idOggettoOrigine, String tipoOggettoOrigine, DocumentOperationType tipoOperazione, String codiceSottoDocumemento, String tipo, TipoFirma tipoFirma, List<String> firmatari, boolean principale, String nome, String uuidMongoPdf, String uuidMongoFirmato, String uuidMongoOriginale, String nomePartFileOriginale, String nomePartFileFirmato, String mimeTypeFileOriginale, String mimeTypeFileFirmato) {
+        super.idOggettoOrigine = idOggettoOrigine;
+        super.tipoOggettoOrigine = tipoOggettoOrigine;
+        this.tipoOperazione = tipoOperazione;
+        this.codiceSottoDocumento = codiceSottoDocumemento;
         this.tipo = tipo;
         this.tipoFirma = tipoFirma;
         this.firmatari = firmatari;
-        this.mimeType = mimeType;
         this.principale = principale;
-        this.codice = codice;
         this.nome = nome;
-        this.uuid_mongo_pdf = uuid_mongo_pdf;
-        this.uuid_mongo_firmato = uuid_mongo_firmato;
-        this.uuid_mongo_originale = uuid_mongo_originale;
-        this.fileOriginale = fileOriginale;
-        this.fileFirmato = fileFirmato;
+        this.uuidMongoPdf = uuidMongoPdf;
+        this.uuidMongoFirmato = uuidMongoFirmato;
+        this.uuidMongoOriginale = uuidMongoOriginale;
+        this.nomePartFileOriginale = nomePartFileOriginale;
+        this.nomePartFileFirmato = nomePartFileFirmato;
+        this.mimeTypeFileOriginale = mimeTypeFileOriginale;
+        this.mimeTypeFileFirmato = mimeTypeFileFirmato;
+    }
+    
+    
+    @JsonIgnore
+    public void check(DocumentOperationType tipoOperazioneGdDocContenitore) throws IodaDocumentException {
+
+        // campi obblicatori
+        if (getIdOggettoOrigine() == null || getIdOggettoOrigine().equals("")) {
+            throw new IodaDocumentException("idOggettoOrigine di un sottoDocumento mancante");
+        }
+        else if (getTipoOggettoOrigine() == null || getTipoOggettoOrigine().equals("")) {
+            throw new IodaDocumentException("tipoOggettoOrigine del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        else if (getTipoOperazione() == null) {
+            throw new IodaDocumentException("tipoOperazione del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        else if (getCodiceSottoDocumento() == null || getCodiceSottoDocumento().equals("")) {
+            throw new IodaDocumentException("codiceSottoDocumento del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        
+        // se l'operazione del GdDoc contenitore è insert allora il campo tipoOperazione di tutti i suoi sottodocumenti deve essere insert
+        else if (tipoOperazioneGdDocContenitore == DocumentOperationType.INSERT && getTipoOperazione() != DocumentOperationType.INSERT) {
+            throw new IodaDocumentException("tipoOperazione del sottoDocumento: " + getIdOggettoOrigine() + " errata. Se il Documento è in fase di inserimento tutti i SottoDocumenti devono avere tipoOperazione: insert");
+        }
+        // se l'operazione del GdDoc contenitore è delete allora il campo tipoOperazione di tutti i suoi sottodocumenti deve essere delete
+        else if (tipoOperazioneGdDocContenitore == DocumentOperationType.DELETE && getTipoOperazione() != DocumentOperationType.DELETE) {
+            throw new IodaDocumentException("tipoOperazione del sottoDocumento: " + getIdOggettoOrigine() + " errata. Se il Documento è in fase di cancellazione tutti i SottoDocumenti devono avere tipoOperazione: delete");
+        }
+        
+        // campi obbligatori solo nel caso di inserimento del SottoDocumento
+        else if (tipoOperazione == DocumentOperationType.INSERT && (getTipo() == null || getTipo().equals(""))) {
+            throw new IodaDocumentException("tipo del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        
+        // se è un file firmato deve esserci il tipoFirma
+        else if (tipoOperazione == DocumentOperationType.INSERT &&
+                ((getUuidMongoFirmato() != null && !getUuidMongoFirmato().equals("")) || getNomePartFileFirmato() != null) &&
+                (getTipoFirma() == null)) {
+            throw new IodaDocumentException("tipoFirma del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        else if (tipoOperazione == DocumentOperationType.INSERT && (isPrincipale() == null)) {
+            throw new IodaDocumentException("principale del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        else if (tipoOperazione == DocumentOperationType.INSERT && (getNome() == null || getNome().equals(""))) {
+            throw new IodaDocumentException("nome del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        
+        // deve esserci almeno un campo tra: uuid_mongo_firmato, uuid_mongo_originale, fileOriginale, fileFirmato;
+        else if (tipoOperazione == DocumentOperationType.INSERT && (
+                    (getNomePartFileFirmato()== null) &&
+                    (getNomePartFileOriginale()== null) &&
+                    (getUuidMongoFirmato() == null || getUuidMongoFirmato().equals("")) &&
+                    (getUuidMongoOriginale() == null || getUuidMongoOriginale().equals("")))
+                ) {
+            throw new IodaDocumentException("nome della part del originale/firmato del sottoDocumento: " + getIdOggettoOrigine() + " mancante");
+        }
+        
+        // se c'è un file firmato ci devono essere i firmatari
+        else if (tipoOperazione == DocumentOperationType.INSERT &&
+                    ((getNomePartFileFirmato() != null) || 
+                    (getUuidMongoFirmato() != null && !getUuidMongoFirmato().equals(""))) && 
+                    (firmatari == null || firmatari.isEmpty())) {
+            throw new IodaDocumentException("firmatari del sottoDocumento: " + getIdOggettoOrigine() + " mancanti");
+        }
+        
+//        if (nomePartFileOriginale != null)
+//            nomePartFileOriginale.check();
+//        
+//        if (nomePartFileFirmato != null)
+//            nomePartFileFirmato.check();
     }
 
+    public DocumentOperationType getTipoOperazione() {
+        return tipoOperazione;
+    }
+
+    public String getCodiceSottoDocumento() {
+        return codiceSottoDocumento;
+    }
+
+    public void setCodiceSottoDocumento(String codiceSottoDocumento) {
+        this.codiceSottoDocumento = codiceSottoDocumento;
+    }
+
+    public void setTipoOperazione(DocumentOperationType tipoOperazione) {
+        this.tipoOperazione = tipoOperazione;
+    }
+    
     public String getTipo() {
         return tipo;
     }
@@ -96,28 +190,12 @@ public class SottoDocumento extends Document{
         this.firmatari = firmatari;
     }
 
-    public String getMimeType() {
-        return mimeType;
-    }
-
-    public void setMimeType(String mimeType) {
-        this.mimeType = mimeType;
-    }
-
-    public boolean isPrincipale() {
+    public Boolean isPrincipale() {
         return principale;
     }
 
-    public void setPrincipale(boolean principale) {
+    public void setPrincipale(Boolean principale) {
         this.principale = principale;
-    }
-
-    public String getCodice() {
-        return codice;
-    }
-
-    public void setCodice(String codice) {
-        this.codice = codice;
     }
 
     public String getNome() {
@@ -128,45 +206,79 @@ public class SottoDocumento extends Document{
         this.nome = nome;
     }
 
-    public String getUuid_mongo_pdf() {
-        return uuid_mongo_pdf;
+    public String getUuidMongoPdf() {
+        return uuidMongoPdf;
     }
 
-    public void setUuid_mongo_pdf(String uuid_mongo_pdf) {
-        this.uuid_mongo_pdf = uuid_mongo_pdf;
+    public void setUuidMongoPdf(String uuidMongoPdf) {
+        this.uuidMongoPdf = uuidMongoPdf;
     }
 
-    public String getUuid_mongo_firmato() {
-        return uuid_mongo_firmato;
+    public String getUuidMongoFirmato() {
+        return uuidMongoFirmato;
     }
 
-    public void setUuid_mongo_firmato(String uuid_mongo_firmato) {
-        this.uuid_mongo_firmato = uuid_mongo_firmato;
+    public void setUuidMongoFirmato(String uuidMongoFirmato) {
+        this.uuidMongoFirmato = uuidMongoFirmato;
     }
 
-    public String getUuid_mongo_originale() {
-        return uuid_mongo_originale;
+    public String getUuidMongoOriginale() {
+        return uuidMongoOriginale;
     }
 
-    public void setUuid_mongo_originale(String uuid_mongo_originale) {
-        this.uuid_mongo_originale = uuid_mongo_originale;
+    public void setUuidMongoOriginale(String uuidMongoOriginale) {
+        this.uuidMongoOriginale = uuidMongoOriginale;
     }
 
-    public String getFileOriginale() {
-        return fileOriginale;
+    public String getNomePartFileOriginale() {
+        return nomePartFileOriginale;
     }
 
-    public void setFileOriginale(String fileOriginale) {
-        this.fileOriginale = fileOriginale;
+    public void setNomePartFileOriginale(String nomePartFileOriginale) {
+        this.nomePartFileOriginale = nomePartFileOriginale;
     }
 
-    public String getFileFirmato() {
-        return fileFirmato;
+    public String getNomePartFileFirmato() {
+        return nomePartFileFirmato;
     }
 
-    public void setFileFirmato(String fileFirmato) {
-        this.fileFirmato = fileFirmato;
+    public void setNomePartFileFirmato(String nomePartFileFirmato) {
+        this.nomePartFileFirmato = nomePartFileFirmato;
     }
 
-    
+    public String getMimeTypeFileOriginale() {
+        return mimeTypeFileOriginale;
+    }
+
+    public void setMimeTypeFileOriginale(String mimeTypeFileOriginale) {
+        this.mimeTypeFileOriginale = mimeTypeFileOriginale;
+    }
+
+    public String getMimeTypeFileFirmato() {
+        return mimeTypeFileFirmato;
+    }
+
+    public void setMimeTypeFileFirmato(String mimeTypeFileFirmato) {
+        this.mimeTypeFileFirmato = mimeTypeFileFirmato;
+    }
+
+    @JsonIgnore
+    public String getNomeFileOriginale() {
+        return nomeFileOriginale;
+    }
+
+    @JsonIgnore
+    public void setNomeFileOriginale(String nomeFileOriginale) {
+        this.nomeFileOriginale = nomeFileOriginale;
+    }
+
+    @JsonIgnore
+    public String getNomeFileFirmato() {
+        return nomeFileFirmato;
+    }
+
+    @JsonIgnore
+    public void setNomeFileFirmato(String nomeFileFirmato) {
+        this.nomeFileFirmato = nomeFileFirmato;
+    }
 }

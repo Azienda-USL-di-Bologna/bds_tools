@@ -10,9 +10,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
 
 /**
  *
@@ -20,7 +18,7 @@ import org.apache.log4j.PropertyConfigurator;
  */
 public class ProctonPecManager extends HttpServlet {
     
-private static Logger log = Logger.getLogger(ProctonPecManager.class);
+private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(ProctonPecManager.class);
 
     /** 
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
@@ -31,7 +29,6 @@ private static Logger log = Logger.getLogger(ProctonPecManager.class);
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
     request.setCharacterEncoding("utf-8");
-    PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
     // configuro il logger per la console
     //BasicConfigurator.configure();
         

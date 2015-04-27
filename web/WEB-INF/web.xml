@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+<web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
     <display-name>bds_tools</display-name>
     <servlet>
-        <servlet-name>ConfigureLog4J</servlet-name>
-        <servlet-class>it.bologna.ausl.bds_tools.ConfigureLog4J</servlet-class>
+        <servlet-name>Init</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.Init</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
     <servlet>
@@ -44,15 +44,19 @@
         <display-name>Schedulatore</display-name>
         <servlet-name>Schedulatore</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.Schedulatore</servlet-class>
-        <load-on-startup>1</load-on-startup>
+        <load-on-startup>2</load-on-startup>
     </servlet>
     <servlet>
         <servlet-name>ReceiveFile</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ReceiveFile</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>InsertGdDoc</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.InsertGdDoc</servlet-class>
+    </servlet>
     <servlet-mapping>
-        <servlet-name>ConfigureLog4J</servlet-name>
-        <url-pattern>/ConfigureLog4J</url-pattern>
+        <servlet-name>Init</servlet-name>
+        <url-pattern>/Init</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>Downloader</servlet-name>
@@ -89,6 +93,10 @@
     <servlet-mapping>
         <servlet-name>ReceiveFile</servlet-name>
         <url-pattern>/ReceiveFile</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>InsertGdDoc</servlet-name>
+        <url-pattern>/ioda/api/document/insert</url-pattern>
     </servlet-mapping>
     <resource-ref>
         <description>DB Connection</description>
@@ -149,6 +157,10 @@
         <param-value>gd.fascicoli_gddocs</param-value>
     </context-param>
     <context-param>
+        <param-name>FileSupportatiTableName</param-name>
+        <param-value>bds_tools.file_supportati</param-value>
+    </context-param>
+    <context-param>
         <param-name>UploadGdDocMongoPath</param-name>
         <param-value>/Procton/Upload Gd Doc</param-value>
     </context-param>
@@ -193,12 +205,38 @@
         <param-value>babelservice1</param-value>
     </context-param>
     <context-param>
-        <param-name>getindeidurl</param-name>
-        <param-value>http://localhost/IndeUtilities/GetIndeId</param-value>
+        <param-name>redisinqueuegdml</param-name>
+        <param-value>chefingdml</param-value>
     </context-param>
-    
-    
-        <welcome-file-list>
+    <context-param>
+        <param-name>redisinqueuearena</param-name>
+        <param-value>chefingarena</param-value>
+    </context-param>
+    <context-param>
+        <param-name>redisinqueueprod</param-name>
+        <param-value>chefinprod</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlgdml</param-name>
+        <param-value>http://gdml:9081/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlarena</param-name>
+        <param-value>http://arena:9081/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlprod</param-name>
+        <param-value>http://babelservice3:8080/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    <context-param>
+        <param-name>appid</param-name>
+        <param-value>bds_tools</param-value>
+    </context-param>
+        <context-param>
+        <param-name>apptoken</param-name>
+        <param-value>bds_tools</param-value>
+    </context-param>
+    <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>
         <welcome-file>index.htm</welcome-file>
