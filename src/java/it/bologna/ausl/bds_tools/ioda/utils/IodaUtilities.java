@@ -56,26 +56,40 @@ private static final String GENERATE_INDE_NUMBER_PARAM_NAME = "generateidnumber"
 
 HttpServletRequest request;
 private String idApplicazione;
-private final MongoWrapper mongo;
-private final String mongoParentPath;
-private final String getIndeIdServletUrl;
-private final String gdDocTable;
-private final String sottoDocumentiTable;
-private final String fascicoliTable;
-private final GdDoc gdDoc;
+private MongoWrapper mongo;
+private String mongoParentPath;
+private String getIndeIdServletUrl;
+private String gdDocTable;
+private String sottoDocumentiTable;
+private String fascicoliTable;
+private GdDoc gdDoc;
 private JSONArray indeId;
 private int indeIdIndex;
-private final JSONObject gdDocIndeId;
-private final Detector detector;
+private JSONObject gdDocIndeId;
+private Detector detector;
 
 
 private final List<SottoDocumento> toConvert = new ArrayList<SottoDocumento>();
 private final List<String> uploadedUuids = new ArrayList<String>();
 
+    private IodaUtilities(ServletContext context, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this.gdDocTable = context.getInitParameter("GdDocsTableName");
+        String mongoUri = ApplicationParams.getMongoUri();
+        this.mongo = new MongoWrapper(mongoUri);
+        this.sottoDocumentiTable = context.getInitParameter("SottoDocumentiTableName");
+
+        if (operation != Document.DocumentOperationType.DELETE) {
+            this.idApplicazione = idApplicazione;
+            this.detector = new Detector();
+            this.indeIdIndex = 0; 
+            this.mongoParentPath = context.getInitParameter("UploadGdDocMongoPath");
+            this.getIndeIdServletUrl = context.getInitParameter("getindeidurl" + ApplicationParams.getServerId());
+            this.fascicoliTable = context.getInitParameter("FascicoliTableName");
+        }
+    }
+
     public IodaUtilities(ServletContext context, HttpServletRequest request, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this.idApplicazione = idApplicazione;
-        this.detector = new Detector();
-        this.indeIdIndex = 0;
+        this(context, operation, idApplicazione);
         this.request = request;
         InputStream gdDocIs = null;
         try {
@@ -85,29 +99,33 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         catch (Exception ex) {
             throw new IodaDocumentException("document non trovato");
         }
-        
+ 
         try {
             this.gdDoc = GdDoc.getGdDoc(gdDocIs, operation);   
         }
         finally {
             IOUtils.closeQuietly(gdDocIs);
         }
-        String mongoUri = ApplicationParams.getMongoUri();
-        this.mongo = new MongoWrapper(mongoUri);
-        this.mongoParentPath = context.getInitParameter("UploadGdDocMongoPath");
-        this.getIndeIdServletUrl = context.getInitParameter("getindeidurl" + ApplicationParams.getServerId());
-        this.gdDocTable = context.getInitParameter("GdDocsTableName");;
-        this.sottoDocumentiTable = context.getInitParameter("SottoDocumentiTableName");;
-        this.fascicoliTable = context.getInitParameter("FascicoliTableName");
-        getIndeId();
-        this.gdDocIndeId = getNextIndeId();
+        if (operation != Document.DocumentOperationType.DELETE) {
+            getIndeId();
+            this.gdDocIndeId = getNextIndeId();
+        }
     }
-    
+
+    public IodaUtilities(ServletContext context, GdDoc gdDoc, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(context, operation, idApplicazione);
+        this.gdDoc = gdDoc;
+        if (operation != Document.DocumentOperationType.DELETE) {
+            getIndeId();
+            this.gdDocIndeId = getNextIndeId();
+        }
+    }
+
     private JSONObject getNextIndeId() {
         JSONObject currentId = (JSONObject) indeId.get(indeIdIndex++);
         return currentId;
     }
-    
+
     public String getMongoParentPath() {
         return mongoParentPath;
     }
@@ -149,10 +167,10 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         String sqlText =
                     "SELECT id_fascicolo " +
                     "FROM " + getFascicoliTable() + " " +
-                    "WHERE codice_fascicolo = ?";
+                    "WHERE numerazione_gerarchica = ?";
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
-        ps.setString(index++, idApplicazione + "_" + f.getCodiceFascicolo());
+        ps.setString(index++, f.getCodiceFascicolo());
         
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
@@ -173,7 +191,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
                         "data_registrazione, numero_registrazione, " +
                         "anno_registrazione, xml_specifico_parer, " +
                         "forza_conservazione, forza_accettazione, forza_collegamento, " +
-                        "guid_documento_origine, tipo_documento_origine) " +
+                        "id_oggetto_origine, tipo_oggetto_origine) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -244,6 +262,57 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         }
         return idGdDoc;
     }
+    
+    public void deleteGdDoc(Connection dbConn, PreparedStatement ps) throws SQLException, IodaDocumentException{
+        String sqlText = 
+                "SELECT numero_registrazione " +
+                "FROM " + getGdDocTable() + " " +
+                "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
+        ps = dbConn.prepareStatement(sqlText);
+        ps.setString(1, gdDoc.getIdOggettoOrigine());
+        ps.setString(2, gdDoc.getTipoOggettoOrigine());
+        ResultSet res = ps.executeQuery();
+        if (!res.next())
+            throw new SQLException("documento non trovato");
+        String numeroRegistrazione = res.getString(1);
+        if (numeroRegistrazione != null && !numeroRegistrazione.equals(""))
+            throw new IodaDocumentException("impossibile eliminare un document registrato");
+        
+        sqlText = 
+              "SELECT s.uuid_mongo_originale, s.uuid_mongo_pdf, s.uuid_mongo_firmato " +
+              "FROM gd.sotto_documenti s INNER JOIN gd.gddocs g ON s.id_gddoc = g.id_gddoc " +
+              "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
+        ps = dbConn.prepareStatement(sqlText);
+        ps.setString(1, gdDoc.getIdOggettoOrigine());
+        ps.setString(2, gdDoc.getTipoOggettoOrigine());
+        res = ps.executeQuery();
+        while (res.next()) {
+            String uuid = res.getString(1);
+            if (uuid != null && !uuid.equals(""))
+                uploadedUuids.add(uuid);
+
+            uuid = res.getString(2);
+            if (uuid != null && !uuid.equals(""))
+                uploadedUuids.add(uuid);
+
+            uuid = res.getString(3);
+            if (uuid != null && !uuid.equals(""))
+                uploadedUuids.add(uuid);
+        }
+        
+        sqlText =
+                "DELETE " +
+                "FROM " + getGdDocTable() + " " +
+                "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
+        ps = dbConn.prepareStatement(sqlText);
+        ps.setString(1, gdDoc.getIdOggettoOrigine());
+        ps.setString(2, gdDoc.getTipoOggettoOrigine());
+        int ris = ps.executeUpdate();
+
+        if (ris > 0)
+            if (uploadedUuids != null && !uploadedUuids.isEmpty())
+                deleteAllMongoFileUploaded();
+    }   
     
     public void insertSottoDocumento(Connection dbConn, PreparedStatement ps, SottoDocumento sd) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
 
@@ -409,7 +478,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
             
             // il numero di id è ottenuto dal numero dei SottoDocumenti + il GdDoc
             int idNumber = 1;
-             if (gdDoc.getFascicoli()!= null)
+             if (gdDoc.getFascicoli() != null)
                 idNumber += gdDoc.getFascicoli().size();
             if (gdDoc.getSottoDocumenti() != null)
                 idNumber += gdDoc.getSottoDocumenti().size();

@@ -72,9 +72,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
         log.info("--------------------------------");
         log.info("Avvio servlet: " + getClass().getSimpleName());
         log.info("--------------------------------");
-           
-        log.info("1");
-        
+
         //Dichiarazione variabili
         String idapplicazione = null;
         String tokenapplicazione = null;
@@ -89,10 +87,10 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
         //creo la temp
         
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
-        log.info("2");
+
         if (!tempDir.exists())
             tempDir.mkdir();
-        log.info("3");
+
         //File tempDir = new File("C:/prova");
         //Richiesta multipart che in questo caso contiene il file e la stringa dell'idFascicolo
         try {
@@ -483,7 +481,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
     }
     
     private Boolean insertGdDoc(String nomeGddoc, String uuidUploadFile) {
-                
+
         String gdDocsTable = getServletContext().getInitParameter("GdDocsTableName");
         String query = "INSERT INTO " + gdDocsTable + " (id_gddoc, nome_gddoc, categoria_origine, multiplo, uuid_mongo, tipo_gddoc, uuid_mongo_pdf,"
                 + " stato_gd_doc, data_gddoc) VALUES (?,?,?,?,?,?,?,?,?)";
@@ -531,8 +529,8 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
     private Boolean insertSottoDocumento(String idGdDoc, String nomeFile, String uuidUploaFile)
     {
         String sottoDocumentiTable = getServletContext().getInitParameter("SottoDocumentiTableName");
-        String query = "INSERT INTO " + sottoDocumentiTable + "(id_sottodocumento, id_gddoc, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_originale) "
-                       + " VALUES(?,?,?,?,?) ";
+        String query = "INSERT INTO " + sottoDocumentiTable + "(id_sottodocumento, id_gddoc, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_originale, codice_sottodocumento) "
+                       + " VALUES(?,?,?,?,?,?) ";
         
         String idSottoDocumento = generateKey(20);
         
@@ -546,6 +544,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
             ps.setString(3, nomeFile);
             ps.setString(4, uuidUploaFile);
             ps.setString(5, uuidUploaFile);
+            ps.setString(6, "babel_" + idSottoDocumento);
             
             log.info("eseguo la query: " + ps.toString() + "...");
             

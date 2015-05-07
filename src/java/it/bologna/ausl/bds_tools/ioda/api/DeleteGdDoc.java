@@ -1,8 +1,17 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.ioda.Document;
+import it.bologna.ausl.bds_tools.ioda.GdDoc;
+import it.bologna.ausl.bds_tools.ioda.IodaRequest;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaDocumentException;
+import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaFileException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -10,12 +19,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
-import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaFileException;
-import javax.servlet.annotation.MultipartConfig;
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,16 +31,8 @@ import org.apache.logging.log4j.Logger;
  *
  * @author gdm
  */
-@MultipartConfig(
-            fileSizeThreshold   = 1024 * 1024 * 10,  // 10 MB
-//            maxFileSize         = 1024 * 1024 * 10, // 10 MB
-//            maxRequestSize      = 1024 * 1024 * 15, // 15 MB
-            location            = ""
-)
-public class InsertGdDoc extends HttpServlet {
- 
-private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
-
+public class DeleteGdDoc extends HttpServlet {
+private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -42,8 +42,9 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {       
-    request.setCharacterEncoding("utf-8");
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+        request.setCharacterEncoding("utf-8");
     // configuro il logger per la console
 //    BasicConfigurator.configure();
     log.info("--------------------------------");
@@ -54,19 +55,32 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
     PreparedStatement ps = null;
         try { 
             // leggo i parametri dalla richiesta
-            
+            ServletInputStream requestIs = null;
+            IodaRequest iodaReq;
+            try {
+                requestIs = request.getInputStream();
+                if (requestIs == null) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
+                    return;
+                }
+                iodaReq = IodaRequest.parse(request.getInputStream());
+            }
+            finally {
+                IOUtils.closeQuietly(requestIs);
+            }
+
             // dati per l'autenticazione
-            String idapplicazione = UtilityFunctions.getMultipartStringParam(request, "idapplicazione");
+            String idapplicazione = iodaReq.getIdApplicazione();
             if (idapplicazione == null) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"idapplicazione\" mancante");
                 return;
             }
-            String tokenapplicazione = UtilityFunctions.getMultipartStringParam(request, "tokenapplicazione");
+            String tokenapplicazione = iodaReq.getTokenApplicazione();
             if (tokenapplicazione == null) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"tokenapplicazione\" mancante");
                 return;
             }
-            
+
             // ottengo una connessione al db
             try {
                 dbConn = UtilityFunctions.getDBConnection();
@@ -87,9 +101,19 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                 }
                 return;
             }
+
+            GdDoc gdDoc;
+            try {
+                gdDoc = iodaReq.getGdDoc(Document.DocumentOperationType.DELETE);
+            }
+            catch (IodaDocumentException ex) {
+                log.error(ex);
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
+                return;
+            }
             
             try {
-                iodaUtilities = new IodaUtilities(getServletContext(), request, Document.DocumentOperationType.INSERT, idapplicazione);
+                iodaUtilities = new IodaUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, idapplicazione);
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);
@@ -99,23 +123,14 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
 
             try {
                 dbConn.setAutoCommit(false);
-                
-                // inserimento GdDoc con fascicolazione e sottodocumenti
-                iodaUtilities.insertGdDoc(dbConn, ps);
-                
+                iodaUtilities.deleteGdDoc(dbConn, ps);
                 dbConn.commit();
             }
-            catch (IodaFileException ex) {
+            catch (IodaDocumentException ex) {
                 log.error(ex);
                 dbConn.rollback();
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
-            }
-            catch (Exception ex) {
-                log.error(ex);
-                dbConn.rollback();
-                iodaUtilities.deleteAllMongoFileUploaded();
-                throw ex;
             }
             finally {
                 if (ps != null)
@@ -127,28 +142,19 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
             throw new ServletException(ex);
         }
         
+        
         response.setContentType("text/html;charset=UTF-8");
-        PrintWriter out = response.getWriter();
-        try {
+        try (PrintWriter out = response.getWriter()) {
             /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet InsertGdDoc</title>");            
+            out.println("<title>Servlet DeleteGdDoc</title>");            
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet InsertGdDoc at " + request.getContextPath() + "</h1>");
+            out.println("<h1>Servlet DeleteGdDoc at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
-        } finally {
-            out.close();
-        }
-        try {
-            log.info("converting pdf...");
-            iodaUtilities.convertPdf();
-        }
-        catch (Exception ex) {
-            log.error(ex);
         }
     }
 
@@ -175,7 +181,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      */
-@Override
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
@@ -188,7 +194,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
      */
     @Override
     public String getServletInfo() {
-        return "Inserisce un Documento in GEDI";
+        return "Short description";
     }// </editor-fold>
 
 }

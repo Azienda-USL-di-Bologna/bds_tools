@@ -49,9 +49,6 @@ public class Fascicolo {
         else if (tipoOperazioneGdDocContenitore == Document.DocumentOperationType.INSERT && getTipoOperazione() != Document.DocumentOperationType.INSERT) {
              throw new IodaDocumentException("tipoOperazione del fascicolo: " + toString() + " errata. Se il Documento è in fase di inserimento tutti i fascicoli devono avere tipoOperazione: insert");
         }
-        else if (tipoOperazioneGdDocContenitore == Document.DocumentOperationType.DELETE && getTipoOperazione() != Document.DocumentOperationType.DELETE) {
-             throw new IodaDocumentException("tipoOperazione del fascicolo: " + toString() + " errata. Se il Documento è in fase di cancellazione tutti i fascicoli devono avere tipoOperazione: delete");
-        }
     }
 
     @Override

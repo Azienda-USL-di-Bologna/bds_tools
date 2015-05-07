@@ -42,7 +42,7 @@ public class Test {
          DateTime jodatime = DateTime.now();
         
         System.out.println(jodatime.toString());
-        GdDoc gddoc = new GdDoc("idGdDoc1", "tipoGdDoc", "nome", true,  jodatime,true, "PG", jodatime, "55", "sa", false, false, false);
+        GdDoc gddoc = new GdDoc("idGdDoc1", "tipoGdDoc", "nome", "gdm", "inserimento", true,  jodatime,true, "PG", jodatime, "55", "sa", false, false, false);
         
         List firmatari = new ArrayList();
         firmatari.add("firmatario");
@@ -92,18 +92,18 @@ public class Test {
         ls.add(sd);
         ls.add(sd2);
         
-        gddoc.setSottoDocumenti(ls);
+//        gddoc.setSottoDocumenti(ls);
         
         Fascicolo fasc = new Fascicolo("babel_EA3A8C9D-D7A9-0500-10A2-2B524AFEC63F", Document.DocumentOperationType.INSERT);
         ArrayList<Fascicolo> fascicoli = new ArrayList<Fascicolo>();
         fascicoli.add(fasc);
-        gddoc.setFascicoli(fascicoli);
+//        gddoc.setFascicoli(fascicoli);
 
 
-//        IodaRequest req = new IodaRequest("test", "test", gddoc);  
-        String json = gddoc.getJSONString();
+        IodaRequest req = new IodaRequest("test", "test", gddoc);  
+        String json = req.getJSONString();
         System.out.println(json);
-       System.exit(0);
+//       System.exit(0);
         IodaRequest reqParsata = IodaRequest.parse(json);
         System.out.println(reqParsata.getJSONString());
         
@@ -112,7 +112,7 @@ public class Test {
         
         Map<String, byte[]> params = new HashMap<String, byte[]>();
         params.put("dati", json.getBytes());
-        String res = UtilityFunctions.sendHttpMessage("http://localhost:8081/bds_tools/ioda/api/document/insert", null, null, params, "POST", "application/json");
+        String res = UtilityFunctions.sendHttpMessage("http://localhost:8082/bds_tools/ioda/api/document/delete", null, null, params, "POST", "application/json");
         System.out.println(res);
         System.exit(0);
        //String bao = "{\"idOggettoOrigine\":\"ciao\",\"tipoOggettoOrigine\":\"tipo\",\"nome\":\"nome\",\"record\":true,\"dataUltimaModifica\":\"2015-04-01T17:26:12\",\"visibile\":true,\"codice_registro\":\"PG\",\"dataRegistrazione\":\"2015-04-10T17:28:12+0200\",\"numeroRegistrazione\":\"55\",\"xmlSpecificoParer\":\"sa\",\"forzaConservazione\":false,\"forzaAccettazione\":false,\"forzaCollegamento\":false}";

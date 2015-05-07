@@ -16,6 +16,10 @@ import org.joda.time.DateTime;
  */
 public class GdDoc extends Document{
     private String nome; // obbligatorio, nella tabella nome_gddoc
+    
+    private String autoreModifica; // obbligatorio solo in caso di aggiornamento
+    private String descrizioneModifica; // obbligatorio solo in caso di aggiornamento
+    
     private boolean record = true; // opzionale, se non passato = true. Indica se è un record
     
     @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ssZ")
@@ -26,6 +30,7 @@ public class GdDoc extends Document{
     @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ssZ")
     private DateTime dataRegistrazione; // obbligatorio se record = true
     private String numeroRegistrazione; // obbligatorio se record = true
+    
     
     private String xmlSpecificoParer; // opzionale per versamento parer (se non passato il documento non viene versato. Il versamento avviene poi nel momento in cui il parametro viene passato)
     private boolean forzaConservazione = false; // opzionale per versamento parer, se non passato = false
@@ -38,10 +43,12 @@ public class GdDoc extends Document{
     public GdDoc() {
     }
   
-    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, boolean record, DateTime dataUltimaModifica, boolean visibile, String codiceRegistro, DateTime dataRegistrazione, String numeroRegistrazione, String xmlSpecificoParer, boolean forzaConservazione, boolean forzaAccettazione, boolean forzaCollegamento) {
+    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, String autoreModifica, String descrizioneModifica, boolean record, DateTime dataUltimaModifica, boolean visibile, String codiceRegistro, DateTime dataRegistrazione, String numeroRegistrazione, String xmlSpecificoParer, boolean forzaConservazione, boolean forzaAccettazione, boolean forzaCollegamento) {
         super.idOggettoOrigine = idOggettoOrigine;
         super.tipoOggettoOrigine = tipoOggettoOrigine;
         this.nome = nome;
+        this.autoreModifica = autoreModifica;
+        this.descrizioneModifica = descrizioneModifica;
         this.record = record;
         this.dataUltimaModifica = dataUltimaModifica;
         this.visibile = visibile;
@@ -54,17 +61,17 @@ public class GdDoc extends Document{
         this.forzaCollegamento = forzaCollegamento;
     }
 
-    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, boolean record, DateTime dataUltimaModifica, boolean visibile, String codiceRegistro, DateTime dataRegistrazione, String numeroRegistrazione) {
-        super.idOggettoOrigine = idOggettoOrigine;
-        super.tipoOggettoOrigine = tipoOggettoOrigine;
-        this.nome = nome;
-        this.record = record;
-        this.dataUltimaModifica = dataUltimaModifica;
-        this.visibile = visibile;
-        this.codiceRegistro = codiceRegistro;
-        this.dataRegistrazione = dataRegistrazione;
-        this.numeroRegistrazione = numeroRegistrazione;
-    }
+//    public GdDoc(String idOggettoOrigine, String tipoOggettoOrigine, String nome, boolean record, DateTime dataUltimaModifica, boolean visibile, String codiceRegistro, DateTime dataRegistrazione, String numeroRegistrazione) {
+//        super.idOggettoOrigine = idOggettoOrigine;
+//        super.tipoOggettoOrigine = tipoOggettoOrigine;
+//        this.nome = nome;
+//        this.record = record;
+//        this.dataUltimaModifica = dataUltimaModifica;
+//        this.visibile = visibile;
+//        this.codiceRegistro = codiceRegistro;
+//        this.dataRegistrazione = dataRegistrazione;
+//        this.numeroRegistrazione = numeroRegistrazione;
+//    }
 
     @JsonIgnore
     public static GdDoc getGdDoc(String gdDocJson, DocumentOperationType operationType) throws IodaDocumentException, IOException, IodaFileException{
@@ -101,6 +108,12 @@ public class GdDoc extends Document{
         else if (operationType == DocumentOperationType.INSERT && (getNome() == null || getNome().equals(""))) {
             throw new IodaDocumentException("nome mancante");
         }
+        else if (operationType == DocumentOperationType.UPDATE && (getAutoreModifica() == null || getAutoreModifica().equals(""))) {
+            throw new IodaDocumentException("autoreModifica mancante");
+        }
+        else if (operationType == DocumentOperationType.UPDATE && (getDescrizioneModifica() == null || getDescrizioneModifica().equals(""))) {
+            throw new IodaDocumentException("descrizioneModifica mancante");
+        }
         else if (operationType != DocumentOperationType.DELETE && isRecord()) {
             if (getCodiceRegistro() == null || getCodiceRegistro().equals(""))
                 throw new IodaDocumentException("codiceRegistro mancante. Questo campo è obbligatorio se il documento è un record");
@@ -113,16 +126,19 @@ public class GdDoc extends Document{
             throw new IodaDocumentException("fascicoli mancanti");
         }
         
-        // fascicoli
-        for (Fascicolo f : fascicoli) {
-            f.check(operationType);
-        }
-        
-        // sottodocumenti
-        if (sottoDocumenti != null && sottoDocumenti.size() > 0) {
-            // controllo sulla validità dei sottodocumenti
-            for (SottoDocumento sd : sottoDocumenti) {
-                sd.check(operationType);
+        if (operationType !=  DocumentOperationType.DELETE) {
+
+            // fascicoli
+            for (Fascicolo f : fascicoli) {
+                f.check(operationType);
+            }
+
+            // sottodocumenti
+            if (sottoDocumenti != null && sottoDocumenti.size() > 0) {
+                // controllo sulla validità dei sottodocumenti
+                for (SottoDocumento sd : sottoDocumenti) {
+                    sd.check(operationType);
+                }
             }
         }
     }
@@ -133,6 +149,22 @@ public class GdDoc extends Document{
 
     public void setNome(String nome) {
         this.nome = nome;
+    }
+
+    public String getAutoreModifica() {
+        return autoreModifica;
+    }
+
+    public void setAutoreModifica(String autoreModifica) {
+        this.autoreModifica = autoreModifica;
+    }
+
+    public String getDescrizioneModifica() {
+        return descrizioneModifica;
+    }
+
+    public void setDescrizioneModifica(String descrizioneModifica) {
+        this.descrizioneModifica = descrizioneModifica;
     }
 
     public boolean isRecord() {
