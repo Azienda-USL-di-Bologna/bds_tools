@@ -128,8 +128,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
         }
         
         response.setContentType("text/html;charset=UTF-8");
-        PrintWriter out = response.getWriter();
-        try {
+        try (PrintWriter out = response.getWriter()) {
             /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
@@ -140,8 +139,9 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
             out.println("<h1>Servlet InsertGdDoc at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
-        } finally {
-            out.close();
+        }
+        catch (Exception ex) {
+            log.error(ex);
         }
         try {
             log.info("converting pdf...");

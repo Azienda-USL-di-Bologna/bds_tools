@@ -1,33 +1,34 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
-
-import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
-import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
+import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequest;
-import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.mimetypeutility.Detector;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
 
 /**
  *
  * @author gdm
  */
-public class DeleteGdDoc extends HttpServlet {
-private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
+public class GetFascicolazioniDocumento extends HttpServlet {
+
+    private static final Logger log = LogManager.getLogger(GetFascicolazioniDocumento.class);
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -38,35 +39,25 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
      * @throws IOException if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        IodaRequest iodaReq;
+        Connection dbConn = null;
+        PreparedStatement ps = null;
+        Fascicolazioni fascicolazioni;
+        
+        try {
 
-        request.setCharacterEncoding("utf-8");
-    // configuro il logger per la console
-//    BasicConfigurator.configure();
-    log.info("--------------------------------");
-    log.info("Avvio servlet: " + getClass().getSimpleName());
-    log.info("--------------------------------");
-    IodaUtilities iodaUtilities;
-    Connection dbConn = null;
-    PreparedStatement ps = null;
-        try { 
-            // leggo i parametri dalla richiesta
-            ServletInputStream requestIs = null;
-            IodaRequest iodaReq = null;
-            try {
-                requestIs = request.getInputStream();
-                if (requestIs == null) {
+            try (InputStream is = request.getInputStream()) {
+                if (is == null) {
                     response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
                     return;
                 }
-                iodaReq = IodaRequest.parse(request.getInputStream());
+                iodaReq = IodaRequest.parse(is);
             }
             catch (Exception ex) {
+                log.error("formato json della richiesta errato: " + ex.getMessage());
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());
+                return;
             }
-            finally {
-                IOUtils.closeQuietly(requestIs);
-            }
-
             // dati per l'autenticazione
             String idapplicazione = iodaReq.getIdApplicazione();
             if (idapplicazione == null) {
@@ -82,9 +73,8 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
             // ottengo una connessione al db
             try {
                 dbConn = UtilityFunctions.getDBConnection();
-            }
-            catch (SQLException sQLException) {
-                String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();    
+            } catch (SQLException sQLException) {
+                String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();
                 log.error(message);
                 throw new ServletException(message);
             }
@@ -94,65 +84,22 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 try {
                     dbConn.close();
-                }
-                catch (Exception ex) {
+                } catch (Exception ex) {
                 }
                 return;
             }
 
-            GdDoc gdDoc;
-            try {
-                gdDoc = iodaReq.getGdDoc(Document.DocumentOperationType.DELETE);
-            }
-            catch (IodaDocumentException ex) {
-                log.error(ex);
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
-                return;
-            }
-            
-            try {
-                iodaUtilities = new IodaUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, idapplicazione);
-            }
-            catch (IodaDocumentException ex) {
-                log.error(ex);
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
-                return;
-            }
-
-            try {
-                dbConn.setAutoCommit(false);
-                iodaUtilities.deleteGdDoc(dbConn, ps);
-                dbConn.commit();
-            }
-            catch (IodaDocumentException ex) {
-                log.error(ex);
-                dbConn.rollback();
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
-                return;
-            }
-            finally {
-                if (ps != null)
-                    ps.close();
-                dbConn.close();
-            }
-        }
-        catch (Exception ex) {
+            fascicolazioni = new Fascicolazioni("test", "test");
+            ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");
+            Fascicolazione fascicolazione = new Fascicolazione("codice", "nome", "g.demarco", "Giuseppe De Marco", DateTime.now(), false, DateTime.now(), null, null, classificazione);
+            fascicolazioni.addFascicolazione(fascicolazione);
+        } catch (Exception ex) {
             throw new ServletException(ex);
         }
-        
-        
-        response.setContentType("text/html;charset=UTF-8");
+
+        response.setContentType(Detector.MEDIA_TYPE_APPLICATION_JSON.toString());
         try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet DeleteGdDoc</title>");            
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet DeleteGdDoc at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
+            out.print(fascicolazioni.getJSONString());
         }
     }
 
