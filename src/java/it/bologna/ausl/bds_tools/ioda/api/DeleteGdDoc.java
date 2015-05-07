@@ -6,13 +6,13 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
-import it.bologna.ausl.bds_tools.ioda.Document;
-import it.bologna.ausl.bds_tools.ioda.GdDoc;
-import it.bologna.ausl.bds_tools.ioda.IodaRequest;
+
 import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
-import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaDocumentException;
-import it.bologna.ausl.bds_tools.ioda.utils.exceptions.IodaFileException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import it.bologna.ausl.iodaobjectlibrary.Document;
+import it.bologna.ausl.iodaobjectlibrary.GdDoc;
+import it.bologna.ausl.iodaobjectlibrary.IodaRequest;
+import it.bologna.ausl.iodaoblectlibrary.exceptions.IodaDocumentException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
