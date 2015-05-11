@@ -2,7 +2,7 @@ package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
 
-import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
@@ -45,7 +45,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
     log.info("--------------------------------");
     log.info("Avvio servlet: " + getClass().getSimpleName());
     log.info("--------------------------------");
-    IodaUtilities iodaUtilities;
+    IodaDocumentUtilities iodaUtilities;
     Connection dbConn = null;
     PreparedStatement ps = null;
         try { 
@@ -111,7 +111,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
             }
             
             try {
-                iodaUtilities = new IodaUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, idapplicazione);
+                iodaUtilities = new IodaDocumentUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, idapplicazione);
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);

@@ -11,7 +11,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaFileException;
@@ -49,7 +49,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
     log.info("--------------------------------");
     log.info("Avvio servlet: " + getClass().getSimpleName());
     log.info("--------------------------------");
-    IodaUtilities iodaUtilities;
+    IodaDocumentUtilities iodaUtilities;
     Connection dbConn = null;
     PreparedStatement ps = null;
         try { 
@@ -89,7 +89,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
             }
             
             try {
-                iodaUtilities = new IodaUtilities(getServletContext(), request, Document.DocumentOperationType.INSERT, idapplicazione);
+                iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.INSERT, idapplicazione);
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);

@@ -6,6 +6,7 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequest;
+import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.mimetypeutility.Detector;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +43,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
         IodaRequest iodaReq;
         Connection dbConn = null;
         PreparedStatement ps = null;
-        Fascicolazioni fascicolazioni;
+        Fascicolazioni fascicolazioni = null;
         
         try {
 
@@ -51,11 +52,12 @@ public class GetFascicolazioniDocumento extends HttpServlet {
                     response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
                     return;
                 }
+//                log.debug(UtilityFunctions.inputStreamToString(is));
                 iodaReq = IodaRequest.parse(is);
             }
             catch (Exception ex) {
-                log.error("formato json della richiesta errato: " + ex.getMessage());
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());
+                log.error("formato json della richiesta errato: " + ex);
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex);
                 return;
             }
             // dati per l'autenticazione
@@ -74,7 +76,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
             try {
                 dbConn = UtilityFunctions.getDBConnection();
             } catch (SQLException sQLException) {
-                String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();
+                String message = "Problemi nella connesione al Database. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();
                 log.error(message);
                 throw new ServletException(message);
             }
@@ -89,10 +91,29 @@ public class GetFascicolazioniDocumento extends HttpServlet {
                 return;
             }
 
-            fascicolazioni = new Fascicolazioni("test", "test");
-            ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");
-            Fascicolazione fascicolazione = new Fascicolazione("codice", "nome", "g.demarco", "Giuseppe De Marco", DateTime.now(), false, DateTime.now(), null, null, classificazione);
-            fascicolazioni.addFascicolazione(fascicolazione);
+            try{
+                SimpleDocument sd = (SimpleDocument) iodaReq.getDocument();
+
+                fascicolazioni = new Fascicolazioni(sd.getIdOggettoOrigine(), sd.getTipoOggettoOrigine());
+                
+                
+                
+                
+//                fascicolazioni = new Fascicolazioni("test", "test");
+//                ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");
+//                Fascicolazione fascicolazione = new Fascicolazione("codice", "nome", "g.demarco", "Giuseppe De Marco", DateTime.now(), false, DateTime.now(), null, null, classificazione);
+//                fascicolazioni.addFascicolazione(fascicolazione);
+            }
+            catch(Exception ex){
+                log.error(ex);
+            }
+            finally{
+                if (ps != null)
+                    ps.close();
+                dbConn.close();
+            }
+            
+           
         } catch (Exception ex) {
             throw new ServletException(ex);
         }

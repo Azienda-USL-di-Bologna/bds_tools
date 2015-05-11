@@ -47,8 +47,8 @@ import org.json.simple.JSONValue;
  *
  * @author gdm
  */
-public class IodaUtilities {
-private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(IodaUtilities.class);
+public class IodaDocumentUtilities {
+private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(IodaDocumentUtilities.class);
     
 public static final String INDE_DOCUMENT_ID_PARAM_NAME = "document_id";
 public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
@@ -72,7 +72,7 @@ private Detector detector;
 private final List<SottoDocumento> toConvert = new ArrayList<SottoDocumento>();
 private final List<String> uploadedUuids = new ArrayList<String>();
 
-    private IodaUtilities(ServletContext context, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    private IodaDocumentUtilities(ServletContext context, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this.gdDocTable = context.getInitParameter("GdDocsTableName");
         String mongoUri = ApplicationParams.getMongoUri();
         this.mongo = new MongoWrapper(mongoUri);
@@ -88,7 +88,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         }
     }
 
-    public IodaUtilities(ServletContext context, HttpServletRequest request, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    public IodaDocumentUtilities(ServletContext context, HttpServletRequest request, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this(context, operation, idApplicazione);
         this.request = request;
         InputStream gdDocIs = null;
@@ -112,7 +112,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         }
     }
 
-    public IodaUtilities(ServletContext context, GdDoc gdDoc, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    public IodaDocumentUtilities(ServletContext context, GdDoc gdDoc, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this(context, operation, idApplicazione);
         this.gdDoc = gdDoc;
         if (operation != Document.DocumentOperationType.DELETE) {
@@ -203,8 +203,8 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
 
-        String idGdDoc = (String) gdDocIndeId.get(IodaUtilities.INDE_DOCUMENT_ID_PARAM_NAME);
-        String guidGdDoc = (String) gdDocIndeId.get(IodaUtilities.INDE_DOCUMENT_GUID_PARAM_NAME);
+        String idGdDoc = (String) gdDocIndeId.get(IodaDocumentUtilities.INDE_DOCUMENT_ID_PARAM_NAME);
+        String guidGdDoc = (String) gdDocIndeId.get(IodaDocumentUtilities.INDE_DOCUMENT_GUID_PARAM_NAME);
 
         ps.setString(index++, idGdDoc);
         ps.setString(index++, gdDoc.getNome());
