@@ -61,9 +61,9 @@ public class IodaFascicoliUtilities {
         ArrayList<String> idFascicoli = this.getIdFascicoli(dbConn, ps);
         
         // per ogni fascicolo calcolo la sua classificazione
-        for(int i = 0; i < idFascicoli.size(); i++){
-            ClassificazioneFascicolo classificazioneFascicolo = this.getClassificazioneFascicolo(dbConn, ps, idFascicoli.get(i));
-            Fascicolazione fascicolazione = getFascicolazione(dbConn, ps, idFascicoli.get(i), classificazioneFascicolo);
+        for (String idFascicolo : idFascicoli) {
+            ClassificazioneFascicolo classificazioneFascicolo = this.getClassificazioneFascicolo(dbConn, ps, idFascicolo);
+            Fascicolazione fascicolazione = getFascicolazione(dbConn, ps, idFascicolo, classificazioneFascicolo);
             fascicolazioni.addFascicolazione(fascicolazione);
         }
         return fascicolazioni;
@@ -141,7 +141,7 @@ public class IodaFascicoliUtilities {
         log.debug("eseguo la query: " + ps.toString() + " ...");
         ResultSet res = ps.executeQuery();
         
-        String result = null;
+        String result;
         
         if (!res.next())
             throw new SQLException("titolo non trovato");
@@ -215,7 +215,7 @@ public class IodaFascicoliUtilities {
             // controllo che esista la data di eliminazione
             String controlloDataEliminazione = res.getString(index++);
             DateTime dataEliminazione = null;
-            if(controlloDataEliminazione != null && !controlloDataEliminazione.equals(res))
+            if(controlloDataEliminazione != null && !controlloDataEliminazione.equals(""))
                 dataEliminazione = DateTime.parse(res.getString(index++), formatter);
             
             
@@ -223,7 +223,7 @@ public class IodaFascicoliUtilities {
             String idUtenteEliminatore = res.getString(index++);
             String descrizioneEliminatore = null;
             boolean eliminato = false;
-            if(idUtenteEliminatore != null && !idUtenteEliminatore.equals(res)){
+            if(idUtenteEliminatore != null && !idUtenteEliminatore.equals("")){
                 eliminato = true;
                 descrizioneEliminatore = this.getNomeCognome(dbConn, ps, idUtenteEliminatore);
             }

@@ -9,7 +9,6 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequest;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
-import it.bologna.ausl.mongowrapper.MongoWrapperException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
