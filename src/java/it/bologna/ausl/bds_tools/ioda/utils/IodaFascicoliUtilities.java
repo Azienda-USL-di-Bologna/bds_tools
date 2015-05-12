@@ -150,7 +150,7 @@ public class IodaFascicoliUtilities {
             
             classificazioneFascicolo = new ClassificazioneFascicolo();
             
-            // calcolo la gerarchia
+            // calcolo la gerarchia e setta il corrispettivo nome
             String[] parts = result.split("-");
             int dim = parts.length;
             
