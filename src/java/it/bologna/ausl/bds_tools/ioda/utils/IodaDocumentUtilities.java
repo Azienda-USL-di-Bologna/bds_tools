@@ -66,12 +66,12 @@ private String fascicoliGdDocTable;
 private GdDoc gdDoc;
 private JSONArray indeId;
 private int indeIdIndex;
-private JSONObject gdDocIndeId;
 private Detector detector;
 
 
 private final List<SottoDocumento> toConvert = new ArrayList<SottoDocumento>();
 private final List<String> uploadedUuids = new ArrayList<String>();
+private final List<String> uuidsToDelete = new ArrayList<String>();
 
     private IodaDocumentUtilities(ServletContext context, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this.gdDocTable = context.getInitParameter("GdDocsTableName");
@@ -111,7 +111,11 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         }
         if (operation != Document.DocumentOperationType.DELETE) {
             getIndeId();
-            this.gdDocIndeId = getNextIndeId();
+            if (operation == Document.DocumentOperationType.INSERT) {
+                JSONObject nextIndeId = getNextIndeId();
+                this.gdDoc.setId((String) nextIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME));
+                this.gdDoc.setGuid((String) nextIndeId.get(INDE_DOCUMENT_GUID_PARAM_NAME));
+            }
         }
     }
 
@@ -122,7 +126,11 @@ private final List<String> uploadedUuids = new ArrayList<String>();
 
         if (operation != Document.DocumentOperationType.DELETE) {
             getIndeId();
-            this.gdDocIndeId = getNextIndeId();
+            if (operation == Document.DocumentOperationType.INSERT) {
+                JSONObject nextIndeId = getNextIndeId();
+                this.gdDoc.setId((String) nextIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME));
+                this.gdDoc.setGuid((String) nextIndeId.get(INDE_DOCUMENT_GUID_PARAM_NAME));
+            }
         }
     }
 
@@ -136,9 +144,8 @@ private final List<String> uploadedUuids = new ArrayList<String>();
     }
     
     public String getMongoPath() {
-        String guidGdDoc = (String) gdDocIndeId.get(INDE_DOCUMENT_GUID_PARAM_NAME);
-        // mongopath: nome[_numeroRegistrazione]_guidGdDoc
-        return mongoParentPath + "/" + gdDoc.getNome() + (gdDoc.getNumeroRegistrazione() != null ? "_" + gdDoc.getNumeroRegistrazione() : "") + "_" + guidGdDoc;
+        // mongopath: tipoOggettoOrigine_idOggettoOrigine
+        return mongoParentPath + "/" + gdDoc.getIdOggettoOrigine() + "_" + gdDoc.getTipoOggettoOrigine();
     }
 
     public void insertInFascicolo(Connection dbConn, PreparedStatement ps, Fascicolo fascicolo) throws SQLException {
@@ -147,8 +154,6 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         JSONObject newIds = getNextIndeId();
         String idFascicoloGdDoc = (String) newIds.get(INDE_DOCUMENT_ID_PARAM_NAME);
         String guidFascicoloGdDoc = (String) newIds.get(INDE_DOCUMENT_GUID_PARAM_NAME);
-
-        String idGdDoc = (String) gdDocIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME);
         
         String sqlText = 
                 "INSERT INTO " + getFascicoliGdDocTable() + "(" +
@@ -157,7 +162,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
         ps.setString(index++, idFascicoloGdDoc);
-        ps.setString(index++, idGdDoc);
+        ps.setString(index++, gdDoc.getId());
         ps.setString(index++, idFascicolo);
         ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
         
@@ -172,7 +177,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         String idFascicolo = getIdFascicolo(dbConn, ps, fascicolo);
 
         String sqlText = 
-                "DELETE FROM " + getFascicoliGdDocTable() +
+                "DELETE FROM " + getFascicoliGdDocTable() + " " +
                 "WHERE id_fascicolo = ? AND id_gddoc = (" +
                     "SELECT id_gddoc " +
                     "FROM " + getGdDocTable() + " " +
@@ -210,7 +215,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
     }
 
     public String insertGdDoc(Connection dbConn, PreparedStatement ps) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
-        
+
         String sqlText =
                         "INSERT INTO " + getGdDocTable() + "(" +
                         "id_gddoc, nome_gddoc, tipo_gddoc, " +
@@ -231,11 +236,8 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
 
-        String idGdDoc = (String) gdDocIndeId.get(IodaDocumentUtilities.INDE_DOCUMENT_ID_PARAM_NAME);
-        String guidGdDoc = (String) gdDocIndeId.get(IodaDocumentUtilities.INDE_DOCUMENT_GUID_PARAM_NAME);
-
         // id_gddoc
-        ps.setString(index++, idGdDoc);
+        ps.setString(index++, gdDoc.getId());
 
         // nome_gddoc
         ps.setString(index++, gdDoc.getNome());
@@ -254,7 +256,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
         
         // guid_gddoc
-        ps.setString(index++, guidGdDoc);
+        ps.setString(index++, gdDoc.getGuid());
         
         // codice_registro
         ps.setString(index++, gdDoc.getCodiceRegistro());
@@ -313,38 +315,27 @@ private final List<String> uploadedUuids = new ArrayList<String>();
                 insertSottoDocumento(dbConn, ps, sottoDocumento);
             }
         }
-        return idGdDoc;
+        return gdDoc.getId();
     }
     
     public void updateGdDoc(Connection dbConn, PreparedStatement ps) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
         
-        String sqlText = "UPDATE " + getGdDocTable() + "SET ";
-        if (gdDoc.getNome() != null)
-            sqlText += "nome_gddoc = coalesce(?, nome_gddoc), ";
-        if (gdDoc.isRecord() != null)
-            sqlText += "tipo_gddoc = coalesce(?, tipo_gddoc), ";
-        if (gdDoc.getDataUltimaModifica() != null)
-            sqlText += "data_ultima_modifica = coalesce(?, data_ultima_modifica), ";
-        if (gdDoc.isVisibile() != null)
-            sqlText += "stato_gd_doc = coalesce(?, stato_gd_doc), ";
-        if (gdDoc.getCodiceRegistro() != null)
-            sqlText += "codice_registro = coalesce(?, codice_registro), ";
-        if (gdDoc.getDataRegistrazione() != null)
-            sqlText += "data_registrazione = coalesce(?, data_registrazione), ";
-        if (gdDoc.getNumeroRegistrazione() != null)
-            sqlText += "numero_registrazione = coalesce(?, numero_registrazione), ";
-        if (gdDoc.getAnnoRegistrazione() != null)
-            sqlText += "anno_registrazione = coalesce(?, anno_registrazione), ";
-        if (gdDoc.getXmlSpecificoParer() != null)
-            sqlText += "xml_specifico_parer = coalesce(?, xml_specifico_parer), ";
-        if (gdDoc.isForzaConservazione() != null)
-            sqlText += "forza_conservazione = coalesce(?, forza_conservazione), ";
-        if (gdDoc.isForzaAccettazione() != null)
-            sqlText += "forza_accettazione = coalesce(?, forza_accettazione), ";
-        if (gdDoc.isForzaCollegamento() != null)
-            sqlText += "forza_collegamento = coalesce(?, forza_collegamento) ";
-
-        sqlText += "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
+        String sqlText = 
+                "UPDATE " + getGdDocTable() + " SET " +
+                "nome_gddoc = coalesce(?, nome_gddoc), " +
+                "tipo_gddoc = coalesce(?, tipo_gddoc), " +
+                "data_ultima_modifica = coalesce(?, data_ultima_modifica), " +
+                "stato_gd_doc = coalesce(?, stato_gd_doc), " +
+                "codice_registro = coalesce(?, codice_registro), " +
+                "data_registrazione = coalesce(?, data_registrazione), " +
+                "numero_registrazione = coalesce(?, numero_registrazione), " +
+                "anno_registrazione = coalesce(?, anno_registrazione), " +
+                "xml_specifico_parer = coalesce(?, xml_specifico_parer), " +
+                "forza_conservazione = coalesce(?, forza_conservazione), " +
+                "forza_accettazione = coalesce(?, forza_accettazione), " +
+                "forza_collegamento = coalesce(?, forza_collegamento) " +
+                "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
+                "returning id_gddoc, guid_gddoc";
         
         
         ps = dbConn.prepareStatement(sqlText);
@@ -421,9 +412,11 @@ private final List<String> uploadedUuids = new ArrayList<String>();
 
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
-        int result = ps.executeUpdate();
-        if (result <= 0)
+        ResultSet result = ps.executeQuery();
+        if (!result.next())
             throw new SQLException("Documento non trovato");
+        gdDoc.setId(result.getString(1));
+        gdDoc.setGuid(result.getString(2));
 
         // fascicoli
         List<Fascicolo> fascicoli = gdDoc.getFascicoli();
@@ -478,15 +471,15 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         while (res.next()) {
             String uuid = res.getString(1);
             if (uuid != null && !uuid.equals(""))
-                uploadedUuids.add(uuid);
+                uuidsToDelete.add(uuid);
 
             uuid = res.getString(2);
             if (uuid != null && !uuid.equals(""))
-                uploadedUuids.add(uuid);
+                uuidsToDelete.add(uuid);
 
             uuid = res.getString(3);
             if (uuid != null && !uuid.equals(""))
-                uploadedUuids.add(uuid);
+                uuidsToDelete.add(uuid);
         }
         
         sqlText =
@@ -499,8 +492,8 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         int ris = ps.executeUpdate();
 
         if (ris > 0)
-            if (uploadedUuids != null && !uploadedUuids.isEmpty())
-                deleteAllMongoFileUploaded();
+            if (uuidsToDelete != null && !uuidsToDelete.isEmpty())
+                deleteAllMongoFileToDelete();
     }   
     
     public void insertSottoDocumento(Connection dbConn, PreparedStatement ps, SottoDocumento sd) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
@@ -509,8 +502,6 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         JSONObject newIds = getNextIndeId();
         String idSottoDocumento = (String) newIds.get(INDE_DOCUMENT_ID_PARAM_NAME);
         String guidSottoDocumento = (String) newIds.get(INDE_DOCUMENT_GUID_PARAM_NAME);
-
-        String idGdDoc = (String) gdDocIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME);
 
         String mongoPath = getMongoPath();
 
@@ -536,7 +527,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
 
         ps.setString(index++, idSottoDocumento);
         ps.setString(index++, guidSottoDocumento);
-        ps.setString(index++, idGdDoc);
+        ps.setString(index++, gdDoc.getId());
         ps.setString(index++, sd.getNome());
 
         if (sd.getUuidMongoPdf() != null && !sd.getUuidMongoPdf().equals("")) {
@@ -639,21 +630,21 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         do {
             String uuid = res.getString(1);
             if (uuid != null && !uuid.equals(""))
-                uploadedUuids.add(uuid);
+                uuidsToDelete.add(uuid);
 
             uuid = res.getString(2);
             if (uuid != null && !uuid.equals(""))
-                uploadedUuids.add(uuid);
+                uuidsToDelete.add(uuid);
 
             uuid = res.getString(3);
             if (uuid != null && !uuid.equals(""))
-                uploadedUuids.add(uuid);
+                uuidsToDelete.add(uuid);
         }
         while (res.next());
         ps.close();
         
         sqlText = 
-                "DELETE FROM " + getSottoDocumentiTable() +
+                "DELETE FROM " + getSottoDocumentiTable() + " " +
                 "WHERE codice_sottodocumento = ?";
         ps = dbConn.prepareStatement(sqlText);
         ps.setString(1, sd.getCodiceSottoDocumento());
@@ -663,6 +654,9 @@ private final List<String> uploadedUuids = new ArrayList<String>();
         int result = ps.executeUpdate();
         if (result <= 0)
             throw new SQLException("SottoDocumento non trovato");
+        
+        if (uuidsToDelete != null && !uuidsToDelete.isEmpty())
+            deleteAllMongoFileToDelete();
     }
 
     private IodaFile uploadOnMongo(String filePartName, String mongoPath) throws IOException, IodaFileException, ServletException, SQLException, UnsupportedEncodingException, MimeTypeException {
@@ -700,6 +694,12 @@ private final List<String> uploadedUuids = new ArrayList<String>();
 
     public void deleteAllMongoFileUploaded() {
         for (String uuid : uploadedUuids) {
+            mongo.delete(uuid);
+        }
+    }
+
+    public void deleteAllMongoFileToDelete() {
+        for (String uuid : uuidsToDelete) {
             mongo.delete(uuid);
         }
     }
@@ -772,7 +772,7 @@ private final List<String> uploadedUuids = new ArrayList<String>();
 
                             ps.setString(1, convertedUuid);
                             ps.setInt(2, -1);
-                            ps.setString(3, idApplicazione + "_" + sd.getCodiceSottoDocumento());
+                            ps.setString(3, sd.getCodiceSottoDocumento());
                             
                             log.debug("eseguo la query: " + ps.toString() + "...");
                             int res = ps.executeUpdate();

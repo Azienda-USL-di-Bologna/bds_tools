@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -22,6 +23,12 @@ import org.apache.logging.log4j.Logger;
  *
  * @author gdm
  */
+@MultipartConfig(
+            fileSizeThreshold   = 1024 * 1024 * 10,  // 10 MB
+//            maxFileSize         = 1024 * 1024 * 10, // 10 MB
+//            maxRequestSize      = 1024 * 1024 * 15, // 15 MB
+            location            = ""
+)
 public class UpdateGdDoc extends HttpServlet {
 private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
 

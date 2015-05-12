@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
@@ -91,7 +92,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
             try {
                 iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.INSERT, idapplicazione);
             }
-            catch (IodaDocumentException ex) {
+            catch (IodaDocumentException | JsonMappingException ex) {
                 log.error(ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
