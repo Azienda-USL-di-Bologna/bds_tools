@@ -222,16 +222,14 @@ private final List<String> uuidsToDelete = new ArrayList<String>();
                         "data_ultima_modifica, stato_gd_doc, " +
                         "data_gddoc, guid_gddoc, codice_registro, " +
                         "data_registrazione, numero_registrazione, " +
-                        "anno_registrazione, xml_specifico_parer, " +
-                        "forza_conservazione, forza_accettazione, forza_collegamento, " +
+                        "anno_registrazione, " +
                         "id_oggetto_origine, tipo_oggetto_origine) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
                         "?, ?, ?, " +
                         "?, ?, " +
-                        "?, ?, " +
-                        "?, ?, ?, " +
+                        "?, " +
                         "?, ?)";
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
@@ -275,18 +273,18 @@ private final List<String> uuidsToDelete = new ArrayList<String>();
         }
         else
             ps.setNull(index++, Types.INTEGER);
-
-        // xml_specifico_parer
-        ps.setString(index++, gdDoc.getXmlSpecificoParer());
-
-        // forza_conservazione
-        ps.setInt(index++, gdDoc.isForzaConservazione() != null && gdDoc.isForzaConservazione() ? -1 : 0);
-        
-        // forza_accettazione
-        ps.setInt(index++, gdDoc.isForzaAccettazione() != null && gdDoc.isForzaAccettazione() ? -1 : 0);
-        
-        // forza_collegamento
-        ps.setInt(index++, gdDoc.isForzaCollegamento() != null && gdDoc.isForzaCollegamento() ? -1 : 0);
+//
+//        // xml_specifico_parer
+//        ps.setString(index++, gdDoc.getXmlSpecificoParer());
+//
+//        // forza_conservazione
+//        ps.setInt(index++, gdDoc.isForzaConservazione() != null && gdDoc.isForzaConservazione() ? -1 : 0);
+//        
+//        // forza_accettazione
+//        ps.setInt(index++, gdDoc.isForzaAccettazione() != null && gdDoc.isForzaAccettazione() ? -1 : 0);
+//        
+//        // forza_collegamento
+//        ps.setInt(index++, gdDoc.isForzaCollegamento() != null && gdDoc.isForzaCollegamento() ? -1 : 0);
 
         // id_oggetto_origine
         ps.setString(index++, gdDoc.getIdOggettoOrigine());
@@ -329,11 +327,7 @@ private final List<String> uuidsToDelete = new ArrayList<String>();
                 "codice_registro = coalesce(?, codice_registro), " +
                 "data_registrazione = coalesce(?, data_registrazione), " +
                 "numero_registrazione = coalesce(?, numero_registrazione), " +
-                "anno_registrazione = coalesce(?, anno_registrazione), " +
-                "xml_specifico_parer = coalesce(?, xml_specifico_parer), " +
-                "forza_conservazione = coalesce(?, forza_conservazione), " +
-                "forza_accettazione = coalesce(?, forza_accettazione), " +
-                "forza_collegamento = coalesce(?, forza_collegamento) " +
+                "anno_registrazione = coalesce(?, anno_registrazione) " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
         
@@ -383,26 +377,26 @@ private final List<String> uuidsToDelete = new ArrayList<String>();
         else
             ps.setNull(index++, Types.INTEGER);
 
-        // xml_specifico_parer
-        ps.setString(index++, gdDoc.getXmlSpecificoParer());
-
-        // forza_conservazione
-        if (gdDoc.isForzaConservazione() != null)
-            ps.setInt(index++, gdDoc.isForzaConservazione() ? -1 : 0);
-        else
-            ps.setNull(index++, Types.INTEGER);
-        
-        // forza_accettazione
-        if (gdDoc.isForzaAccettazione() != null)
-            ps.setInt(index++, gdDoc.isForzaAccettazione() ? -1 : 0);
-        else
-            ps.setNull(index++, Types.INTEGER);
-        
-        // forza_collegamento
-        if (gdDoc.isForzaCollegamento() != null)
-            ps.setInt(index++, gdDoc.isForzaCollegamento() ? -1 : 0);
-        else
-            ps.setNull(index++, Types.INTEGER);
+//        // xml_specifico_parer
+//        ps.setString(index++, gdDoc.getXmlSpecificoParer());
+//
+//        // forza_conservazione
+//        if (gdDoc.isForzaConservazione() != null)
+//            ps.setInt(index++, gdDoc.isForzaConservazione() ? -1 : 0);
+//        else
+//            ps.setNull(index++, Types.INTEGER);
+//        
+//        // forza_accettazione
+//        if (gdDoc.isForzaAccettazione() != null)
+//            ps.setInt(index++, gdDoc.isForzaAccettazione() ? -1 : 0);
+//        else
+//            ps.setNull(index++, Types.INTEGER);
+//        
+//        // forza_collegamento
+//        if (gdDoc.isForzaCollegamento() != null)
+//            ps.setInt(index++, gdDoc.isForzaCollegamento() ? -1 : 0);
+//        else
+//            ps.setNull(index++, Types.INTEGER);
         
         // id_oggetto_origine
         ps.setString(index++, gdDoc.getIdOggettoOrigine());
