@@ -45,14 +45,18 @@ import javax.sql.DataSource;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.tika.mime.MimeTypeException;
 
 public class UtilityFunctions {
 
-private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(UtilityFunctions.class);
-    
-    public static Connection getDBConnection() throws SQLException, NamingException {
-        Context initContext = new InitialContext();
+private static final Logger log = LogManager.getLogger(UtilityFunctions.class);
+
+private static Context initContext;
+
+    public synchronized static Connection getDBConnection() throws SQLException, NamingException {
+        if (initContext == null)
+            initContext = new InitialContext();
         Context envContext = (Context) initContext.lookup("java:/comp/env");
         DataSource ds = (DataSource) envContext.lookup("jdbc/argo");
         Connection conn = ds.getConnection();
