@@ -169,6 +169,14 @@
         <param-value>gd.fascicoli_gddocs</param-value>
     </context-param>
     <context-param>
+        <param-name>TitoliTableName</param-name>
+        <param-value>procton.titoli</param-value>
+    </context-param>
+    <context-param>
+        <param-name>UtentiTableName</param-name>
+        <param-value>procton.utenti</param-value>
+    </context-param>
+    <context-param>
         <param-name>FileSupportatiTableName</param-name>
         <param-value>bds_tools.file_supportati</param-value>
     </context-param>
