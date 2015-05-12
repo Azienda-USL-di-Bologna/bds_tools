@@ -33,7 +33,6 @@ public class IodaFascicoliUtilities {
     private String utentiTable;
     private String idApplicazione;
     private SimpleDocument sd;
-    
     HttpServletRequest request;
     
     private IodaFascicoliUtilities(ServletContext context, SimpleDocument sd, String idApplicazione) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
@@ -178,7 +177,7 @@ public class IodaFascicoliUtilities {
                 dim--;
             }  
         }
-         return classificazioneFascicolo;
+        return classificazioneFascicolo;
     }
     
     
@@ -216,9 +215,9 @@ public class IodaFascicoliUtilities {
             // controllo che esista la data di eliminazione
             String controlloDataEliminazione = res.getString(index++);
             DateTime dataEliminazione = null;
-            if(controlloDataEliminazione != null && !controlloDataEliminazione.equals(res)){
+            if(controlloDataEliminazione != null && !controlloDataEliminazione.equals(res))
                 dataEliminazione = DateTime.parse(res.getString(index++), formatter);
-            }
+            
             
             // controllo che esista idUtenteEliminatore
             String idUtenteEliminatore = res.getString(index++);
