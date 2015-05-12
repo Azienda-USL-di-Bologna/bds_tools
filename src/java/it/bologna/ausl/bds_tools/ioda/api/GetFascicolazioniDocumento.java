@@ -1,26 +1,28 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
+import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
-import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequest;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
+import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
+import it.bologna.ausl.mongowrapper.MongoWrapperException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.joda.time.DateTime;
 
 /**
  *
@@ -44,6 +46,8 @@ public class GetFascicolazioniDocumento extends HttpServlet {
         Connection dbConn = null;
         PreparedStatement ps = null;
         Fascicolazioni fascicolazioni = null;
+        
+        IodaFascicoliUtilities fascicoliUtilities;
         
         try {
 
@@ -93,18 +97,17 @@ public class GetFascicolazioniDocumento extends HttpServlet {
 
             try{
                 SimpleDocument sd = (SimpleDocument) iodaReq.getDocument();
-
-                fascicolazioni = new Fascicolazioni(sd.getIdOggettoOrigine(), sd.getTipoOggettoOrigine());
                 
+                fascicoliUtilities = new IodaFascicoliUtilities(getServletContext(), request, sd, idapplicazione);
                 
-                
-                
-//                fascicolazioni = new Fascicolazioni("test", "test");
-//                ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");
-//                Fascicolazione fascicolazione = new Fascicolazione("codice", "nome", "g.demarco", "Giuseppe De Marco", DateTime.now(), false, DateTime.now(), null, null, classificazione);
-//                fascicolazioni.addFascicolazione(fascicolazione);
+                fascicolazioni = fascicoliUtilities.getFascicolazioni(dbConn, ps);
+                  
+//              fascicolazioni = new Fascicolazioni("test", "test");
+//              ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");
+//              Fascicolazione fascicolazione = new Fascicolazione("codice", "nome", "g.demarco", "Giuseppe De Marco", DateTime.now(), false, DateTime.now(), null, null, classificazione);
+//              fascicolazioni.addFascicolazione(fascicolazione);
             }
-            catch(Exception ex){
+            catch(IOException | SendHttpMessageException | IodaDocumentException | SQLException ex){
                 log.error(ex);
             }
             finally{
@@ -114,7 +117,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
             }
             
            
-        } catch (Exception ex) {
+        } catch (IOException | NamingException | ServletException | SQLException ex) {
             throw new ServletException(ex);
         }
 
