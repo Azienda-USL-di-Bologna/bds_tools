@@ -69,9 +69,9 @@ private int indeIdIndex;
 private Detector detector;
 
 
-private final List<SottoDocumento> toConvert = new ArrayList<SottoDocumento>();
-private final List<String> uploadedUuids = new ArrayList<String>();
-private final List<String> uuidsToDelete = new ArrayList<String>();
+private final List<SottoDocumento> toConvert = new ArrayList<>();
+private final List<String> uploadedUuids = new ArrayList<>();
+private final List<String> uuidsToDelete = new ArrayList<>();
 
     private IodaDocumentUtilities(ServletContext context, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this.gdDocTable = context.getInitParameter("GdDocsTableName");
@@ -298,7 +298,7 @@ private final List<String> uuidsToDelete = new ArrayList<String>();
         if (result <= 0)
             throw new SQLException("Documento non inserito");
 
-        // inseririmento fascicoli
+        // inseririmento in fascicoli
         List<Fascicolo> fascicoli = gdDoc.getFascicoli();
         if (fascicoli != null && !fascicoli.isEmpty()) {
             for (Fascicolo fascicolo : fascicoli) {
@@ -687,9 +687,9 @@ private final List<String> uuidsToDelete = new ArrayList<String>();
     }
 
     public void deleteAllMongoFileUploaded() {
-        for (String uuid : uploadedUuids) {
+        uploadedUuids.stream().forEach((uuid) -> {
             mongo.delete(uuid);
-        }
+    });
     }
 
     public void deleteAllMongoFileToDelete() {
@@ -701,7 +701,7 @@ private final List<String> uuidsToDelete = new ArrayList<String>();
     private void getIndeId() throws IOException, MalformedURLException, SendHttpMessageException {
             
             // contruisco la mappa dei parametri per la servlet (va passato solo un parametro che è il numero di id da generare)
-            Map<String, byte[]> params = new HashMap<String, byte[]>();
+            Map<String, byte[]> params = new HashMap<>();
             
             // il numero di id è ottenuto dal numero dei SottoDocumenti + il GdDoc
             int idNumber = 1;
