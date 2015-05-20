@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.RequestException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
@@ -173,118 +174,112 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
 
        //Carico il file su Mongo
         try {
-            // dati per l'autenticazione
-            
-            String authenticationTable = getServletContext().getInitParameter("AuthenticationTable");
-
             dbConn = UtilityFunctions.getDBConnection();      
-                    
-            if (!UtilityFunctions.checkAuthentication(dbConn, authenticationTable, idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+
+            // controllo se l'applicazione è autorizzata
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
-                
-                if(createdFile != null )
-                    createdFile.delete();        
-
-                String message = "Accesso negato";
-                throw new RequestException(HttpServletResponse.SC_FORBIDDEN, message);
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
             }
-            else 
+                
+            currentDate = new Timestamp(System.currentTimeMillis());
+
+            GregorianCalendar calendar = new GregorianCalendar();
+            int year = calendar.get(GregorianCalendar.YEAR);
+            int month = calendar.get(GregorianCalendar.MONTH)+1;
+            int day = calendar.get(GregorianCalendar.DAY_OF_MONTH);
+            int hour = calendar.get(GregorianCalendar.HOUR_OF_DAY);
+            int minute = calendar.get(GregorianCalendar.MINUTE);
+            int second = calendar.get(GregorianCalendar.SECOND);
+            int millisecond = calendar.get(GregorianCalendar.MILLISECOND);
+
+            String prefixSeparator = "_";
+
+            String[] datiFascicolo = getNomeFascicolo(idFascicolo);
+            String nomeFascicolo = datiFascicolo[0];
+            if (nomeFascicolo == null || nomeFascicolo.equals("")) 
             {
-                
-                currentDate = new Timestamp(System.currentTimeMillis());
+                String message = "Fascicolo " + idFascicolo + " non trovato";
+                throw new RequestException(HttpServletResponse.SC_NOT_FOUND, message);
+            }
+            String annoFascicolo = datiFascicolo[2];
+            String pathMongoNumerazioneGerarchica = getGerarchiaFascicoli(datiFascicolo[1], annoFascicolo);
 
-                GregorianCalendar calendar = new GregorianCalendar();
-                int year = calendar.get(GregorianCalendar.YEAR);
-                int month = calendar.get(GregorianCalendar.MONTH)+1;
-                int day = calendar.get(GregorianCalendar.DAY_OF_MONTH);
-                int hour = calendar.get(GregorianCalendar.HOUR_OF_DAY);
-                int minute = calendar.get(GregorianCalendar.MINUTE);
-                int second = calendar.get(GregorianCalendar.SECOND);
-                int millisecond = calendar.get(GregorianCalendar.MILLISECOND);
-                              
-                String prefixSeparator = "_";
+            String fileName = UtilityFunctions.removeExtensionFromFileName(receivedFileName);
+            String fileExt = UtilityFunctions.getExtensionFromFileName(receivedFileName);
+            String endFileExt = "";
 
-                String[] datiFascicolo = getNomeFascicolo(idFascicolo);
-                String nomeFascicolo = datiFascicolo[0];
-                if (nomeFascicolo == null || nomeFascicolo.equals("")) 
-                {
-                    String message = "Fascicolo " + idFascicolo + " non trovato";
-                    throw new RequestException(HttpServletResponse.SC_NOT_FOUND, message);
-                }
-                String annoFascicolo = datiFascicolo[2];
-                String pathMongoNumerazioneGerarchica = getGerarchiaFascicoli(datiFascicolo[1], annoFascicolo);
+            // il nome del file sarà : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
+            if(fileExt != null)
+                endFileExt="." + fileExt;
 
-                String fileName = UtilityFunctions.removeExtensionFromFileName(receivedFileName);
-                String fileExt = UtilityFunctions.getExtensionFromFileName(receivedFileName);
-                String endFileExt = "";
-                
-                // il nome del file sarà : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
-                if(fileExt != null)
-                    endFileExt="." + fileExt;
-                                   
-                String serverId = UtilityFunctions.getPubblicParameter(dbConn, getServletContext().getInitParameter("ParametersTableName"), "serverIdentifier");
-                String mongoUri = getServletContext().getInitParameter("mongo" + serverId);
-                mongo = new MongoWrapper(mongoUri);
+            String serverId = UtilityFunctions.getPubblicParameter(dbConn, getServletContext().getInitParameter("ParametersTableName"), "serverIdentifier");
+            String mongoUri = getServletContext().getInitParameter("mongo" + serverId);
+            mongo = new MongoWrapper(mongoUri);
 
-                //Creo la cartella dove inserire i file su mongo-- è quella del fascicolo passato
-                String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + "/" +pathMongoNumerazioneGerarchica;
-                
-                boolean exists = true;
-                                
-                while(exists)
-                {
-                    //fileNameToCreate = year + prefixSeparator + nomeFascicolo + prefixSeparator + fileName + prefixSeparator + generateKey(10) + endFileExt;
-                    fileNameToCreate =  fileName + getSuffissoNomeFile(idapplicazione) + prefixSeparator + year + prefixSeparator + mettiZeroDavanti(month) + prefixSeparator + mettiZeroDavanti(day) 
-                            + prefixSeparator + mettiZeroDavanti(hour) + prefixSeparator + mettiZeroDavanti(minute) + prefixSeparator + mettiZeroDavanti(second) 
-                            + prefixSeparator + mettiZeroDavanti(millisecond) + endFileExt;
-                    
-                    exists = mongo.existsObjectbyPath(cartellaFascicolo + "/" + fileNameToCreate);                          
-                }
-                
-                File newFile = new File(createdFile.getParentFile(), fileNameToCreate);
+            //Creo la cartella dove inserire i file su mongo-- è quella del fascicolo passato
+            String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + "/" +pathMongoNumerazioneGerarchica;
+
+            boolean exists = true;
+
+            while(exists)
+            {
+                //fileNameToCreate = year + prefixSeparator + nomeFascicolo + prefixSeparator + fileName + prefixSeparator + generateKey(10) + endFileExt;
+                fileNameToCreate =  fileName + getSuffissoNomeFile(idapplicazione) + prefixSeparator + year + prefixSeparator + mettiZeroDavanti(month) + prefixSeparator + mettiZeroDavanti(day) 
+                        + prefixSeparator + mettiZeroDavanti(hour) + prefixSeparator + mettiZeroDavanti(minute) + prefixSeparator + mettiZeroDavanti(second) 
+                        + prefixSeparator + mettiZeroDavanti(millisecond) + endFileExt;
+
+                exists = mongo.existsObjectbyPath(cartellaFascicolo + "/" + fileNameToCreate);                          
+            }
+
+            File newFile = new File(createdFile.getParentFile(), fileNameToCreate);
 //                log.info(createdFile.getAbsolutePath());
 //                log.info(newFile.getAbsolutePath());
-                if(createdFile.renameTo(newFile))
-                {
-                    createdFile= newFile;
-                }
-                else
-                {
-                    throw new ServletException("Errore nella rinominazione del file");
-                }
-               
-                              
-                //**************************************
-                //PARTE DI CARICAMENTO SU MONGO
-                //**************************************
-                
-                uuidUploadedFile = mongo.put(createdFile, createdFile.getName(), cartellaFascicolo, true);
-                log.info("cartella del fascicolo su mongo: " + cartellaFascicolo);
-                
-                //Disabilito l'autoCommit per fare il rollback in caso fallisca l'inserimento
-                dbConn.setAutoCommit(false);
-                
-                //Eseguo gli inserimenti
-                boolean okInsertGddoc = insertGdDoc(fileNameToCreate, uuidUploadedFile);
-                boolean okInsertSottoDoc = insertSottoDocumento(idGdDocInserito, fileNameToCreate, uuidUploadedFile);
-                boolean okInsertCross = insertFascicoliGddocCross(idGdDocInserito, idFascicolo);
-               
-                              
-                if(okInsertCross == true && okInsertGddoc == true && okInsertSottoDoc == true)
-                {
-                    dbConn.commit();
-                }
-                else
-                {
-                    dbConn.rollback();
-                    throw new ServletException("Errore nell'inserimento dei dati nella tabella di cross fascicoli_gddocs");
-                }
+            if(createdFile.renameTo(newFile))
+            {
+                createdFile= newFile;
             }
+            else
+            {
+                throw new ServletException("Errore nella rinominazione del file");
+            }
+
+
+            //**************************************
+            //PARTE DI CARICAMENTO SU MONGO
+            //**************************************
+
+            uuidUploadedFile = mongo.put(createdFile, createdFile.getName(), cartellaFascicolo, true);
+            log.info("cartella del fascicolo su mongo: " + cartellaFascicolo);
+
+            //Disabilito l'autoCommit per fare il rollback in caso fallisca l'inserimento
+            dbConn.setAutoCommit(false);
+
+            //Eseguo gli inserimenti
+            boolean okInsertGddoc = insertGdDoc(fileNameToCreate, uuidUploadedFile);
+            boolean okInsertSottoDoc = insertSottoDocumento(idGdDocInserito, fileNameToCreate, uuidUploadedFile);
+            boolean okInsertCross = insertFascicoliGddocCross(idGdDocInserito, idFascicolo);
+
+
+            if(okInsertCross == true && okInsertGddoc == true && okInsertSottoDoc == true)
+            {
+                dbConn.commit();
+            }
+            else
+            {
+                dbConn.rollback();
+                throw new ServletException("Errore nell'inserimento dei dati nella tabella di cross fascicoli_gddocs");
+            }
+            
         }
         catch (Exception ex) {
             log.fatal("Errore", ex);

@@ -55,7 +55,7 @@ public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
 private static final String GENERATE_INDE_NUMBER_PARAM_NAME = "generateidnumber";
 
 HttpServletRequest request;
-private String idApplicazione;
+private String prefixIds; // prefisso da anteporre agli id dei documenti che si inseriscono o che si ricercano (GdDoc, SottoDocumenti)
 private MongoWrapper mongo;
 private String mongoParentPath;
 private String getIndeIdServletUrl;
@@ -73,14 +73,14 @@ private final List<SottoDocumento> toConvert = new ArrayList<>();
 private final List<String> uploadedUuids = new ArrayList<>();
 private final List<String> uuidsToDelete = new ArrayList<>();
 
-    private IodaDocumentUtilities(ServletContext context, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    private IodaDocumentUtilities(ServletContext context, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this.gdDocTable = context.getInitParameter("GdDocsTableName");
         String mongoUri = ApplicationParams.getMongoUri();
         this.mongo = new MongoWrapper(mongoUri);
         this.sottoDocumentiTable = context.getInitParameter("SottoDocumentiTableName");
 
         if (operation != Document.DocumentOperationType.DELETE) {
-            this.idApplicazione = idApplicazione;
+            this.prefixIds = prefixIds;
             this.detector = new Detector();
             this.indeIdIndex = 0; 
             this.mongoParentPath = context.getInitParameter("UploadGdDocMongoPath");
@@ -90,8 +90,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
-    public IodaDocumentUtilities(ServletContext context, HttpServletRequest request, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, operation, idApplicazione);
+    public IodaDocumentUtilities(ServletContext context, HttpServletRequest request, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(context, operation, prefixIds);
         this.request = request;
         InputStream gdDocIs = null;
         try {
@@ -104,7 +104,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
  
         try {
             this.gdDoc = GdDoc.getGdDoc(gdDocIs, operation);   
-            this.gdDoc.setPrefissoApplicazioneOrigine(this.idApplicazione);
+            this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
         }
         finally {
             IOUtils.closeQuietly(gdDocIs);
@@ -119,10 +119,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
-    public IodaDocumentUtilities(ServletContext context, GdDoc gdDoc, Document.DocumentOperationType operation, String idApplicazione) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, operation, idApplicazione);
+    public IodaDocumentUtilities(ServletContext context, GdDoc gdDoc, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(context, operation, prefixIds);
         this.gdDoc = gdDoc;
-        this.gdDoc.setPrefissoApplicazioneOrigine(this.idApplicazione);
+        this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
 
         if (operation != Document.DocumentOperationType.DELETE) {
             getIndeId();
@@ -492,7 +492,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     
     public void insertSottoDocumento(Connection dbConn, PreparedStatement ps, SottoDocumento sd) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
 
-        sd.setPrefissoApplicazioneOrigine(idApplicazione);
+        sd.setPrefissoApplicazioneOrigine(prefixIds);
         JSONObject newIds = getNextIndeId();
         String idSottoDocumento = (String) newIds.get(INDE_DOCUMENT_ID_PARAM_NAME);
         String guidSottoDocumento = (String) newIds.get(INDE_DOCUMENT_GUID_PARAM_NAME);
@@ -608,7 +608,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     }
     
     public void deleteSottoDocumento(Connection dbConn, PreparedStatement ps, SottoDocumento sd) throws SQLException {
-        sd.setPrefissoApplicazioneOrigine(idApplicazione);
+        sd.setPrefissoApplicazioneOrigine(prefixIds);
 
         String sqlText = 
                 "SELECT uuid_mongo_originale, uuid_mongo_pdf, uuid_mongo_firmato " +

@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.sql.Connection;
@@ -43,16 +44,16 @@ public class GetFascicoloSpecialeId extends HttpServlet {
         log.info("--------------------------------");
         
         String idapplicazione = null;
-        String tokenapplicazione = null;
+        String tokenapplicazione;
         Connection dbConn = null;
-        PreparedStatement ps = null;
+        PreparedStatement ps;
         String annoString = null;
         int anno = 0;
         //Tipo fascicolo corrisponde al nome del sub-fascicolo speciale: "Registro", "Determine", "Delibere"
         
         String nomeFascicolo = null;
         String id_fascicolo= null;
-        
+
         try
         {
              // dati per l'autenticazione
@@ -82,28 +83,26 @@ public class GetFascicoloSpecialeId extends HttpServlet {
                 throw new ServletException(message);
             }
             
-            String authenticationTable = getServletContext().getInitParameter("AuthenticationTable");
             String fascicoliTable = getServletContext().getInitParameter("FascicoliTableName");
             
-             if(authenticationTable == null || authenticationTable.equals("")) {
-                String message = "Manca il nome della tabella per l'autenticazione. Indicarlo nel file \"web.xml\"";
-                log.error(message);
-                throw new ServletException(message);
-            }
-            else if(fascicoliTable == null || fascicoliTable.equals("")) {
+            if(fascicoliTable == null || fascicoliTable.equals("")) {
                 String message = "Manca il nome della tabella fascicoli. Indicarlo nel file \"web.xml\"";
                 log.error(message);
                 throw new ServletException(message);
             }
              
             // controllo se l'applicazione è autorizzata
-            if (!UtilityFunctions.checkAuthentication(dbConn, authenticationTable, idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
             

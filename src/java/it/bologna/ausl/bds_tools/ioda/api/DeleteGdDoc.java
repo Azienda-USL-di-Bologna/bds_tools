@@ -1,6 +1,7 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -89,14 +90,18 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
                 throw new ServletException(message);
             }
 
-            // autenticazione
-            if (!UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            // controllo se l'applicazione è autorizzata
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 
@@ -111,7 +116,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
             }
             
             try {
-                iodaUtilities = new IodaDocumentUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, idapplicazione);
+                iodaUtilities = new IodaDocumentUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, prefix);
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);

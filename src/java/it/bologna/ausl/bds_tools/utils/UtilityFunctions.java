@@ -6,6 +6,7 @@ package it.bologna.ausl.bds_tools.utils;
  */
 import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.masterchefclient.PdfConvertParams;
 import it.bologna.ausl.masterchefclient.PdfConvertResult;
@@ -63,36 +64,38 @@ private static Context initContext;
         return conn;
     }
 
-    public static boolean checkAuthentication(Connection dbConn, String authenticationTable, String idApplicazione, String token) {
-//        PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
-        // configuro il logger per la console
-//    BasicConfigurator.configure(); 
-        try {
-            String sqlText = "SELECT id_applicazione"
-                    + " FROM " + authenticationTable
-                    + " WHERE id_applicazione = ? and token = ?";
+    /**
+     * Controlla se l'applicazione è autorizzata e ne ritorna il prefisso da usare nella costruzione degli id
+     * @param dbConn connessione
+     * @param authenticationTable nome della tabella di autenticazione
+     * @param idApplicazione id applicazione della quale verificare l'autenticazione
+     * @param token token corrispondente all'id applicazione della quale verificare l'autenticazione
+     * @return se l'applicazione è autorizzata torna il prefisso da usare nella costruzione degli id, se non è autorizzata torna NotAuthorizedException
+     * @throws it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException se l'applicazione non è autorizzata
+     * @throws java.sql.SQLException
+     */
+    public static String checkAuthentication(Connection dbConn, String authenticationTable, String idApplicazione, String token) throws NotAuthorizedException, SQLException {
+        String sqlText = 
+                    "SELECT prefix " +
+                    "FROM " + authenticationTable + " " +
+                    "WHERE id_applicazione = ? and token = ?";
 
-            PreparedStatement ps = dbConn.prepareStatement(sqlText);
-            ps.setString(1, idApplicazione);
-            ps.setString(2, token);
-            String query = ps.toString().substring(0, ps.toString().lastIndexOf("=") + 1) + " ******";
-            log.debug("eseguo la query: " + query + " ...");
-            dbConn.setAutoCommit(true);
-            ResultSet authenticationResultSet = null;
-            authenticationResultSet = ps.executeQuery();
+        PreparedStatement ps = dbConn.prepareStatement(sqlText);
+        ps.setString(1, idApplicazione);
+        ps.setString(2, token);
+        String query = ps.toString().substring(0, ps.toString().lastIndexOf("=") + 1) + " ******";
+        log.debug("eseguo la query: " + query + " ...");
+//            dbConn.setAutoCommit(true);
+        ResultSet authenticationResultSet = ps.executeQuery();
 
-            if (authenticationResultSet.next() == false) {
-                String message = "applicazione: " + idApplicazione + " non autorizzata";
-                log.error(message);
-                return false;
-            } else {
-                String message = "applicazione: " + idApplicazione + " autorizzata";
-                log.info(message);
-                return true;
-            }
-        } catch (Exception ex) {
-            log.error("Errore", ex);
-            return false;
+        if (authenticationResultSet.next() == false) {
+            String message = "applicazione: " + idApplicazione + " non autorizzata";
+            log.error(message);
+            throw new NotAuthorizedException(message);
+        } else {
+            String message = "applicazione: " + idApplicazione + " autorizzata";
+            log.info(message);
+            return authenticationResultSet.getString(1);
         }
     }
 

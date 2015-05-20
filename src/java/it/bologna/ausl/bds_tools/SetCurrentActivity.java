@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -80,28 +81,26 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
             }
 
             // leggo i parametri per l'esecuzione della query dal web.xml
-            String authenticationTable = getServletContext().getInitParameter("AuthenticationTable");
             String setCurrentActivityFunctionName = getServletContext().getInitParameter(idapplicazione.toLowerCase() + "SetCurrentActivityFunctionName");
 
-            if(authenticationTable == null || authenticationTable.equals("")) {
-                String message = "Manca il nome della tabella per l'autenticazione. Indicarlo nel file \"web.xml\"";
-                log.error(message);
-                throw new ServletException(message);
-            }
-            else if(setCurrentActivityFunctionName == null || setCurrentActivityFunctionName.equals("")) {
+            if(setCurrentActivityFunctionName == null || setCurrentActivityFunctionName.equals("")) {
                 String message = "Manca il nome della funzione che scrive l'attivita sulla tabbella dei documenti. Indicarlo nel file \"web.xml\"";
                 log.error(message);
                 throw new ServletException(message);
             }
 
             // controllo se l'applicazione è autorizzata
-            if (!UtilityFunctions.checkAuthentication(dbConn, authenticationTable, idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 

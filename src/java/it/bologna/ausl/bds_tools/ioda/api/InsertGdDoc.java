@@ -2,6 +2,7 @@ package it.bologna.ausl.bds_tools.ioda.api;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import it.bologna.ausl.bds_tools.ApplicationParams;
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -78,19 +79,23 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                 throw new ServletException(message);
             }
 
-            // autenticazione
-            if (!UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            // controllo se l'applicazione è autorizzata
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
             
             try {
-                iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.INSERT, idapplicazione);
+                iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.INSERT, prefix);
             }
             catch (IodaDocumentException | JsonMappingException ex) {
                 log.error(ex);

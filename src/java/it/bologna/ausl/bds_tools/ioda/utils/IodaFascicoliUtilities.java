@@ -31,24 +31,24 @@ public class IodaFascicoliUtilities {
     private String titoliTable;
     private String fascicoliGdDocTable;
     private String utentiTable;
-    private String idApplicazione;
+    private String prefixIds; // prefisso da anteporre agli id dei documenti che si inseriscono o che si ricercano (GdDoc, SottoDocumenti)
     private SimpleDocument sd;
     HttpServletRequest request;
     
-    private IodaFascicoliUtilities(ServletContext context, SimpleDocument sd, String idApplicazione) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    private IodaFascicoliUtilities(ServletContext context, SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this.gdDocTable = context.getInitParameter("GdDocsTableName");
         this.fascicoliTable = context.getInitParameter("FascicoliTableName");
         this.titoliTable = context.getInitParameter("TitoliTableName");
         this.fascicoliGdDocTable = context.getInitParameter("FascicoliGdDocsTableName");
         this.utentiTable = context.getInitParameter("UtentiTableName");
-        this.idApplicazione = idApplicazione;
+        this.prefixIds = prefixIds;
         this.sd = sd;
-        sd.setPrefissoApplicazioneOrigine(this.idApplicazione);
+        sd.setPrefissoApplicazioneOrigine(this.prefixIds);
         
     }
     
-    public IodaFascicoliUtilities(ServletContext context, HttpServletRequest request, SimpleDocument sd, String idApplicazione) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, sd, idApplicazione);
+    public IodaFascicoliUtilities(ServletContext context, HttpServletRequest request, SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(context, sd, prefixIds);
         this.request = request;
     }
     
