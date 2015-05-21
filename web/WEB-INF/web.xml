@@ -66,6 +66,10 @@
         <servlet-name>UpdateGdDoc</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateGdDoc</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>AddVersamentoParer</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.AddVersamentoParer</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Init</servlet-name>
         <url-pattern>/Init</url-pattern>
@@ -159,7 +163,7 @@
     <context-param>
         <param-name>GdDocsTableName</param-name>
         <param-value>gd.gddocs</param-value>
-    </context-param>
+    </context-param>  
     <context-param>
         <param-name>SottoDocumentiTableName</param-name>
         <param-value>gd.sotto_documenti</param-value>
@@ -172,6 +176,10 @@
         <param-name>TitoliTableName</param-name>
         <param-value>procton.titoli</param-value>
     </context-param>
+    <context-param>
+        <param-name>AggiornamentiParerTableName</param-name>
+        <param-value>aggiornamenti_parer</param-value>
+    </context-param>  
     <context-param>
         <param-name>UtentiTableName</param-name>
         <param-value>procton.utenti</param-value>
@@ -268,6 +276,10 @@
         <servlet-name>UpdateGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/update</url-pattern>
     </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AddVersamentoParer</servlet-name>
+        <url-pattern>/ioda/api/document/addVersamentoParer</url-pattern>
+    </servlet-mapping>
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>
@@ -275,5 +287,5 @@
         <welcome-file>default.html</welcome-file>
         <welcome-file>default.htm</welcome-file>
         <welcome-file>default.jsp</welcome-file>
-    </welcome-file-list>
+    </welcome-file-list>    
 </web-app>
