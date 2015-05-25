@@ -60,6 +60,7 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
             }
             catch (Exception ex) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());
+                return;
             }
             finally {
                 IOUtils.closeQuietly(requestIs);
