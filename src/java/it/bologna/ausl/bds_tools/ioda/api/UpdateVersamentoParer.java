@@ -21,26 +21,16 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/**
- *
- * @author gdm
- */
-public class AddVersamentoParer extends HttpServlet {
-private static final Logger log = LogManager.getLogger(AddVersamentoParer.class);
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+
+public class UpdateVersamentoParer extends HttpServlet{
+    
+    private static final Logger log = LogManager.getLogger(UpdateVersamentoParer.class);
+    
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.setCharacterEncoding("utf-8");
     // configuro il logger per la console
-//    BasicConfigurator.configure();
+    //    BasicConfigurator.configure();
     log.info("--------------------------------");
     log.info("Avvio servlet: " + getClass().getSimpleName());
     log.info("--------------------------------");
@@ -100,7 +90,7 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
             DatiParer datiParer;
             try {
                 // per convenzione questa servlet userà il tipo di operazione insert
-                datiParer = iodaReq.getDatiParer(Document.DocumentOperationType.INSERT);
+                datiParer = iodaReq.getDatiParer(Document.DocumentOperationType.UPDATE);
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);
@@ -110,9 +100,7 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
             
             iodaParerUtilities = new IodaParerUtilities(getServletContext(), datiParer, prefix);
 
-            iodaParerUtilities.insertAggiornamentoParer(dbConn);
-
-           
+            iodaParerUtilities.updateAggiornamentoParer(dbConn);
         }
         catch (Exception ex) {
             throw new ServletException(ex);
@@ -178,5 +166,5 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
     public String getServletInfo() {
         return "Short description";
     }// </editor-fold>
-
+    
 }
