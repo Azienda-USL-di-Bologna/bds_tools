@@ -11,6 +11,13 @@ import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.util.Properties;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -24,6 +31,10 @@ import org.apache.logging.log4j.Logger;
  */
 public class Debug extends HttpServlet {
 private static final Logger log = LogManager.getLogger(Debug.class);
+
+
+
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -35,17 +46,13 @@ private static final Logger log = LogManager.getLogger(Debug.class);
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        try {
-            MongoWrapper m=new MongoWrapper("mongodb://argo:siamofreschi@procton3/downloadgdml");
-            log.info(m.getFilePathByUuid("5537cd284b3af2862e0deee4"));
-        }
-        catch (Exception ex) {
-            log.error(ex);
-        }
+
         log.debug("ciao");
         log.info("ciao");
         log.error("ciao");
         log.fatal("ciao");
+        
+        
         
         String fonts[] = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
         String output = "";
