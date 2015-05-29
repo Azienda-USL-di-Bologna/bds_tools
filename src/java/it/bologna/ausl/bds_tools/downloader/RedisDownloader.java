@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package it.bologna.ausl.bds_tools.downloader;
 
 import java.io.ByteArrayInputStream;
@@ -11,7 +7,7 @@ import redis.clients.jedis.Jedis;
 
 /**
  *
- * @author Administrator
+ * @author gdm
  */
 public class RedisDownloader implements DownloaderPlugin {
 
@@ -30,7 +26,6 @@ public class RedisDownloader implements DownloaderPlugin {
 
     @Override
     public String getFileName(JSONObject parameters) {
-
         return (String) parameters.get("file_name");
     }
 

@@ -1,23 +1,7 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package it.bologna.ausl.bds_tools;
 
-import it.bologna.ausl.mongowrapper.MongoWrapper;
-import java.awt.GraphicsEnvironment;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
-import java.util.Properties;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -27,13 +11,26 @@ import org.apache.logging.log4j.Logger;
 
 /**
  *
- * @author Administrator
+ * @author gdm
  */
-public class Debug extends HttpServlet {
-private static final Logger log = LogManager.getLogger(Debug.class);
-
-
-
+public class Init extends HttpServlet {
+private static Logger log;
+     @Override
+    public void init() throws ServletException {
+        super.init();
+        initLog4J();
+        log = LogManager.getLogger(Init.class);
+        try {
+            ApplicationParams.initApplicationParams(getServletContext());
+        }
+        catch (Exception ex) {
+            throw new ServletException(ex);
+        }
+    }
+    
+    private void initLog4J() {
+        System.setProperty("log4j.configurationFile", Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j2.xml").getFile());
+    }
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -46,32 +43,18 @@ private static final Logger log = LogManager.getLogger(Debug.class);
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        log.debug("ciao");
-        log.info("ciao");
-        log.error("ciao");
-        log.fatal("ciao");
-        
-        
-        
-        String fonts[] = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
-        String output = "";
-        for (String font : fonts) {
-            output += "\n" + font;
-        }
-
+        init();
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
         try {
+            /* TODO output your page here. You may use following sample code. */
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet Debug</title>");            
+            out.println("<title>Servlet ConfigureLog4J</title>");            
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet Debug at " + request.getContextPath() + "</h1>");
-            out.println("<p> fonts: trovati: " + fonts.length + "</p>");
-            out.println("<p> lista: <br/>" + output.replace("\n", "<br/>\n") + "</p>");
+            out.println("<h1>Servlet ConfigureLog4J at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
         } finally {

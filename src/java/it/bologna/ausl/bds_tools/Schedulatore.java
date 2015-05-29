@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package it.bologna.ausl.bds_tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +15,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
 import static org.quartz.JobBuilder.newJob;
@@ -39,7 +36,7 @@ import org.quartz.impl.matchers.GroupMatcher;
  */
 public class Schedulatore extends HttpServlet {
 
-    private static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(ProctonPecManager.class);
+    private static final Logger log = LogManager.getLogger(Schedulatore.class);
     private static Scheduler sched;
     private static final String JOB_PACKAGE_SUFFIX = "jobs";
     private static final String CONF_PACKAGE_SUFFIX = "conf";

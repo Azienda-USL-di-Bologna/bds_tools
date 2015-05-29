@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.sql.Connection;
@@ -11,8 +12,8 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  *
@@ -20,7 +21,7 @@ import org.apache.log4j.PropertyConfigurator;
  */
 public class GetFascicoloSpecialeId extends HttpServlet {
 
-    private static final Logger log = Logger.getLogger(GetFascicoloSpecialeId.class);
+    private static final Logger log = LogManager.getLogger(GetFascicoloSpecialeId.class);
     public enum TipiFascicoli{ATTI, REGISTRO, DETERMINE, DELIBERE};
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -35,7 +36,6 @@ public class GetFascicoloSpecialeId extends HttpServlet {
             throws ServletException, IOException {
         
         request.setCharacterEncoding("utf-8");
-        PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
         // configuro il logger per la console
         //BasicConfigurator.configure();
         
@@ -44,16 +44,16 @@ public class GetFascicoloSpecialeId extends HttpServlet {
         log.info("--------------------------------");
         
         String idapplicazione = null;
-        String tokenapplicazione = null;
+        String tokenapplicazione;
         Connection dbConn = null;
-        PreparedStatement ps = null;
+        PreparedStatement ps;
         String annoString = null;
         int anno = 0;
         //Tipo fascicolo corrisponde al nome del sub-fascicolo speciale: "Registro", "Determine", "Delibere"
         
         String nomeFascicolo = null;
         String id_fascicolo= null;
-        
+
         try
         {
              // dati per l'autenticazione
@@ -83,28 +83,26 @@ public class GetFascicoloSpecialeId extends HttpServlet {
                 throw new ServletException(message);
             }
             
-            String authenticationTable = getServletContext().getInitParameter("AuthenticationTable");
             String fascicoliTable = getServletContext().getInitParameter("FascicoliTableName");
             
-             if(authenticationTable == null || authenticationTable.equals("")) {
-                String message = "Manca il nome della tabella per l'autenticazione. Indicarlo nel file \"web.xml\"";
-                log.error(message);
-                throw new ServletException(message);
-            }
-            else if(fascicoliTable == null || fascicoliTable.equals("")) {
+            if(fascicoliTable == null || fascicoliTable.equals("")) {
                 String message = "Manca il nome della tabella fascicoli. Indicarlo nel file \"web.xml\"";
                 log.error(message);
                 throw new ServletException(message);
             }
              
             // controllo se l'applicazione è autorizzata
-            if (!UtilityFunctions.checkAuthentication(dbConn, authenticationTable, idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
             

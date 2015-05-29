@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app id="WebApp_ID" version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+<web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
     <display-name>bds_tools</display-name>
-    <welcome-file-list>
-        <welcome-file>index.jsp</welcome-file>
-        <welcome-file>index.html</welcome-file>
-        <welcome-file>index.htm</welcome-file>
-        <welcome-file>default.html</welcome-file>
-        <welcome-file>default.htm</welcome-file>
-        <welcome-file>default.jsp</welcome-file>
-    </welcome-file-list>
+    <servlet>
+        <servlet-name>Init</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.Init</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
     <servlet>
         <description/>
         <display-name>Downloader</display-name>
@@ -44,9 +41,43 @@
         <servlet-class>it.bologna.ausl.bds_tools.Debug</servlet-class>
     </servlet>
     <servlet>
+        <display-name>Schedulatore</display-name>
         <servlet-name>Schedulatore</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.Schedulatore</servlet-class>
+        <load-on-startup>2</load-on-startup>
     </servlet>
+    <servlet>
+        <servlet-name>ReceiveFile</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ReceiveFile</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>InsertGdDoc</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.InsertGdDoc</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>DeleteGdDoc</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.DeleteGdDoc</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>GetFascicolazioniDocumento</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicolazioniDocumento</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>UpdateGdDoc</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateGdDoc</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>AddVersamentoParer</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.AddVersamentoParer</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>UpdateVersamentoParer</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateVersamentoParer</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>Init</servlet-name>
+        <url-pattern>/Init</url-pattern>
+    </servlet-mapping>
     <servlet-mapping>
         <servlet-name>Downloader</servlet-name>
         <url-pattern>/Downloader</url-pattern>
@@ -79,6 +110,14 @@
         <servlet-name>Schedulatore</servlet-name>
         <url-pattern>/Schedulatore</url-pattern>
     </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>ReceiveFile</servlet-name>
+        <url-pattern>/ReceiveFile</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>InsertGdDoc</servlet-name>
+        <url-pattern>/ioda/api/document/insert</url-pattern>
+    </servlet-mapping>
     <resource-ref>
         <description>DB Connection</description>
         <res-ref-name>jdbc/argo</res-ref-name>
@@ -90,24 +129,8 @@
         <param-value>bds_tools.authorized_applications</param-value>
     </context-param>
     <context-param>
-        <param-name>proctonUpdateNumberFunctionName</param-name>
-        <param-value>procton_tools.get_and_set_protocol_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>deteUpdateNumberFunctionName</param-name>
-        <param-value>dete_tools.get_and_set_dete_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>deliUpdateNumberFunctionName</param-name>
-        <param-value>deli_tools.get_and_set_deli_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>verbaUpdateNumberFunctionName</param-name>
-        <param-value>verba_tools.get_and_set_verba_number</param-value>
-    </context-param>
-    <context-param>
-        <param-name>babelUpdateNumberFunctionName</param-name>
-        <param-value>gd_tools.get_and_set_gddoc_number</param-value>
+        <param-name>UpdateNumberFunctionNameTemplate</param-name>
+        <param-value>bds_tools.get_and_set_[nome_sequenza]_number</param-value>
     </context-param>
     <context-param>
         <param-name>proctonSetCurrentActivityFunctionName</param-name>
@@ -144,7 +167,7 @@
     <context-param>
         <param-name>GdDocsTableName</param-name>
         <param-value>gd.gddocs</param-value>
-    </context-param>
+    </context-param>  
     <context-param>
         <param-name>SottoDocumentiTableName</param-name>
         <param-value>gd.sotto_documenti</param-value>
@@ -152,6 +175,22 @@
     <context-param>
         <param-name>FascicoliGdDocsTableName</param-name>
         <param-value>gd.fascicoli_gddocs</param-value>
+    </context-param>
+    <context-param>
+        <param-name>TitoliTableName</param-name>
+        <param-value>procton.titoli</param-value>
+    </context-param>
+    <context-param>
+        <param-name>AggiornamentiParerTableName</param-name>
+        <param-value>gd.aggiornamenti_parer</param-value>
+    </context-param>  
+    <context-param>
+        <param-name>UtentiTableName</param-name>
+        <param-value>procton.utenti</param-value>
+    </context-param>
+    <context-param>
+        <param-name>FileSupportatiTableName</param-name>
+        <param-value>bds_tools.file_supportati</param-value>
     </context-param>
     <context-param>
         <param-name>UploadGdDocMongoPath</param-name>
@@ -163,11 +202,11 @@
     </context-param>
     <context-param>
         <param-name>mongogdml</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/doc</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/doc?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>mongodownloadgdml</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/downloadgdml</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/downloadgdml?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>redisgdml</param-name>
@@ -175,11 +214,11 @@
     </context-param>
     <context-param>
         <param-name>mongoarena</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/arena</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/arena?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>mongodownloadarena</param-name>
-        <param-value>mongodb://argo:siamofreschi@procton3/downloadarena</param-value>
+        <param-value>mongodb://argo:siamofreschi@procton3,procton4/downloadarena?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
     <context-param>
         <param-name>redisarena</param-name>
@@ -198,7 +237,63 @@
         <param-value>babelservice1</param-value>
     </context-param>
     <context-param>
-        <param-name>schedulatore.configfile</param-name>
-        <param-value>schedulatore_conf_gdml.json</param-value>
+        <param-name>redisinqueuegdml</param-name>
+        <param-value>chefingdml</param-value>
     </context-param>
+    <context-param>
+        <param-name>redisinqueuearena</param-name>
+        <param-value>chefingarena</param-value>
+    </context-param>
+    <context-param>
+        <param-name>redisinqueueprod</param-name>
+        <param-value>chefinprod</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlgdml</param-name>
+        <param-value>http://gdml:9081/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlarena</param-name>
+        <param-value>http://arena:9081/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlprod</param-name>
+        <param-value>http://babelservice3:8080/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    <context-param>
+        <param-name>appid</param-name>
+        <param-value>bds_tools</param-value>
+    </context-param>
+    <context-param>
+        <param-name>apptoken</param-name>
+        <param-value>bds_tools</param-value>
+    </context-param>
+    <servlet-mapping>
+        <servlet-name>DeleteGdDoc</servlet-name>
+        <url-pattern>/ioda/api/document/delete</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GetFascicolazioniDocumento</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/getFascicolazioniDocumento</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>UpdateGdDoc</servlet-name>
+        <url-pattern>/ioda/api/document/update</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AddVersamentoParer</servlet-name>
+        <url-pattern>/ioda/api/document/addVersamentoParer</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>UpdateVersamentoParer</servlet-name>
+        <url-pattern>/ioda/api/document/updateVersamentoParer</url-pattern>
+    </servlet-mapping>
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+        <welcome-file>index.html</welcome-file>
+        <welcome-file>index.htm</welcome-file>
+        <welcome-file>default.html</welcome-file>
+        <welcome-file>default.htm</welcome-file>
+        <welcome-file>default.jsp</welcome-file>
+    </welcome-file-list>    
 </web-app>

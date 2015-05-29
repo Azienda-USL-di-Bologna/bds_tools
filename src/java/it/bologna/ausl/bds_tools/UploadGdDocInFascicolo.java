@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.RequestException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
@@ -15,27 +16,31 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.GregorianCalendar;
-import java.util.List;
 import java.util.Random;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import javax.servlet.http.Part;
+import org.apache.commons.io.IOUtils;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  *
  * @author Andrea
  */
+@MultipartConfig(
+        fileSizeThreshold = 1024 * 1024 * 10, // 10 MB
+        //            maxFileSize         = 1024 * 1024 * 10, // 10 MB
+        //            maxRequestSize      = 1024 * 1024 * 15, // 15 MB
+        location = ""
+)
 public class UploadGdDocInFascicolo extends HttpServlet {
+private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.class);
 
-    private static final Logger log = Logger.getLogger(UploadGdDocInFascicolo.class);
     private Connection dbConn = null;
 
     private MongoWrapper mongo;
@@ -61,15 +66,14 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             throws ServletException, IOException, RequestException {
 
         request.setCharacterEncoding("utf-8");
-        PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
+//        PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
         // configuro il logger per la console
-        BasicConfigurator.configure();
+//        BasicConfigurator.configure();
 
         log.info("--------------------------------");
         log.info("Avvio servlet: " + getClass().getSimpleName());
         log.info("--------------------------------");
-           
-        
+
         //Dichiarazione variabili
         String idapplicazione = null;
         String tokenapplicazione = null;
@@ -79,55 +83,60 @@ public class UploadGdDocInFascicolo extends HttpServlet {
         String receivedFileName = null;
         
         String idFascicolo = null;
+        InputStream is = null;
 
         //creo la temp
         
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
+
+        if (!tempDir.exists())
+            tempDir.mkdir();
+
         //File tempDir = new File("C:/prova");
         //Richiesta multipart che in questo caso contiene il file e la stringa dell'idFascicolo
-        if (ServletFileUpload.isMultipartContent(request)) {
-            ServletFileUpload sfu = new ServletFileUpload(new DiskFileItemFactory(1024 * 1024, tempDir));
-
-            List fileItems = null;
-
+        try {
+            idapplicazione = UtilityFunctions.getMultipartStringParam(request, "idapplicazione");
+            if (idapplicazione == null) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"idapplicazione\" non trovata");
+                return;
+            }
+            tokenapplicazione = UtilityFunctions.getMultipartStringParam(request, "tokenapplicazione");
+            if (tokenapplicazione == null) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"tokenapplicazione\" non trovata");
+                return;
+            }
+            idFascicolo = UtilityFunctions.getMultipartStringParam(request, "idfascicolo");
+            if (idFascicolo == null) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"idfascicolo\" non trovata");
+                return;
+            }
             try {
-                fileItems = sfu.parseRequest(request);
-
-            } catch (FileUploadException ex) {
-                throw new ServletException(ex);
+                Part filePart = request.getPart("file");
+                is = filePart.getInputStream();
+                createdFile = File.createTempFile(getClass().getSimpleName() + "_", null, tempDir);
+                createFile(is, createdFile);
+                receivedFileName = filePart.getSubmittedFileName();
+                IOUtils.closeQuietly(is);
             }
-            for (int elementIndex = 0; elementIndex < fileItems.size(); elementIndex++) {
-
-                FileItem item = (FileItem) fileItems.get(elementIndex);
-                if (item.isFormField() && item.getFieldName().equals("idfascicolo")) {
-                    idFascicolo = item.getString();
-                } else if (item.isFormField() && item.getFieldName().equals("idapplicazione")) {
-                    idapplicazione = item.getString();
-                } else if (item.isFormField() && item.getFieldName().equals("tokenapplicazione")) {
-                    tokenapplicazione = item.getString();
-                } else if (!item.isFormField() && item.getFieldName().equals("file") && item.getSize() > 0) {
-                    try {
-                        
-                        createdFile = File.createTempFile(getClass().getSimpleName() + "_", null, tempDir);
-                        createFile(item.getInputStream(), createdFile);
-                        receivedFileName = item.getName();
-                        
-                    } catch (Exception ex) {
-                        
-                        if(createdFile != null)
-                            createdFile.delete();
-                                                        
-                        throw new ServletException(ex);
-                    }
-                }
+            catch (Exception ex) {
+                if(createdFile != null)
+                    createdFile.delete();
+                throw ex;
             }
 
-        } else {
-            response.getWriter().print("Il servizio supporta solo richieste multipart");
-            response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
-            return;
         }
-
+        catch (Exception ex) {
+            log.error(ex);
+            throw ex;
+        }
+        catch (Error er) {
+            log.error(er);
+            throw er;
+        }
+        finally {
+            IOUtils.closeQuietly(is);
+        }
+        
         log.info("Dati ricevuti: ");
         log.info("idFascicolo: " + idFascicolo);
         log.info("received: " + receivedFileName);
@@ -165,118 +174,112 @@ public class UploadGdDocInFascicolo extends HttpServlet {
 
        //Carico il file su Mongo
         try {
-            // dati per l'autenticazione
-            
-            String authenticationTable = getServletContext().getInitParameter("AuthenticationTable");
-
             dbConn = UtilityFunctions.getDBConnection();      
-                    
-            if (!UtilityFunctions.checkAuthentication(dbConn, authenticationTable, idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+
+            // controllo se l'applicazione è autorizzata
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
-                
-                if(createdFile != null )
-                    createdFile.delete();        
-
-                String message = "Accesso negato";
-                throw new RequestException(HttpServletResponse.SC_FORBIDDEN, message);
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                return;
             }
-            else 
+                
+            currentDate = new Timestamp(System.currentTimeMillis());
+
+            GregorianCalendar calendar = new GregorianCalendar();
+            int year = calendar.get(GregorianCalendar.YEAR);
+            int month = calendar.get(GregorianCalendar.MONTH)+1;
+            int day = calendar.get(GregorianCalendar.DAY_OF_MONTH);
+            int hour = calendar.get(GregorianCalendar.HOUR_OF_DAY);
+            int minute = calendar.get(GregorianCalendar.MINUTE);
+            int second = calendar.get(GregorianCalendar.SECOND);
+            int millisecond = calendar.get(GregorianCalendar.MILLISECOND);
+
+            String prefixSeparator = "_";
+
+            String[] datiFascicolo = getNomeFascicolo(idFascicolo);
+            String nomeFascicolo = datiFascicolo[0];
+            if (nomeFascicolo == null || nomeFascicolo.equals("")) 
             {
-                
-                currentDate = new Timestamp(System.currentTimeMillis());
+                String message = "Fascicolo " + idFascicolo + " non trovato";
+                throw new RequestException(HttpServletResponse.SC_NOT_FOUND, message);
+            }
+            String annoFascicolo = datiFascicolo[2];
+            String pathMongoNumerazioneGerarchica = getGerarchiaFascicoli(datiFascicolo[1], annoFascicolo);
 
-                GregorianCalendar calendar = new GregorianCalendar();
-                int year = calendar.get(GregorianCalendar.YEAR);
-                int month = calendar.get(GregorianCalendar.MONTH)+1;
-                int day = calendar.get(GregorianCalendar.DAY_OF_MONTH);
-                int hour = calendar.get(GregorianCalendar.HOUR_OF_DAY);
-                int minute = calendar.get(GregorianCalendar.MINUTE);
-                int second = calendar.get(GregorianCalendar.SECOND);
-                int millisecond = calendar.get(GregorianCalendar.MILLISECOND);
-                              
-                String prefixSeparator = "_";
+            String fileName = UtilityFunctions.removeExtensionFromFileName(receivedFileName);
+            String fileExt = UtilityFunctions.getExtensionFromFileName(receivedFileName);
+            String endFileExt = "";
 
-                String[] datiFascicolo = getNomeFascicolo(idFascicolo);
-                String nomeFascicolo = datiFascicolo[0];
-                if (nomeFascicolo == null || nomeFascicolo.equals("")) 
-                {
-                    String message = "Fascicolo " + idFascicolo + " non trovato";
-                    throw new RequestException(HttpServletResponse.SC_NOT_FOUND, message);
-                }
-                String annoFascicolo = datiFascicolo[2];
-                String pathMongoNumerazioneGerarchica = getGerarchiaFascicoli(datiFascicolo[1], annoFascicolo);
+            // il nome del file sarà : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
+            if(fileExt != null)
+                endFileExt="." + fileExt;
 
-                String fileName = UtilityFunctions.removeExtensionFromFileName(receivedFileName);
-                String fileExt = UtilityFunctions.getExtensionFromFileName(receivedFileName);
-                String endFileExt = "";
-                
-                // il nome del file sarà : giorno_mese_anno_ore_minuti_secondi_nomedelfilericevuto
-                if(fileExt != null)
-                    endFileExt="." + fileExt;
-                                   
-                String serverId = getParameterValue("serverIdentifier");
-                String mongoUri = getServletContext().getInitParameter("mongo" + serverId);
-                mongo = new MongoWrapper(mongoUri);
+            String serverId = UtilityFunctions.getPubblicParameter(dbConn, getServletContext().getInitParameter("ParametersTableName"), "serverIdentifier");
+            String mongoUri = getServletContext().getInitParameter("mongo" + serverId);
+            mongo = new MongoWrapper(mongoUri);
 
-                //Creo la cartella dove inserire i file su mongo-- è quella del fascicolo passato
-                String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + "/" +pathMongoNumerazioneGerarchica;
-                
-                boolean exists = true;
-                                
-                while(exists)
-                {
-                    //fileNameToCreate = year + prefixSeparator + nomeFascicolo + prefixSeparator + fileName + prefixSeparator + generateKey(10) + endFileExt;
-                    fileNameToCreate =  fileName + getSuffissoNomeFile(idapplicazione) + prefixSeparator + year + prefixSeparator + mettiZeroDavanti(month) + prefixSeparator + mettiZeroDavanti(day) 
-                            + prefixSeparator + mettiZeroDavanti(hour) + prefixSeparator + mettiZeroDavanti(minute) + prefixSeparator + mettiZeroDavanti(second) 
-                            + prefixSeparator + mettiZeroDavanti(millisecond) + endFileExt;
-                    
-                    exists = mongo.existsObjectbyPath(cartellaFascicolo + "/" + fileNameToCreate);                          
-                }
-                
-                File newFile = new File(createdFile.getParentFile(), fileNameToCreate);
+            //Creo la cartella dove inserire i file su mongo-- è quella del fascicolo passato
+            String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + "/" +pathMongoNumerazioneGerarchica;
+
+            boolean exists = true;
+
+            while(exists)
+            {
+                //fileNameToCreate = year + prefixSeparator + nomeFascicolo + prefixSeparator + fileName + prefixSeparator + generateKey(10) + endFileExt;
+                fileNameToCreate =  fileName + getSuffissoNomeFile(idapplicazione) + prefixSeparator + year + prefixSeparator + mettiZeroDavanti(month) + prefixSeparator + mettiZeroDavanti(day) 
+                        + prefixSeparator + mettiZeroDavanti(hour) + prefixSeparator + mettiZeroDavanti(minute) + prefixSeparator + mettiZeroDavanti(second) 
+                        + prefixSeparator + mettiZeroDavanti(millisecond) + endFileExt;
+
+                exists = mongo.existsObjectbyPath(cartellaFascicolo + "/" + fileNameToCreate);                          
+            }
+
+            File newFile = new File(createdFile.getParentFile(), fileNameToCreate);
 //                log.info(createdFile.getAbsolutePath());
 //                log.info(newFile.getAbsolutePath());
-                if(createdFile.renameTo(newFile))
-                {
-                    createdFile= newFile;
-                }
-                else
-                {
-                    throw new ServletException("Errore nella rinominazione del file");
-                }
-               
-                              
-                //**************************************
-                //PARTE DI CARICAMENTO SU MONGO
-                //**************************************
-                
-                uuidUploadedFile = mongo.put(createdFile, createdFile.getName(), cartellaFascicolo, true);
-                log.info("cartella del fascicolo su mongo: " + cartellaFascicolo);
-                
-                //Disabilito l'autoCommit per fare il rollback in caso fallisca l'inserimento
-                dbConn.setAutoCommit(false);
-                
-                //Eseguo gli inserimenti
-                boolean okInsertGddoc = insertGdDoc(fileNameToCreate, uuidUploadedFile);
-                boolean okInsertSottoDoc = insertSottoDocumento(idGdDocInserito, fileNameToCreate, uuidUploadedFile);
-                boolean okInsertCross = insertFascicoliGddocCross(idGdDocInserito, idFascicolo);
-               
-                              
-                if(okInsertCross == true && okInsertGddoc == true && okInsertSottoDoc == true)
-                {
-                    dbConn.commit();
-                }
-                else
-                {
-                    dbConn.rollback();
-                    throw new ServletException("Errore nell'inserimento dei dati nella tabella di cross fascicoli_gddocs");
-                }
+            if(createdFile.renameTo(newFile))
+            {
+                createdFile= newFile;
             }
+            else
+            {
+                throw new ServletException("Errore nella rinominazione del file");
+            }
+
+
+            //**************************************
+            //PARTE DI CARICAMENTO SU MONGO
+            //**************************************
+
+            uuidUploadedFile = mongo.put(createdFile, createdFile.getName(), cartellaFascicolo, true);
+            log.info("cartella del fascicolo su mongo: " + cartellaFascicolo);
+
+            //Disabilito l'autoCommit per fare il rollback in caso fallisca l'inserimento
+            dbConn.setAutoCommit(false);
+
+            //Eseguo gli inserimenti
+            boolean okInsertGddoc = insertGdDoc(fileNameToCreate, uuidUploadedFile);
+            boolean okInsertSottoDoc = insertSottoDocumento(idGdDocInserito, fileNameToCreate, uuidUploadedFile);
+            boolean okInsertCross = insertFascicoliGddocCross(idGdDocInserito, idFascicolo);
+
+
+            if(okInsertCross == true && okInsertGddoc == true && okInsertSottoDoc == true)
+            {
+                dbConn.commit();
+            }
+            else
+            {
+                dbConn.rollback();
+                throw new ServletException("Errore nell'inserimento dei dati nella tabella di cross fascicoli_gddocs");
+            }
+            
         }
         catch (Exception ex) {
             log.fatal("Errore", ex);
@@ -322,10 +325,10 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             out.println("<!DOCTYPE html>");
             out.println("<html>");
             out.println("<head>");
-            out.println("<title>Servlet SetGddocAndFascicoloSpeciale</title>");
+            out.println("<title>Servlet " + getClass().getSimpleName() +"</title>");
             out.println("</head>");
             out.println("<body>");
-            out.println("<h1>Servlet SetGddocAndFascicoloSpeciale at " + request.getContextPath() + "</h1>");
+            out.println("<h1>Servlet " + getClass().getSimpleName() + " at " + request.getContextPath() + "</h1>");
             out.println("</body>");
             out.println("</html>");
         } finally {
@@ -400,21 +403,6 @@ public class UploadGdDocInFascicolo extends HttpServlet {
         return "Short description";
     }// </editor-fold>
 
-    private String getParameterValue(String parameterName) throws SQLException {
-        String parametersTable = getServletContext().getInitParameter("ParametersTableName");
-        String query = "SELECT val_parametro FROM " + parametersTable + " WHERE nome_parametro = ?";
-        PreparedStatement ps = dbConn.prepareStatement(query);
-        ps.setString(1, parameterName);
-
-        ResultSet result = ps.executeQuery();
-        String value = null;
-
-        if (result != null && result.next() == true) {
-            value = result.getString(1);
-        }
-        return value;
-    }
-
     private String[] getNomeFascicolo(String idFascicolo) throws SQLException {
         
         String[] campiFascicolo = new String[3];
@@ -488,7 +476,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
     }
     
     private Boolean insertGdDoc(String nomeGddoc, String uuidUploadFile) {
-                
+
         String gdDocsTable = getServletContext().getInitParameter("GdDocsTableName");
         String query = "INSERT INTO " + gdDocsTable + " (id_gddoc, nome_gddoc, categoria_origine, multiplo, uuid_mongo, tipo_gddoc, uuid_mongo_pdf,"
                 + " stato_gd_doc, data_gddoc) VALUES (?,?,?,?,?,?,?,?,?)";
@@ -536,8 +524,8 @@ public class UploadGdDocInFascicolo extends HttpServlet {
     private Boolean insertSottoDocumento(String idGdDoc, String nomeFile, String uuidUploaFile)
     {
         String sottoDocumentiTable = getServletContext().getInitParameter("SottoDocumentiTableName");
-        String query = "INSERT INTO " + sottoDocumentiTable + "(id_sottodocumento, id_gddoc, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_originale) "
-                       + " VALUES(?,?,?,?,?) ";
+        String query = "INSERT INTO " + sottoDocumentiTable + "(id_sottodocumento, id_gddoc, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_originale, codice_sottodocumento) "
+                       + " VALUES(?,?,?,?,?,?) ";
         
         String idSottoDocumento = generateKey(20);
         
@@ -551,6 +539,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
             ps.setString(3, nomeFile);
             ps.setString(4, uuidUploaFile);
             ps.setString(5, uuidUploaFile);
+            ps.setString(6, "babel_" + idSottoDocumento);
             
             log.info("eseguo la query: " + ps.toString() + "...");
             
@@ -649,7 +638,7 @@ public class UploadGdDocInFascicolo extends HttpServlet {
     
     private String mettiZeroDavanti(int numero)
     {
-        String numeroString = "";
+        String numeroString;
         
         if(numero < 10)
                numeroString = "0"+ numero;
@@ -663,12 +652,18 @@ public class UploadGdDocInFascicolo extends HttpServlet {
     {
         String suffisso = "";
         
-        if(idApplicazione == "procton")
-            suffisso = "_Pico";
-        else if(idApplicazione == "dete")
-            suffisso = "_Dete";
-        else if(idApplicazione == "deli")
-            suffisso = "_Deli";
+        if(null != idApplicazione)
+            switch (idApplicazione) {
+            case "procton":
+                suffisso = "_Pico";
+                break;
+            case "dete":
+                suffisso = "_Dete";
+                break;
+            case "deli":
+                suffisso = "_Deli";
+                break;
+        }
                 
         return suffisso;
     }

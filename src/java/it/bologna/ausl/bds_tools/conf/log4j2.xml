@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <!--<File name="FILEGDM" fileName="${sys:catalina.home}/logs/bds_tools.log">
+            <PatternLayout>
+                <Pattern>%d{yyyy MM dd HH:mm:ss,SSS} %p %t %c - %m%n</Pattern>
+            </PatternLayout>
+        </File>-->
+        <RollingFile name="RollFile" fileName="${sys:catalina.home}/logs/bds_tools.log"
+            filePattern="${sys:catalina.home}/logs/bds_tools.log.%i">
+            <PatternLayout>
+                <Pattern>%d{yyyy MM dd HH:mm:ss,SSS} %p %t %c - %m%n</Pattern>
+            </PatternLayout>
+            <Policies>   
+                <SizeBasedTriggeringPolicy size="50 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="40"/>
+        </RollingFile>
+        <Console name="Console" target="SYSTEM_OUT">
+           <PatternLayout>
+                <Pattern>%d{yyyy MM dd HH:mm:ss,SSS} %p %t %c - %m%n</Pattern>
+            </PatternLayout>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="debug">
+            <!--<AppenderRef ref="FILEGDM" />-->
+            <AppenderRef ref="Console" />
+            <AppenderRef ref="RollFile" />
+        </Root>
+    </Loggers>
+</Configuration>

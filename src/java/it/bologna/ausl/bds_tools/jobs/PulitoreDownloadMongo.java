@@ -7,7 +7,7 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
 import java.util.Calendar;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -17,8 +17,8 @@ import org.quartz.JobExecutionException;
  * @author andrea
  */
 public class PulitoreDownloadMongo implements Job {
+private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(PulitoreDownloadMongo.class);
 
-    private static final Logger log = Logger.getLogger(PulitoreDownloadMongo.class);
     private String connectUri;
     private int intervalHour;
 

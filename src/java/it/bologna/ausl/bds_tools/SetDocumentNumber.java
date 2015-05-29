@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -11,9 +12,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+import org.apache.logging.log4j.LogManager;
 
 /**
  *
@@ -21,7 +20,7 @@ import org.apache.log4j.PropertyConfigurator;
  */
 public class SetDocumentNumber extends HttpServlet {
 
-private static Logger log = Logger.getLogger(SetDocumentNumber.class);
+private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(SetDocumentNumber.class);
     /** 
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
      * @param request servlet request
@@ -31,7 +30,6 @@ private static Logger log = Logger.getLogger(SetDocumentNumber.class);
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
     request.setCharacterEncoding("utf-8");
-    PropertyConfigurator.configure(Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j.properties"));
     // configuro il logger per la console
 //    BasicConfigurator.configure();
     log.info("--------------------------------");
@@ -61,10 +59,22 @@ private static Logger log = Logger.getLogger(SetDocumentNumber.class);
             log.debug("idapplicazione: " + idapplicazione);
             log.debug("iddocumento: " + iddocumento);
             log.debug("nomesequenza: " + nomesequenza);
-
+            
             // controllo se mi sono stati passati i dati per l'autenticazione
             if (idapplicazione == null || tokenapplicazione == null) {
                 String message = "Dati di autenticazione errati, specificare i parametri \"idapplicazione\" e \"tokenapplicazione\" nella richiesta";
+                log.error(message);
+                throw new ServletException(message);
+            }
+            
+            if (iddocumento == null || iddocumento.equals("")) {
+                String message = "Dati errati, specificare il parametro \"iddocumento\" nella richiesta";
+                log.error(message);
+                throw new ServletException(message);
+            }
+            
+            if (nomesequenza == null || nomesequenza.equals("")) {
+                String message = "Dati errati, specificare il parametro \"nomesequenza\" nella richiesta";
                 log.error(message);
                 throw new ServletException(message);
             }
@@ -80,28 +90,28 @@ private static Logger log = Logger.getLogger(SetDocumentNumber.class);
             }
 
             // leggo i parametri per l'esecuzione della query dal web.xml
-            String authenticationTable = getServletContext().getInitParameter("AuthenticationTable");
-            String updateNumberFunctionName = getServletContext().getInitParameter(idapplicazione.toLowerCase() + "UpdateNumberFunctionName");
-
-            if(authenticationTable == null || authenticationTable.equals("")) {
-                String message = "Manca il nome della tabella per l'autenticazione. Indicarlo nel file \"web.xml\"";
-                log.error(message);
-                throw new ServletException(message);
-            }
-            else if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {
-                String message = "Manca il nome della funzione che esegue l'aggiornamento del numero di determina. Indicarlo nel file \"web.xml\"";
+            //String updateNumberFunctionName = getServletContext().getInitParameter(idapplicazione.toLowerCase() + "UpdateNumberFunctionName");
+            String updateNumberFunctionName = getServletContext().getInitParameter("UpdateNumberFunctionNameTemplate");
+            updateNumberFunctionName = updateNumberFunctionName.replace("[nome_sequenza]", nomesequenza);
+            
+            if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {
+                String message = "Errore nel calcolo del nome della funzione che esegue l'aggiornamento del numero di documento";
                 log.error(message);
                 throw new ServletException(message);
             }
 
             // controllo se l'applicazione è autorizzata
-            if (!UtilityFunctions.checkAuthentication(dbConn, authenticationTable, idapplicazione, tokenapplicazione)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            String prefix;
+            try {
+                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+            }
+            catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
                 }
-                catch (Exception ex) {
+                catch (Exception subEx) {
                 }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 
