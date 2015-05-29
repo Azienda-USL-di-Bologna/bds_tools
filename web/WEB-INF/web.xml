@@ -70,6 +70,10 @@
         <servlet-name>AddVersamentoParer</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.AddVersamentoParer</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>UpdateVersamentoParer</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateVersamentoParer</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Init</servlet-name>
         <url-pattern>/Init</url-pattern>
@@ -178,7 +182,7 @@
     </context-param>
     <context-param>
         <param-name>AggiornamentiParerTableName</param-name>
-        <param-value>aggiornamenti_parer</param-value>
+        <param-value>gd.aggiornamenti_parer</param-value>
     </context-param>  
     <context-param>
         <param-name>UtentiTableName</param-name>
@@ -279,6 +283,10 @@
     <servlet-mapping>
         <servlet-name>AddVersamentoParer</servlet-name>
         <url-pattern>/ioda/api/document/addVersamentoParer</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>UpdateVersamentoParer</servlet-name>
+        <url-pattern>/ioda/api/document/updateVersamentoParer</url-pattern>
     </servlet-mapping>
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>

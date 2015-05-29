@@ -36,7 +36,52 @@ public class IodaParerUtilities {
         datiParer.setPrefissoApplicazioneOrigine(prefixIds);
     }
 
-    public void updateAggiornamentoParer(Connection dbConn, PreparedStatement ps) {
+    public void updateAggiornamentoParer(Connection dbConn) throws SQLException, IodaDocumentException {
+        String xmlSpecifico = getXmlSpecificoGdDoc(dbConn);
+        if (xmlSpecifico == null || xmlSpecifico.equals(""))
+            throw new IodaDocumentException("Non è possibile fare l'update, xml specifico parer non presente");
+        
+        String idGdDoc = getIdGdDoc(dbConn);
+        
+        String sqlText =
+                "INSERT INTO " + aggiornamentiParerTable + "(" +
+                " id_gddoc, autore_aggiornamento, descrizione_aggiornamento, " +
+                " xml_specifico_aggiornamento) " +
+                "VALUES (" +
+                "?, ?, ?, " +
+                "?)";
+                
+        PreparedStatement ps = null;
+        
+        
+        try {
+            ps = dbConn.prepareStatement(sqlText);
+            int index = 1;
+
+            // id_gddoc
+            ps.setString(index++, idGdDoc);
+
+            // autore aggiornamento
+            ps.setString(index++, datiParer.getAutoreAggiornamento());
+
+            // descrizione aggiornamento
+            ps.setString(index++, datiParer.getDescrizioneAggiornamento());
+
+            // xml specifico aggiornamento
+            ps.setString(index++, datiParer.getXmlSpecifico());
+            
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("Update non inserito");
+        }
+        finally {
+            try {
+                ps.close();
+            }
+            catch (Exception ex) {
+            }
+        }
+        
         
     }
 
@@ -119,4 +164,33 @@ public class IodaParerUtilities {
             }
         }
     }
+    
+    
+    private String getIdGdDoc(Connection dbConn) throws SQLException {
+        String sqlText =
+                        "SELECT id_gddoc " +
+                        "FROM " + gdDocTable + " " +
+                        "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
+        PreparedStatement ps = null;
+        try {
+            String idGdDoc;
+            ps = dbConn.prepareStatement(sqlText);
+            ps.setString(1, datiParer.getIdOggettoOrigine());
+            ps.setString(2, datiParer.getTipoOggettoOrigine());
+            ResultSet res = ps.executeQuery();
+            if (res.next() == false)
+                throw new SQLException("Documento non trovato");
+            else 
+                idGdDoc = res.getString(1);
+            return idGdDoc;
+        }
+        finally {
+            try {
+                ps.close();
+            }
+            catch (Exception ex) {
+            }
+        }
+    }
+    
 }
