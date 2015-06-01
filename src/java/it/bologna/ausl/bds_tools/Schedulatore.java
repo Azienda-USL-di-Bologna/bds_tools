@@ -80,14 +80,18 @@ public class Schedulatore extends HttpServlet {
 
     }
 
+    private void quarzStop() throws SchedulerException {
+        if (sched.isStarted()) {
+            sched.standby();
+            sched.clear();
+        }
+    }
+
     private void quarzInit() throws SchedulerException, IOException, ClassNotFoundException {
         if (active) {
             log.info("Inizializzazione schedulatore");
+            quarzStop();
 
-            if (sched.isStarted()) {
-                sched.standby();
-                sched.clear();
-            }
             URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
             if (jobConfURL == null) {
                 throw new FileNotFoundException("Schedulatore configuration file not found");
@@ -104,7 +108,7 @@ public class Schedulatore extends HttpServlet {
                     jb.usingJobData(k, jp.getParam(k));
                 }
                 JobDetail job = jb.build();
-                Trigger trigger = newTrigger().withIdentity("trigger" + jd.getName(), "group1").startNow()
+                Trigger trigger = newTrigger().withIdentity("trigger_" + jd.getName(), "group1").startNow()
                         .withSchedule(simpleSchedule()
                                 .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
                                 .repeatForever())
@@ -137,6 +141,25 @@ public class Schedulatore extends HttpServlet {
                 throw new ServletException("Errore ricaricando configurazione", ex);
             }
         }
+        if (request.getParameter("start") != null) {
+            try {
+                active = true;
+                quarzInit();
+            } catch (SchedulerException ex) {
+                log.fatal(ex);
+            } catch (ClassNotFoundException ex) {
+                log.fatal(ex);
+                throw new ServletException("Errore ricaricando configurazione", ex);
+            }
+        }
+        if (request.getParameter("stop") != null) {
+            try {
+                active = false;
+                quarzStop();
+            } catch (SchedulerException ex) {
+                log.fatal(ex);
+            }
+        }
         PrintWriter out = response.getWriter();
         try {
             /* TODO output your page here. You may use following sample code. */
@@ -152,9 +175,15 @@ public class Schedulatore extends HttpServlet {
                     Set<JobKey> jobKeys = sched.getJobKeys(GroupMatcher.anyJobGroup());
                     for (JobKey jk : jobKeys) {
                         JobDetail jobDetail = sched.getJobDetail(jk);
-                        out.println("<tr><td>" + jobDetail + "</td></tr>");
+                        out.println("<tr><td>" + jobDetail + "</td>");
+                        for (Trigger t : sched.getTriggersOfJob(jk)) {
+                            out.println("<td>" + t.getDescription() + " [" + t.getStartTime().toString() + "] " + t.getPreviousFireTime().toString() + " - " + t.getNextFireTime().toString() + "</td>");
+
+                        }
+                        out.println("</tr>");
 
                     }
+
                 } catch (SchedulerException sk) {
                     out.println(sk);
                 }
