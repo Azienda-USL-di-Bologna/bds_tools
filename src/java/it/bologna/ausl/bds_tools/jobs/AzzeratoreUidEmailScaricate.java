@@ -27,7 +27,7 @@ public class AzzeratoreUidEmailScaricate implements Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
-        log.info("Job started");
+        log.info("Job AzzeratoreUidEmailScaricate started");
         try {
             Class.forName(driver);
             Connection c = DriverManager.getConnection(connectUri);
@@ -36,10 +36,10 @@ public class AzzeratoreUidEmailScaricate implements Job {
             s.executeUpdate("update pecgw.mail_config set lastuid=0");
             c.close();
         } catch (Throwable t) {
-            log.fatal("Errore in update db per download mail", t);
+            log.fatal("AzzeratoreUidEmailScaricate: Errore in update db per download mail", t);
         } finally {
 
-            log.info("Job finished");
+            log.info("Job AzzeratoreUidEmailScaricate finished");
         }
     }
 
