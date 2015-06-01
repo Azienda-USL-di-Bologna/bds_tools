@@ -10,7 +10,7 @@
               },
               {
               "name":"AzzeratoreUidEmailScaricate",
-              "schedule":"30",
+              "schedule":"3600",
               "class":"AzzeratoreUidEmailScaricate",
               "params":{
                         "driver":"org.postgresql.Driver",

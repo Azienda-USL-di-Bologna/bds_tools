@@ -7,6 +7,15 @@
                         "interval":"6",
                         "connectUri":"mongodb://argo:siamocaldi@babelmongo1,babelmongo2/downloadprod?safe=true&replicaSet=prod0"
                         }
+              },
+              {
+              "name":"AzzeratoreUidEmailScaricate",
+              "schedule":"3600",
+              "class":"AzzeratoreUidEmailScaricate",
+              "params":{
+                        "driver":"org.postgresql.Driver",
+                        "connectUri":"jdbc:postgresql://toshiro/argo?user=pecgw&password=siamocaldi"
+                        }
               }
       ]
 }
