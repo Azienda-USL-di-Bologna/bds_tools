@@ -8,7 +8,8 @@ package it.bologna.ausl.bds_tools.jobs;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -20,7 +21,7 @@ import org.quartz.JobExecutionException;
 public class AzzeratoreUidEmailScaricate implements Job {
 
     private String connectUri, driver;
-    private static final Logger log = Logger.getLogger(AzzeratoreUidEmailScaricate.class);
+    private static final Logger log = LogManager.getLogger(AzzeratoreUidEmailScaricate.class);
 
     public AzzeratoreUidEmailScaricate() {
     }

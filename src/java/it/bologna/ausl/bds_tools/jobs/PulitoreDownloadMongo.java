@@ -17,7 +17,8 @@ import org.quartz.JobExecutionException;
  * @author andrea
  */
 public class PulitoreDownloadMongo implements Job {
-private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(PulitoreDownloadMongo.class);
+
+    private static final Loggerlog  = LogManager.getLogger(PulitoreDownloadMongo.class);
 
     private String connectUri;
     private int intervalHour;
