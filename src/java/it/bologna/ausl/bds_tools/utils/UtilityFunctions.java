@@ -99,8 +99,8 @@ private static Context initContext;
         }
     }
 
-    public static String getPubblicParameter(Connection dbConn, String parametersTableName, String parameterName) throws SQLException {
-        String query = "SELECT val_parametro FROM " + parametersTableName + " WHERE nome_parametro = ?";
+    public static String getPubblicParameter(Connection dbConn, String parameterName) throws SQLException {
+        String query = "SELECT val_parametro FROM " + ApplicationParams.getPublicParametersTableName() + " WHERE nome_parametro = ?";
         PreparedStatement ps = dbConn.prepareStatement(query);
         ps.setString(1, parameterName);
 

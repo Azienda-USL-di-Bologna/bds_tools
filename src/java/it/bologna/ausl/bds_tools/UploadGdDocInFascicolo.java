@@ -222,7 +222,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
             if(fileExt != null)
                 endFileExt="." + fileExt;
 
-            String serverId = UtilityFunctions.getPubblicParameter(dbConn, getServletContext().getInitParameter("ParametersTableName"), "serverIdentifier");
+            String serverId = UtilityFunctions.getPubblicParameter(dbConn, "serverIdentifier");
             String mongoUri = getServletContext().getInitParameter("mongo" + serverId);
             mongo = new MongoWrapper(mongoUri);
 
