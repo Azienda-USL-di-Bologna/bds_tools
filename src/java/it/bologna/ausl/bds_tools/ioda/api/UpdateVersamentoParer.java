@@ -6,7 +6,7 @@ import it.bologna.ausl.bds_tools.ioda.utils.IodaParerUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParer;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
-import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequest;
+import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -39,14 +39,14 @@ public class UpdateVersamentoParer extends HttpServlet{
         try { 
             // leggo i parametri dalla richiesta
             ServletInputStream requestIs = null;
-            IodaRequest iodaReq = null;
+            IodaRequestDescriptor iodaReq = null;
             try {
                 requestIs = request.getInputStream();
                 if (requestIs == null) {
                     response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
                     return;
                 }
-                iodaReq = IodaRequest.parse(request.getInputStream());
+                iodaReq = IodaRequestDescriptor.parse(request.getInputStream());
             }
             catch (Exception ex) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());

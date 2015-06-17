@@ -6,7 +6,7 @@ import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
-import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequest;
+import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
@@ -42,7 +42,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
      * @throws IOException if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        IodaRequest iodaReq;
+        IodaRequestDescriptor iodaReq;
         Connection dbConn = null;
         PreparedStatement ps = null;
         Fascicolazioni fascicolazioni = null;
@@ -57,7 +57,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
                     return;
                 }
 //                log.debug(UtilityFunctions.inputStreamToString(is));
-                iodaReq = IodaRequest.parse(is);
+                iodaReq = IodaRequestDescriptor.parse(is);
             }
             catch (Exception ex) {
                 log.error("formato json della richiesta errato: " + ex);
