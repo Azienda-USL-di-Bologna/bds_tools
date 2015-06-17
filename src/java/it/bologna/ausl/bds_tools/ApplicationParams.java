@@ -27,6 +27,7 @@ public class ApplicationParams {
     private static String serverId;
     private static String mongoUri;
     private static String redisHost;
+    private static String publicParametersTableName;
     private static String redisInQueue;
     private static String authenticationTable;
     
@@ -36,9 +37,10 @@ public class ApplicationParams {
             dbConn = UtilityFunctions.getDBConnection();
             appId = context.getInitParameter("appid");
             appToken = context.getInitParameter("apptoken");
+            publicParametersTableName = context.getInitParameter("ParametersTableName");
             readAuthenticationTable(context);
             initilizeSupporetdFiles(dbConn, context);
-            serverId = serverId = UtilityFunctions.getPubblicParameter(dbConn, context.getInitParameter("ParametersTableName"), "serverIdentifier");
+            serverId = serverId = UtilityFunctions.getPubblicParameter(dbConn, "serverIdentifier");
             mongoUri = context.getInitParameter("mongo" + serverId);
             redisHost = context.getInitParameter("redis" + serverId);
             redisInQueue = context.getInitParameter("redisinqueue" + serverId);
@@ -103,6 +105,14 @@ public class ApplicationParams {
 
     public static void setAppToken(String appToken) {
         ApplicationParams.appToken = appToken;
+    }
+
+    public static String getPublicParametersTableName() {
+        return publicParametersTableName;
+    }
+
+    public static void setPublicParametersTableName(String publicParametersTableName) {
+        ApplicationParams.publicParametersTableName = publicParametersTableName;
     }
 
     public static String getServerId() {
