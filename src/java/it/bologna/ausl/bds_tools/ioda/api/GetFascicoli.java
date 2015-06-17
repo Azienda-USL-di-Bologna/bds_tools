@@ -4,9 +4,12 @@ import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
@@ -24,13 +27,10 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/**
- *
- * @author gdm
- */
-public class GetFascicolazioniDocumento extends HttpServlet {
 
-    private static final Logger log = LogManager.getLogger(GetFascicolazioniDocumento.class);
+public class GetFascicoli extends HttpServlet {
+
+    private static final Logger log = LogManager.getLogger(GetFascicoli.class);
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -45,9 +45,9 @@ public class GetFascicolazioniDocumento extends HttpServlet {
         IodaRequestDescriptor iodaReq;
         Connection dbConn = null;
         PreparedStatement ps = null;
-        Fascicolazioni fascicolazioni = null;
+        Fascicoli fascicoli = null;
         
-        IodaFascicolazioniUtilities fascicoliUtilities;
+        IodaFascicoliUtilities fascicoliUtilities;
         
         try {
 
@@ -100,19 +100,14 @@ public class GetFascicolazioniDocumento extends HttpServlet {
             }
 
             try{
-                //SimpleDocument sd = (SimpleDocument) iodaReq.getDocument();
-                SimpleDocument sd = (SimpleDocument) iodaReq.getObject();
+                Researcher sd = (Researcher) iodaReq.getObject();
                 
-                fascicoliUtilities = new IodaFascicolazioniUtilities(getServletContext(), request, sd, prefix);
+                fascicoliUtilities = new IodaFascicoliUtilities(getServletContext(), request, sd);
                 
-                fascicolazioni = fascicoliUtilities.getFascicolazioni(dbConn, ps);
-                  
-//              fascicolazioni = new Fascicolazioni("test", "test");
-//              ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");
-//              Fascicolazione fascicolazione = new Fascicolazione("codice", "nome", "g.demarco", "Giuseppe De Marco", DateTime.now(), false, DateTime.now(), null, null, classificazione);
-//              fascicolazioni.addFascicolazione(fascicolazione);
+                fascicoli = fascicoliUtilities.getFascicoli(dbConn, ps);
+
             }
-            catch(IOException | SendHttpMessageException | IodaDocumentException | SQLException ex){
+            catch(SendHttpMessageException | IodaDocumentException | SQLException ex){
                 log.error(ex);
             }
             finally{
@@ -128,7 +123,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
 
         response.setContentType(Detector.MEDIA_TYPE_APPLICATION_JSON.toString());
         try (PrintWriter out = response.getWriter()) {
-            out.print(fascicolazioni.getJSONString());
+            out.print(fascicoli.getJSONString());
         }
     }
 
