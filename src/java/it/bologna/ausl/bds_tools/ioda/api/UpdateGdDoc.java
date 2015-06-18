@@ -64,6 +64,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 iodaRequest = IodaUtilities.extractIodaRequest(request);
             }
             catch (RequestException ex) {
+                log.error(ex);
                 response.sendError(ex.getHttpStatusCode(), ex.getMessage());
                 return;
             }

@@ -5,7 +5,7 @@ package it.bologna.ausl.bds_tools.exceptions;
  * @author Giuseppe De Marco (gdm)
  */
 public class RequestException extends Exception {
-private int httpStatusCode;
+private final int httpStatusCode;
     
     public RequestException(int httpStatusCode, String message) {
         super(message);
