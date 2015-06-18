@@ -8,6 +8,7 @@ import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
+import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaFileException;
@@ -52,6 +53,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
     
 public static final String INDE_DOCUMENT_ID_PARAM_NAME = "document_id";
 public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
+
 private static final String GENERATE_INDE_NUMBER_PARAM_NAME = "generateidnumber";
 
 HttpServletRequest request;
@@ -122,6 +124,21 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     public IodaDocumentUtilities(ServletContext context, GdDoc gdDoc, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this(context, operation, prefixIds);
         this.gdDoc = gdDoc;
+        this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
+
+        if (operation != Document.DocumentOperationType.DELETE) {
+            getIndeId();
+            if (operation == Document.DocumentOperationType.INSERT) {
+                JSONObject nextIndeId = getNextIndeId();
+                this.gdDoc.setId((String) nextIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME));
+                this.gdDoc.setGuid((String) nextIndeId.get(INDE_DOCUMENT_GUID_PARAM_NAME));
+            }
+        }
+    }
+    
+    public IodaDocumentUtilities(ServletContext context, IodaRequestDescriptor iodaRequestDescriptor, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(context, operation, prefixIds);
+        this.gdDoc = iodaRequestDescriptor.getGdDoc(operation);
         this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
 
         if (operation != Document.DocumentOperationType.DELETE) {

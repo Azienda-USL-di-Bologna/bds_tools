@@ -57,14 +57,14 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             // leggo i parametri dalla richiesta
             
             // dati per l'autenticazione
-            String idapplicazione = UtilityFunctions.getMultipartStringParam(request, "idapplicazione");
+            String idapplicazione = UtilityFunctions.getMultipartStringParam(request, "idApplicazione");
             if (idapplicazione == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"idapplicazione\" mancante");
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"idApplicazione\" mancante");
                 return;
             }
-            String tokenapplicazione = UtilityFunctions.getMultipartStringParam(request, "tokenapplicazione");
+            String tokenapplicazione = UtilityFunctions.getMultipartStringParam(request, "tokenApplicazione");
             if (tokenapplicazione == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"tokenapplicazione\" mancante");
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"tokenApplicazione\" mancante");
                 return;
             }
             
