@@ -92,50 +92,6 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
-    public IodaDocumentUtilities(ServletContext context, HttpServletRequest request, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, operation, prefixIds);
-        this.request = request;
-        InputStream gdDocIs = null;
-        try {
-            Part part = request.getPart("document");
-            gdDocIs = part.getInputStream();
-        }
-        catch (Exception ex) {
-            throw new IodaDocumentException("document non trovato");
-        }
- 
-        try {
-            this.gdDoc = GdDoc.getGdDoc(gdDocIs, operation);   
-            this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
-        }
-        finally {
-            IOUtils.closeQuietly(gdDocIs);
-        }
-        if (operation != Document.DocumentOperationType.DELETE) {
-            getIndeId();
-            if (operation == Document.DocumentOperationType.INSERT) {
-                JSONObject nextIndeId = getNextIndeId();
-                this.gdDoc.setId((String) nextIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME));
-                this.gdDoc.setGuid((String) nextIndeId.get(INDE_DOCUMENT_GUID_PARAM_NAME));
-            }
-        }
-    }
-
-    public IodaDocumentUtilities(ServletContext context, GdDoc gdDoc, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, operation, prefixIds);
-        this.gdDoc = gdDoc;
-        this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
-
-        if (operation != Document.DocumentOperationType.DELETE) {
-            getIndeId();
-            if (operation == Document.DocumentOperationType.INSERT) {
-                JSONObject nextIndeId = getNextIndeId();
-                this.gdDoc.setId((String) nextIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME));
-                this.gdDoc.setGuid((String) nextIndeId.get(INDE_DOCUMENT_GUID_PARAM_NAME));
-            }
-        }
-    }
-    
     public IodaDocumentUtilities(ServletContext context, IodaRequestDescriptor iodaRequestDescriptor, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this(context, operation, prefixIds);
         this.gdDoc = iodaRequestDescriptor.getGdDoc(operation);

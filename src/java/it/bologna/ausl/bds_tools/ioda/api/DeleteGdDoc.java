@@ -2,8 +2,10 @@ package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
+import it.bologna.ausl.bds_tools.exceptions.RequestException;
 
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
@@ -16,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,6 +30,12 @@ import org.apache.logging.log4j.Logger;
  *
  * @author gdm
  */
+@MultipartConfig(
+            fileSizeThreshold   = 1024 * 1024 * 10,  // 10 MB
+//            maxFileSize         = 1024 * 1024 * 10, // 10 MB
+//            maxRequestSize      = 1024 * 1024 * 15, // 15 MB
+            location            = ""
+)
 public class DeleteGdDoc extends HttpServlet {
 private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
     /**
@@ -51,34 +60,18 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
     PreparedStatement ps = null;
         try { 
             // leggo i parametri dalla richiesta
-            ServletInputStream requestIs = null;
-            IodaRequestDescriptor iodaReq = null;
+            IodaRequestDescriptor iodaRequest;
             try {
-                requestIs = request.getInputStream();
-                if (requestIs == null) {
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
-                    return;
-                }
-                iodaReq = IodaRequestDescriptor.parse(request.getInputStream());
+                iodaRequest = IodaUtilities.extractIodaRequest(request);
             }
-            catch (Exception ex) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());
+            catch (RequestException ex) {
+                response.sendError(ex.getHttpStatusCode(), ex.getMessage());
+                return;
             }
-            finally {
-                IOUtils.closeQuietly(requestIs);
-            }
-
+            
             // dati per l'autenticazione
-            String idapplicazione = iodaReq.getIdApplicazione();
-            if (idapplicazione == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"idapplicazione\" mancante");
-                return;
-            }
-            String tokenapplicazione = iodaReq.getTokenApplicazione();
-            if (tokenapplicazione == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"tokenapplicazione\" mancante");
-                return;
-            }
+            String idapplicazione = iodaRequest.getIdApplicazione();
+            String tokenapplicazione = iodaRequest.getTokenApplicazione();
 
             // ottengo una connessione al db
             try {
@@ -104,19 +97,10 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
-
-            GdDoc gdDoc;
-            try {
-                gdDoc = iodaReq.getGdDoc(Document.DocumentOperationType.DELETE);
-            }
-            catch (IodaDocumentException ex) {
-                log.error(ex);
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
-                return;
-            }
             
             try {
-                iodaUtilities = new IodaDocumentUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, prefix);
+                //iodaUtilities = new IodaDocumentUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, prefix);
+                iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.DELETE, prefix);
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);

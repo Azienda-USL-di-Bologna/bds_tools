@@ -2,9 +2,12 @@ package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
+import it.bologna.ausl.bds_tools.exceptions.RequestException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
+import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaFileException;
 import java.io.IOException;
@@ -56,17 +59,18 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
         try { 
             // leggo i parametri dalla richiesta
             
+           IodaRequestDescriptor iodaRequest;
+            try {
+                iodaRequest = IodaUtilities.extractIodaRequest(request);
+            }
+            catch (RequestException ex) {
+                response.sendError(ex.getHttpStatusCode(), ex.getMessage());
+                return;
+            }
+            
             // dati per l'autenticazione
-            String idapplicazione = UtilityFunctions.getMultipartStringParam(request, "idApplicazione");
-            if (idapplicazione == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"idApplicazione\" mancante");
-                return;
-            }
-            String tokenapplicazione = UtilityFunctions.getMultipartStringParam(request, "tokenApplicazione");
-            if (tokenapplicazione == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "part \"tokenApplicazione\" mancante");
-                return;
-            }
+            String idapplicazione = iodaRequest.getIdApplicazione();
+            String tokenapplicazione = iodaRequest.getTokenApplicazione();
             
             // ottengo una connessione al db
             try {
@@ -94,7 +98,8 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             }
 
             try {
-                iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.UPDATE, prefix);
+                //iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.UPDATE, prefix);
+                iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.UPDATE, prefix);
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);
