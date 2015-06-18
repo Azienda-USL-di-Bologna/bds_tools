@@ -135,6 +135,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             }
         }
         catch (Exception ex) {
+            log.error(ex);
             throw new ServletException(ex);
         }
         

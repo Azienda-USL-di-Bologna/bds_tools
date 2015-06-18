@@ -758,7 +758,5 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             if (dbConn != null)
                 dbConn.close();
         }
-    }
-    
-     
+    } 
 }
