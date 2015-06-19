@@ -50,14 +50,14 @@ public class IodaFascicoliUtilities {
     
     
     public Fascicoli getFascicoli(Connection dbConn, PreparedStatement ps) throws SQLException{
-        Fascicoli fascicoli = getFascicoli(dbConn, ps, researcher.getSearchString(), researcher.getIdUtente());
+        Fascicoli fascicoli = getFascicoli(dbConn, ps, researcher.getSearchString(), researcher.getIdUtente(), researcher.getLimiteDiRicerca());
         
         return fascicoli;
     }
     
     
     
-    private Fascicoli getFascicoli(Connection dbConn, PreparedStatement ps, String strToFind, String idUtente) throws SQLException{
+    private Fascicoli getFascicoli(Connection dbConn, PreparedStatement ps, String strToFind, String idUtente, int limit) throws SQLException{
         
         Fascicoli res = new Fascicoli();
         
@@ -78,6 +78,11 @@ public class IodaFascicoliUtilities {
                          "or cast(f.numero_fascicolo as text) like '%" + strToFind + "%') " + 
                          "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' " + 
                          "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
+        
+        // controllo se ci sono limiti da applicare
+        if(limit != 0){
+            sqlText += " limit " + limit; 
+        }
         
         ps = dbConn.prepareStatement(sqlText);
         

@@ -7,6 +7,7 @@ import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Requestable;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
@@ -97,9 +98,9 @@ public class GetFascicoli extends HttpServlet {
             }
 
             try{
-                Researcher sd = (Researcher) iodaReq.getObject();
+                Researcher researcher = (Researcher) iodaReq.getObject();
                 
-                fascicoliUtilities = new IodaFascicoliUtilities(getServletContext(), request, sd);
+                fascicoliUtilities = new IodaFascicoliUtilities(getServletContext(), request, researcher);
                 
                 fascicoli = fascicoliUtilities.getFascicoli(dbConn, ps);
 
@@ -120,7 +121,7 @@ public class GetFascicoli extends HttpServlet {
 
         response.setContentType(Detector.MEDIA_TYPE_APPLICATION_JSON.toString());
         try (PrintWriter out = response.getWriter()) {
-            out.print(fascicoli.getJSONString());
+            out.print(Requestable.getJSONString(fascicoli));
         }
     }
 
