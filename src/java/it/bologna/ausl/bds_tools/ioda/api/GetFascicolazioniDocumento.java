@@ -8,7 +8,7 @@ import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
-import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
 import java.io.IOException;
 import java.io.InputStream;

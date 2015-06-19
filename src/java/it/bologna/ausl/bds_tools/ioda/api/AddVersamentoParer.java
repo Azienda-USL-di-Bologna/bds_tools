@@ -7,7 +7,7 @@ import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParer;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
-import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;

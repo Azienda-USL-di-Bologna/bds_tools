@@ -2,7 +2,7 @@ package it.bologna.ausl.bds_tools.ioda.utils;
 
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParer;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
-import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

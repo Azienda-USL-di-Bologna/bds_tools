@@ -4,7 +4,7 @@ import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
-import it.bologna.ausl.ioda.iodaoblectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
