@@ -63,6 +63,10 @@
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicolazioniDocumento</servlet-class>
     </servlet>
     <servlet>
+        <servlet-name>GetFascicoli</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicoli</servlet-class>
+    </servlet>
+    <servlet>
         <servlet-name>UpdateGdDoc</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateGdDoc</servlet-class>
     </servlet>
@@ -167,7 +171,7 @@
     <context-param>
         <param-name>GdDocsTableName</param-name>
         <param-value>gd.gddocs</param-value>
-    </context-param>  
+    </context-param>
     <context-param>
         <param-name>SottoDocumentiTableName</param-name>
         <param-value>gd.sotto_documenti</param-value>
@@ -183,7 +187,7 @@
     <context-param>
         <param-name>AggiornamentiParerTableName</param-name>
         <param-value>gd.aggiornamenti_parer</param-value>
-    </context-param>  
+    </context-param>
     <context-param>
         <param-name>UtentiTableName</param-name>
         <param-value>procton.utenti</param-value>
@@ -277,6 +281,10 @@
         <url-pattern>/ioda/api/fascicolo/getFascicolazioniDocumento</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
+        <servlet-name>GetFascicoli</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/getFascicoli</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
         <servlet-name>UpdateGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/update</url-pattern>
     </servlet-mapping>
@@ -295,5 +303,5 @@
         <welcome-file>default.html</welcome-file>
         <welcome-file>default.htm</welcome-file>
         <welcome-file>default.jsp</welcome-file>
-    </welcome-file-list>    
+    </welcome-file-list>
 </web-app>
