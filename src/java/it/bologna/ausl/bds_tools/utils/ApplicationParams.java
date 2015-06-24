@@ -1,4 +1,4 @@
-package it.bologna.ausl.bds_tools;
+package it.bologna.ausl.bds_tools.utils;
 
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -32,22 +32,19 @@ public class ApplicationParams {
     private static String authenticationTable;
     
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
-        Connection dbConn = null;
-        try {
-            dbConn = UtilityFunctions.getDBConnection();
+        try (Connection dbConn = UtilityFunctions.getDBConnection()) {
             appId = context.getInitParameter("appid");
             appToken = context.getInitParameter("apptoken");
             publicParametersTableName = context.getInitParameter("ParametersTableName");
             readAuthenticationTable(context);
             initilizeSupporetdFiles(dbConn, context);
             serverId = serverId = UtilityFunctions.getPubblicParameter(dbConn, "serverIdentifier");
-            mongoUri = context.getInitParameter("mongo" + serverId);
-            redisHost = context.getInitParameter("redis" + serverId);
-            redisInQueue = context.getInitParameter("redisinqueue" + serverId);
-        }
-        finally {
-            if (dbConn != null)
-                dbConn.close();
+            //mongoUri = context.getInitParameter("mongo" + serverId);
+            mongoUri = UtilityFunctions.getPubblicParameter(dbConn, "mongoConnectionString");
+            //redisHost = context.getInitParameter("redis" + serverId);
+            redisHost = UtilityFunctions.getPubblicParameter(dbConn, "masterChefHost");
+            //redisInQueue = context.getInitParameter("redisinqueue" + serverId);
+            redisInQueue = UtilityFunctions.getPubblicParameter(dbConn, "masterChefPushingQueue");
         }
     }
 

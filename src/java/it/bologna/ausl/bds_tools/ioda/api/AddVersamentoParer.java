@@ -1,6 +1,6 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
-import it.bologna.ausl.bds_tools.ApplicationParams;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaParerUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -91,7 +91,7 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
             // controllo se l'applicazione è autorizzata
             String prefix;
             try {
-                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+                prefix = UtilityFunctions.checkAuthentication(dbConn, idapplicazione, tokenapplicazione);
             }
             catch (NotAuthorizedException ex) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);

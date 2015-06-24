@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
@@ -103,7 +104,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
             // controllo se l'applicazione è autorizzata
             String prefix;
             try {
-                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+                prefix = UtilityFunctions.checkAuthentication(dbConn, idapplicazione, tokenapplicazione);
             }
             catch (NotAuthorizedException ex) {
                 try {

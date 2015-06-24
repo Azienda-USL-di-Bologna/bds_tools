@@ -1,7 +1,7 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import com.mongodb.MongoException;
-import it.bologna.ausl.bds_tools.ApplicationParams;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -321,7 +321,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         Timestamp dataUltimaModifica = (gdDoc.getDataUltimaModifica() != null) ? new Timestamp(gdDoc.getDataUltimaModifica().getMillis()) : null;
         if (dataUltimaModifica != null)
             ps.setTimestamp(index++, dataUltimaModifica);
-        ps.setNull(index++, Types.TIMESTAMP);
+        else
+            ps.setNull(index++, Types.TIMESTAMP);
         
         // stato_gd_doc
         if (gdDoc.isVisibile() != null)

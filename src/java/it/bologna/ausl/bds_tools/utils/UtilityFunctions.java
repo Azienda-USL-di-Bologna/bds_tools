@@ -4,7 +4,6 @@ package it.bologna.ausl.bds_tools.utils;
  *
  * @author Giuseppe De Marco (gdm)
  */
-import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
@@ -67,17 +66,16 @@ private static Context initContext;
     /**
      * Controlla se l'applicazione è autorizzata e ne ritorna il prefisso da usare nella costruzione degli id
      * @param dbConn connessione
-     * @param authenticationTable nome della tabella di autenticazione
      * @param idApplicazione id applicazione della quale verificare l'autenticazione
      * @param token token corrispondente all'id applicazione della quale verificare l'autenticazione
      * @return se l'applicazione è autorizzata torna il prefisso da usare nella costruzione degli id, se non è autorizzata torna NotAuthorizedException
      * @throws it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException se l'applicazione non è autorizzata
      * @throws java.sql.SQLException
      */
-    public static String checkAuthentication(Connection dbConn, String authenticationTable, String idApplicazione, String token) throws NotAuthorizedException, SQLException {
+    public static String checkAuthentication(Connection dbConn, String idApplicazione, String token) throws NotAuthorizedException, SQLException {
         String sqlText = 
                     "SELECT prefix " +
-                    "FROM " + authenticationTable + " " +
+                    "FROM " + ApplicationParams.getAuthenticationTable() + " " +
                     "WHERE id_applicazione = ? and token = ?";
 
         PreparedStatement ps = dbConn.prepareStatement(sqlText);

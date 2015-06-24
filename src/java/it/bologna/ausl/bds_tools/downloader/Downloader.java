@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools.downloader;
 
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -54,7 +55,7 @@ public class Downloader extends HttpServlet {
         if (deleteTokenParams != null && deleteTokenParams.toLowerCase().equals("false")) {
             deleteToken = false;
         }
-        Jedis redis = new Jedis(getServletContext().getInitParameter("redis.host"));
+        Jedis redis = new Jedis(ApplicationParams.getRedisHost());
         String params = redis.get(token);
         if (deleteToken) {
             redis.del(token);

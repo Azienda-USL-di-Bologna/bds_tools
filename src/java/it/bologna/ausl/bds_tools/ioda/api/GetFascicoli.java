@@ -1,13 +1,11 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
-import it.bologna.ausl.bds_tools.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Requestable;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
@@ -85,7 +83,7 @@ public class GetFascicoli extends HttpServlet {
             // controllo se l'applicazione è autorizzata
             String prefix;
             try {
-                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+                prefix = UtilityFunctions.checkAuthentication(dbConn, idapplicazione, tokenapplicazione);
             }
             catch (NotAuthorizedException ex) {
                 try {
@@ -121,7 +119,7 @@ public class GetFascicoli extends HttpServlet {
 
         response.setContentType(Detector.MEDIA_TYPE_APPLICATION_JSON.toString());
         try (PrintWriter out = response.getWriter()) {
-            out.print(Requestable.getJSONString(fascicoli));
+            out.print(fascicoli.getJSONString());
         }
     }
 

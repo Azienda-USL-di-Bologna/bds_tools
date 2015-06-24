@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.RequestException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -179,7 +180,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
             // controllo se l'applicazione è autorizzata
             String prefix;
             try {
-                prefix = UtilityFunctions.checkAuthentication(dbConn, ApplicationParams.getAuthenticationTable(), idapplicazione, tokenapplicazione);
+                prefix = UtilityFunctions.checkAuthentication(dbConn, idapplicazione, tokenapplicazione);
             }
             catch (NotAuthorizedException ex) {
                 try {
@@ -222,8 +223,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
             if(fileExt != null)
                 endFileExt="." + fileExt;
 
-            String serverId = UtilityFunctions.getPubblicParameter(dbConn, "serverIdentifier");
-            String mongoUri = getServletContext().getInitParameter("mongo" + serverId);
+            String mongoUri = ApplicationParams.getMongoUri();
             mongo = new MongoWrapper(mongoUri);
 
             //Creo la cartella dove inserire i file su mongo-- è quella del fascicolo passato

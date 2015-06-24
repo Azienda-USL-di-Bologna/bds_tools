@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import java.io.IOException;
 import java.io.PrintWriter;
 import javax.servlet.ServletException;
@@ -15,7 +16,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class Init extends HttpServlet {
 private static Logger log;
-     @Override
+    @Override
     public void init() throws ServletException {
         super.init();
         initLog4J();

@@ -6,18 +6,9 @@
 
 package it.bologna.ausl.bds_tools;
 
-import it.bologna.ausl.mongowrapper.MongoWrapper;
 import java.awt.GraphicsEnvironment;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
-import java.util.Properties;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
