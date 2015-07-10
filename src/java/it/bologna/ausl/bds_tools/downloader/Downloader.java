@@ -81,8 +81,8 @@ public class Downloader extends HttpServlet {
             //String plugin = parts[0];
             String plugin = (String) downloadParams.get("plugin");
             //String server = parts[1];
-//            String server = (String) downloadParams.get("server");
-            String server = ApplicationParams.getServerId();
+            String server = (String) downloadParams.get("server");
+//            String server = ApplicationParams.getServerId();
             String connParameters = getServletContext().getInitParameter(server);
             if (connParameters == null) {
                 throw new ServletException(server + " not found in parameters");

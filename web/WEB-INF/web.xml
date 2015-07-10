@@ -200,10 +200,12 @@
         <param-name>UploadGdDocMongoPath</param-name>
         <param-value>/Procton/Upload Gd Doc</param-value>
     </context-param>
+    <!--
     <context-param>
         <param-name>redis.host</param-name>
         <param-value>babelservice1</param-value>
     </context-param>
+    -->
     <context-param>
         <param-name>mongogdml</param-name>
         <param-value>mongodb://argo:siamofreschi@procton3,procton4/doc?safe=true&amp;replicaSet=rs0</param-value>
@@ -214,7 +216,7 @@
     </context-param>
     <context-param>
         <param-name>redisgdml</param-name>
-        <param-value>babelservice1</param-value>
+        <param-value>gdml</param-value>
     </context-param>
     <context-param>
         <param-name>mongoarena</param-name>
@@ -226,7 +228,7 @@
     </context-param>
     <context-param>
         <param-name>redisarena</param-name>
-        <param-value>babelservice1</param-value>
+        <param-value>arena</param-value>
     </context-param>
     <context-param>
         <param-name>mongoprod</param-name>
