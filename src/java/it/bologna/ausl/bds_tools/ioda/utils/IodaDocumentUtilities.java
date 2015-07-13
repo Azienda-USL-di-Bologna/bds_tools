@@ -39,6 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.tika.mime.MimeTypeException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -49,7 +50,7 @@ import org.json.simple.JSONValue;
  * @author gdm
  */
 public class IodaDocumentUtilities {
-private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(IodaDocumentUtilities.class);
+private static final Logger log = LogManager.getLogger(IodaDocumentUtilities.class);
     
 public static final String INDE_DOCUMENT_ID_PARAM_NAME = "document_id";
 public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";

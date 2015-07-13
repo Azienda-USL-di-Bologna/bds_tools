@@ -314,7 +314,7 @@ private static Context initContext;
                 String retQueue = uuid + "_" + ApplicationParams.getAppId() + "_pdfConvertRetQueue_" + ApplicationParams.getServerId();
                 WorkerData wd = new WorkerData(ApplicationParams.getAppId(), "1", retQueue);
                 wd.addNewJob("1", null, pdfConvertJobParams);
-                RedisClient rd = new RedisClient(ApplicationParams.getRedisHost(), null, null);
+                RedisClient rd = new RedisClient(ApplicationParams.getRedisHost(), null);
                 rd.put(wd.getStringForRedis(), ApplicationParams.getRedisInQueue());
                 
                 String res = rd.bpop(retQueue, 86400);
