@@ -3,6 +3,7 @@ package it.bologna.ausl.bds_tools.ioda.api;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.RequestException;
+import it.bologna.ausl.bds_tools.exceptions.ResourceNotAvailableException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.LockUtilities;
@@ -130,7 +131,9 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                     times++;
                 }
                 if (!updateComplete) {
-                    //TODO: dare eccezione per risorsa non disponibile
+                    //dare eccezione per risorsa non disponibile
+                    String message = "Risorsa non disponibile perchè occupata da un altro processo. Riprovare più tardi";
+                    throw new ResourceNotAvailableException(message);
                 }
             }
             catch (IodaFileException ex) {
@@ -139,7 +142,11 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
             }
-            // TODO: inserire eccezione che da risorsa non disponibile
+            catch (ResourceNotAvailableException ex) {
+                // eccezione che da risorsa non disponibile
+                log.error(ex);
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, ex.getMessage());
+            }
             catch (Exception ex) {
                 log.error(ex);
                 dbConn.rollback();
