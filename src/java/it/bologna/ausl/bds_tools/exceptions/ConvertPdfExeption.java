@@ -6,7 +6,7 @@ package it.bologna.ausl.bds_tools.exceptions;
  */
 public class ConvertPdfExeption extends Exception {
 
-      public ConvertPdfExeption() {
+    public ConvertPdfExeption() {
     }
     
     public ConvertPdfExeption(String message) {
