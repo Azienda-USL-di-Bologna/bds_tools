@@ -39,7 +39,7 @@ public class ApplicationParams {
             appToken = context.getInitParameter("apptoken");
             publicParametersTableName = context.getInitParameter("ParametersTableName");
             resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
-            resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("resourceLockedSleepMillis"));
+            resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));
             
             readAuthenticationTable(context);
             initilizeSupporetdFiles(dbConn, context);
@@ -50,6 +50,9 @@ public class ApplicationParams {
             redisHost = UtilityFunctions.getPubblicParameter(dbConn, "masterChefHost");
             //redisInQueue = context.getInitParameter("redisinqueue" + serverId);
             redisInQueue = UtilityFunctions.getPubblicParameter(dbConn, "masterChefPushingQueue");
+        }
+        catch (Exception ex) {
+           log.error(ex);
         }
     }
 
