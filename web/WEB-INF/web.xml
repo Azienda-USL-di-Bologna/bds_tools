@@ -274,6 +274,14 @@
         <param-name>apptoken</param-name>
         <param-value>bds_tools</param-value>
     </context-param>
+    <context-param>
+        <param-name>ResourceLockedMaxRetryTimes</param-name>
+        <param-value>5</param-value>
+    </context-param>
+    <context-param>
+        <param-name>ResourceLockedSleepMillis</param-name>
+        <param-value>5000</param-value>
+    </context-param>
     <servlet-mapping>
         <servlet-name>DeleteGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/delete</url-pattern>

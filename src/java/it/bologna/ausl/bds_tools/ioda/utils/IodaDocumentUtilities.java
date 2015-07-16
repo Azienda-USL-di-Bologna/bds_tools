@@ -108,6 +108,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
+    public GdDoc getGdDoc() {
+        return gdDoc;
+    }
+
     private JSONObject getNextIndeId() {
         JSONObject currentId = (JSONObject) indeId.get(indeIdIndex++);
         return currentId;

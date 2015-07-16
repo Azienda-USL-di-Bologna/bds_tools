@@ -5,8 +5,10 @@ import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.RequestException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
+import it.bologna.ausl.bds_tools.ioda.utils.LockUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
+import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
@@ -108,13 +110,28 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 return;
             }
 
+            LockUtilities lock = null;
             try {
                 dbConn.setAutoCommit(false);
 
-                // inserimento GdDoc con fascicolazione e sottodocumenti
-                iodaUtilities.updateGdDoc(dbConn, ps);
-
-                dbConn.commit();
+                GdDoc gdDoc = iodaUtilities.getGdDoc();
+                lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
+                
+                int times = 0;
+                boolean updateComplete = false;
+                while (!updateComplete && times < ApplicationParams.getResourceLockedMaxRetryTimes()) {
+                    if (lock.getLock()) {
+                        // inserimento GdDoc con fascicolazione e sottodocumenti
+                        iodaUtilities.updateGdDoc(dbConn, ps);
+                        dbConn.commit();
+                        updateComplete = true;
+                    }
+                    Thread.sleep(ApplicationParams.getResourceLockedSleepMillis());
+                    times++;
+                }
+                if (!updateComplete) {
+                    //TODO: dare eccezione per risorsa non disponibile
+                }
             }
             catch (IodaFileException ex) {
                 log.error(ex);
@@ -122,6 +139,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
             }
+            // TODO: inserire eccezione che da risorsa non disponibile
             catch (Exception ex) {
                 log.error(ex);
                 dbConn.rollback();
@@ -132,6 +150,8 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 if (ps != null)
                     ps.close();
                 dbConn.close();
+                if (lock != null)
+                    lock.deleteLock(false);
             }
         }
         catch (Exception ex) {

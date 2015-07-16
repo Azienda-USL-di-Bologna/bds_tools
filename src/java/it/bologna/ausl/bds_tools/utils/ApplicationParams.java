@@ -30,12 +30,17 @@ public class ApplicationParams {
     private static String publicParametersTableName;
     private static String redisInQueue;
     private static String authenticationTable;
+    private static int resourceLockedMaxRetryTimes;
+    private static long resourceLockedSleepMillis;
     
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
         try (Connection dbConn = UtilityFunctions.getDBConnection()) {
             appId = context.getInitParameter("appid");
             appToken = context.getInitParameter("apptoken");
             publicParametersTableName = context.getInitParameter("ParametersTableName");
+            resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
+            resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("resourceLockedSleepMillis"));
+            
             readAuthenticationTable(context);
             initilizeSupporetdFiles(dbConn, context);
             serverId = serverId = UtilityFunctions.getPubblicParameter(dbConn, "serverIdentifier");
@@ -150,5 +155,21 @@ public class ApplicationParams {
 
     public static void setAuthenticationTable(String authenticationTable) {
         ApplicationParams.authenticationTable = authenticationTable;
+    }
+
+    public static int getResourceLockedMaxRetryTimes() {
+        return resourceLockedMaxRetryTimes;
+    }
+
+    public static void setResourceLockedMaxRetryTimes(int resourceLockedMaxRetryTimes) {
+        ApplicationParams.resourceLockedMaxRetryTimes = resourceLockedMaxRetryTimes;
+    }
+
+    public static long getResourceLockedSleepMillis() {
+        return resourceLockedSleepMillis;
+    }
+
+    public static void setResourceLockedSleepMillis(long resourceLockedSleepMillis) {
+        ApplicationParams.resourceLockedSleepMillis = resourceLockedSleepMillis;
     }
 }
