@@ -200,14 +200,14 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "data_ultima_modifica, stato_gd_doc, " +
                         "data_gddoc, guid_gddoc, codice_registro, " +
                         "data_registrazione, numero_registrazione, " +
-                        "anno_registrazione, " +
+                        "anno_registrazione, oggetto," +
                         "id_oggetto_origine, tipo_oggetto_origine) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
                         "?, ?, ?, " +
                         "?, ?, " +
-                        "?, " +
+                        "?, ?, " +
                         "?, ?)";
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;

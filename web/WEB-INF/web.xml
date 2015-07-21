@@ -266,6 +266,28 @@
         <param-name>getindeidurlprod</param-name>
         <param-value>http://babelservice3:8080/Indeutilities/GetIndeId</param-value>
     </context-param>
+    
+    <context-param>
+        <param-name>mongoprototipo</param-name>
+        <param-value>mongodb://argo:password@localhost/doc?safe=true&amp;replicaSet=rs0</param-value>
+    </context-param>
+    <context-param>
+        <param-name>mongodownloadprototipo</param-name>
+        <param-value>mongodb://argo:password@localhost/download?safe=true&amp;replicaSet=rs0</param-value>
+    </context-param>
+    <context-param>
+        <param-name>redisprototipo</param-name>
+        <param-value>localhost</param-value>
+    </context-param>
+    <context-param>
+        <param-name>redisinqueueprototipo</param-name>
+        <param-value>chefin</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlprototipo</param-name>
+        <param-value>http://localhost:8080/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    
     <context-param>
         <param-name>appid</param-name>
         <param-value>bds_tools</param-value>

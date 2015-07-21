@@ -145,7 +145,8 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             catch (ResourceNotAvailableException ex) {
                 // eccezione che da risorsa non disponibile
                 log.error(ex);
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, ex.getMessage());
+                response.sendError(HttpServletResponse.SC_CONFLICT, ex.getMessage());
+                return;
             }
             catch (Exception ex) {
                 log.error(ex);
