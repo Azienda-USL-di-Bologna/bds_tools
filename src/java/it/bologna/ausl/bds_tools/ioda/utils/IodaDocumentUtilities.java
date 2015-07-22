@@ -251,6 +251,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
         else
             ps.setNull(index++, Types.INTEGER);
+        
+        // oggetto
+        ps.setString(index++, gdDoc.getOggetto());
 //
 //        // xml_specifico_parer
 //        ps.setString(index++, gdDoc.getXmlSpecificoParer());
@@ -305,7 +308,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "codice_registro = coalesce(?, codice_registro), " +
                 "data_registrazione = coalesce(?, data_registrazione), " +
                 "numero_registrazione = coalesce(?, numero_registrazione), " +
-                "anno_registrazione = coalesce(?, anno_registrazione) " +
+                "anno_registrazione = coalesce(?, anno_registrazione), " +
+                "oggetto = coalesce(?, oggetto) " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
         
@@ -356,6 +360,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         else
             ps.setNull(index++, Types.INTEGER);
 
+        // oggetto
+        ps.setString(index++, gdDoc.getOggetto());
+        
 //        // xml_specifico_parer
 //        ps.setString(index++, gdDoc.getXmlSpecificoParer());
 //
