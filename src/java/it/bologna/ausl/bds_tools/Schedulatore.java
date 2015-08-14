@@ -98,10 +98,8 @@ public class Schedulatore extends HttpServlet {
             }
             String jobString = IOUtils.toString(jobConfURL);
             ObjectMapper mapper = new ObjectMapper();
-            JobList jobList = mapper.readValue(jobString, JobList.class
-            );
-            for (JobDescriptor jd
-                    : jobList.getJobs()) {
+            JobList jobList = mapper.readValue(jobString, JobList.class);
+            for (JobDescriptor jd : jobList.getJobs()) {
                 JobParams jp = jd.getJobParams();
                 JobBuilder jb = newJob((Class< ? extends Job>) Class.forName(this.getClass().getPackage().getName() + "." + JOB_PACKAGE_SUFFIX + "." + jd.getClassz())).withIdentity(jd.getName(), "group1");
                 for (String k : jp.getParamNames()) {

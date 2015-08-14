@@ -16,7 +16,15 @@
                         "driver":"org.postgresql.Driver",
                         "connectUri":"jdbc:postgresql://gdml/argo?user=pecgw&password=siamofreschi"
                         }
-              }
-                              
+              },
+              {
+              "name":"PulitoreCestinoMongo",
+              "schedule":"3600",
+              "class":"PulitoreCestinoMongo",
+              "params":{
+                        "interval":"1",
+                        "connectUri":"mongodb://argo:siamofreschi@procton3,procton4/doc?replicaset=rs0&safe=true"
+                        }
+              }               
       ]
 }
