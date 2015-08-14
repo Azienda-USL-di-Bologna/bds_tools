@@ -6,9 +6,11 @@
 
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Enumeration;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -38,12 +40,18 @@ private static final Logger log = LogManager.getLogger(Debug.class);
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        log.debug("ciao");
-        log.info("ciao");
-        log.error("ciao");
-        log.fatal("ciao");
+        Enumeration<String> parametersNames = request.getParameterNames();
+        log.info("parameters:");
+        String parameters = "";
+        while (parametersNames.hasMoreElements()) {
+            String paramName = parametersNames.nextElement();
+            parameters += paramName + "=" + request.getParameter(paramName) + "\n";
+        }
+        log.info(parameters);
         
-        
+        log.info("body:");
+        String body = UtilityFunctions.inputStreamToString(request.getInputStream());
+        log.info(body);
         
         String fonts[] = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
         String output = "";
@@ -61,8 +69,10 @@ private static final Logger log = LogManager.getLogger(Debug.class);
             out.println("</head>");
             out.println("<body>");
             out.println("<h1>Servlet Debug at " + request.getContextPath() + "</h1>");
-            out.println("<p> fonts: trovati: " + fonts.length + "</p>");
-            out.println("<p> lista: <br/>" + output.replace("\n", "<br/>\n") + "</p>");
+            out.println("<p>parameters: " + parameters + "</p>");
+            out.println("<p>body: " + body + "</p>");
+//            out.println("<p> fonts: trovati: " + fonts.length + "</p>");
+//            out.println("<p> lista: <br/>" + output.replace("\n", "<br/>\n") + "</p>");
             out.println("</body>");
             out.println("</html>");
         } finally {

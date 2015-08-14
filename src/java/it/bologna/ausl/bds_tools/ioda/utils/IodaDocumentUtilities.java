@@ -14,7 +14,7 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
 import it.bologna.ausl.mimetypeutility.Detector;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
-import it.bologna.ausl.mongowrapper.MongoWrapperException;
+import it.bologna.ausl.mongowrapper.exceptions.MongoWrapperException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;

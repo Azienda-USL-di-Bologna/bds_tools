@@ -2,7 +2,7 @@ package it.bologna.ausl.bds_tools.downloader;
 
 import com.mongodb.MongoException;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
-import it.bologna.ausl.mongowrapper.MongoWrapperException;
+import it.bologna.ausl.mongowrapper.exceptions.MongoWrapperException;
 import java.io.InputStream;
 import java.net.UnknownHostException;
 import org.json.simple.JSONObject;
