@@ -37,7 +37,7 @@ public class PulitoreCestinoMongo implements Job {
             mw = new MongoWrapper(connectUri);            
             Calendar targetDate = Calendar.getInstance();
             targetDate.add(Calendar.DATE, -intervalDays);
-            targetDate.add(Calendar.HOUR, -intervalDays);
+//            targetDate.add(Calendar.HOUR, -intervalDays);
             List<String> uuidsToDelete = mw.getDeletedLessThan(targetDate.getTimeInMillis());
             for (String uuid : uuidsToDelete) {
                 mw.erase(uuid);

@@ -1,6 +1,5 @@
 package it.bologna.ausl.bds_tools;
 
-import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
@@ -13,6 +12,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  *
@@ -20,7 +20,7 @@ import org.apache.logging.log4j.LogManager;
  */
 public class SetCurrentActivity extends HttpServlet {
 
-private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(SetCurrentActivity.class);
+private static final Logger log = LogManager.getLogger(SetCurrentActivity.class);
     /** 
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code> methods.
      * @param request servlet request
