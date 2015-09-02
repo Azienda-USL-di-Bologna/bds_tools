@@ -61,7 +61,7 @@ public class IodaFascicoliUtilities {
         
         Fascicoli res = new Fascicoli();
         
-        String sqlText = "select distinct(f.id_fascicolo), f.id_livello_fascicolo, f.numero_fascicolo, " + 
+        String sqlTextOld = "select distinct(f.id_fascicolo), f.id_livello_fascicolo, f.numero_fascicolo, " + 
                          "f.nome_fascicolo,f.anno_fascicolo, f.id_utente_creazione, f.data_creazione, " +
                          "f.numerazione_gerarchica, f.id_utente_responsabile, uResp.nome, uResp.cognome, " + 
                          "f.stato_fascicolo, f.id_utente_responsabile_proposto, f.id_fascicolo_padre, " + 
@@ -79,6 +79,31 @@ public class IodaFascicoliUtilities {
                          "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' " + 
                          "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
         
+        
+        String sqlText = "select distinct(f.id_fascicolo), f.id_livello_fascicolo, " +
+                            "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
+                            "WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
+                            "ELSE NULL " +
+                            "END as nome_fascicolo_interfaccia, " +
+                            "f.numero_fascicolo, " +
+                            "f.nome_fascicolo,f.anno_fascicolo, f.id_utente_creazione, f.data_creazione, " +
+                            "f.numerazione_gerarchica, f.id_utente_responsabile, uResp.nome, uResp.cognome, " +
+                            "f.stato_fascicolo, f.id_utente_responsabile_proposto, f.id_fascicolo_padre, " +
+                            "f.id_titolo, f.speciale, t.codice_gerarchico || '' || t.codice_titolo || ' ' || t.titolo as titolo, " +
+                            "case when fv.id_fascicolo is null then 0 else -1 end as accesso " +
+                            "from " +
+                            "gd.fascicoligd f " +
+                            "left join procton.titoli t on t.id_titolo = f.id_titolo " +
+                            "left join gd.log_azioni_fascicolo laf on laf.id_fascicolo= f.id_fascicolo " +
+                            "join gd.fascicoli_modificabili fv on fv.id_fascicolo=f.id_fascicolo and fv.id_utente= ? " +
+                            "join procton.utenti uResp on uResp.id_utente=f.id_utente_responsabile " +
+                            "join procton.utenti uCrea on f.id_utente_creazione=uCrea.id_utente " +
+                            "where 1=1  AND (f.nome_fascicolo ilike ('%" + strToFind + "%') " +
+                            "or cast(f.numero_fascicolo as text) like '%" + strToFind + "%') " + 
+                            "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' " +
+                            "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
+        
+        
         // controllo se ci sono limiti da applicare
         if(limit != 0){
             sqlText += " limit " + limit; 
@@ -95,6 +120,7 @@ public class IodaFascicoliUtilities {
             int index = 2;
             
             String idLivelloFascicolo = results.getString(index++);
+            String nomeFascicoloInterfaccia = results.getString(index++);
             int numeroFascicolo = results.getInt(index++);
             String nomeFascicolo = results.getString(index++);
             int annoFascicolo = results.getInt(index++);
@@ -119,6 +145,7 @@ public class IodaFascicoliUtilities {
             f.setCodiceFascicolo(numerazioneGerarchica);
             f.setNumeroFascicolo(numeroFascicolo);
             f.setNomeFascicolo(nomeFascicolo);
+            f.setNomeFascicoloInterfaccia(nomeFascicoloInterfaccia);
             f.setIdUtenteResponsabile(idUtenteResponsabile);
             f.setDescrizioneUtenteResponsabile(descrizioneUtenteResponsabile);
             f.setDataCreazione(dataCreazione);
