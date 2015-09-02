@@ -184,7 +184,7 @@ public class IodaFascicolazioniUtilities {
         
         Fascicolazione fascicolazione = null;
         
-        String sqlText = 
+        String sqlTextOld = 
                 "SELECT f.numerazione_gerarchica, f.nome_fascicolo, fg.data_assegnazione, fg.id_utente_fascicolatore, fg.data_eliminazione, fg.id_utente_eliminazione " +
                 "FROM " + getFascicoliTable() + " f, " + getFascicoliGdDocTable() + " fg, "+ getGdDocTable() + " g " +
                 "WHERE g.id_oggetto_origine = ? " +
@@ -193,6 +193,20 @@ public class IodaFascicolazioniUtilities {
                 "AND f.id_fascicolo = fg.id_fascicolo " +
                 "AND fg.id_fascicolo = ? ";
 	
+        String sqlText = 
+                "SELECT f.numerazione_gerarchica, f.nome_fascicolo, fg.data_assegnazione, fg.id_utente_fascicolatore, fg.data_eliminazione, " +
+                "fg.id_utente_eliminazione, " +
+                "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
+                "WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
+                "ELSE NULL " +
+                "END as nome_fascicolo_interfaccia " +
+                "FROM " + getFascicoliTable() + " f, " + getFascicoliGdDocTable() + " fg, "+ getGdDocTable() + " g " +
+                "WHERE g.id_oggetto_origine = ? " +
+                "AND g.tipo_oggetto_origine = ? " +
+                "AND g.id_gddoc = fg.id_gddoc " +
+                "AND f.id_fascicolo = fg.id_fascicolo " +
+                "AND fg.id_fascicolo = ? ";
+        
         ps = dbConn.prepareStatement(sqlText);
         ps.setString(1, sd.getIdOggettoOrigine());
         ps.setString(2, sd.getTipoOggettoOrigine());
@@ -220,6 +234,7 @@ public class IodaFascicolazioniUtilities {
             
             // controllo che esista idUtenteEliminatore
             String idUtenteEliminatore = res.getString(index++);
+            String nomeFascicoloInterfaccia = res.getString(index++);
             String descrizioneEliminatore = null;
             boolean eliminato = false;
             if(idUtenteEliminatore != null && !idUtenteEliminatore.equals("")){
@@ -228,7 +243,8 @@ public class IodaFascicolazioniUtilities {
             }
             String descrizioneFascicolatore = this.getNomeCognome(dbConn, ps, idUtenteFascicolatore);         
             
-            fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione);
+           
+            fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
            
         }
         return fascicolazione;
