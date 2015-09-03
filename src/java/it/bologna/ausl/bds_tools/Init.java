@@ -30,7 +30,7 @@ private static Logger log;
     }
     
     private void initLog4J() {
-        System.setProperty("log4j.configurationFile", Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j2.xml").getFile());
+        //System.setProperty("log4j.configurationFile", Thread.currentThread().getContextClassLoader().getResource("it/bologna/ausl/bds_tools/conf/log4j2.xml").getFile());
     }
 
     /**
