@@ -161,6 +161,7 @@ public class IodaFascicoliUtilities {
             res.addFascicolo(f);
         }
         
+               
         return res;
     }
     
