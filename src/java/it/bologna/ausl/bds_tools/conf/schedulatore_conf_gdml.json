@@ -22,7 +22,7 @@
               "schedule":"3600",
               "class":"PulitoreCestinoMongo",
               "params":{
-                        "interval":"1",
+                        "intervalDays":"0",
                         "connectUri":"mongodb://argo:siamofreschi@procton3,procton4/doc?replicaset=rs0&safe=true"
                         }
               }               

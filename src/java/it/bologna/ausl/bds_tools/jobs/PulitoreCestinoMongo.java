@@ -1,10 +1,5 @@
 package it.bologna.ausl.bds_tools.jobs;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
-import com.mongodb.DBObject;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
 import java.util.Calendar;
 import java.util.List;
@@ -32,16 +27,19 @@ public class PulitoreCestinoMongo implements Job {
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Pulitore Cestino di mongo Started");
-        MongoWrapper mw = null;
+        MongoWrapper mw;
         try {
             mw = new MongoWrapper(connectUri);            
             Calendar targetDate = Calendar.getInstance();
-            targetDate.add(Calendar.DATE, -intervalDays);
+            targetDate.add(Calendar.DAY_OF_MONTH, -intervalDays);
+//            if (Calendar.getInstance().getTimeInMillis() - targetDate.getTimeInMillis() < (1000*3600*24)) {
+//                throw new JobExecutionException("intervallo troppo breve, minore di 24 ore: " + intervalDays);
+//            }
 //            targetDate.add(Calendar.HOUR, -intervalDays);
             List<String> uuidsToDelete = mw.getDeletedLessThan(targetDate.getTimeInMillis());
-            for (String uuid : uuidsToDelete) {
+            uuidsToDelete.stream().forEach((uuid) -> {
                 mw.erase(uuid);
-            }
+            });
         } catch (Throwable t) {
             log.fatal("Errore nel pulitore Cestino di Mongo", t);
             throw new JobExecutionException(t);

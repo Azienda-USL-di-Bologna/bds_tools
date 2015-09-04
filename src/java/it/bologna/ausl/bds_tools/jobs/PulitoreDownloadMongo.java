@@ -31,7 +31,7 @@ public class PulitoreDownloadMongo implements Job {
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Pulitore mongo Started");
-        MongoWrapper mw = null;
+        MongoWrapper mw;
         try {
             mw = new MongoWrapper(connectUri);
             //Trovo i file piu' vecchi di 24 h
@@ -44,17 +44,13 @@ public class PulitoreDownloadMongo implements Job {
             DBObject filter = new BasicDBObject("uploadDate", new BasicDBObject("$lt", c.getTime()));
 
             log.debug(filter);
-            DBCursor results = files.find(filter);
             //results = files.find();
-            try {
+            try (DBCursor results = files.find(filter)) {
                 while (results.hasNext()) {
                     DBObject next = results.next();
-                    mw.delete(next.get("_id").toString());
+                    mw.erase(next.get("_id").toString());
                 }
-            } finally {
-                results.close();
             }
-
         } catch (Throwable t) {
             log.fatal("Errore nel pulitore Mongo", t);
             throw new JobExecutionException(t);
