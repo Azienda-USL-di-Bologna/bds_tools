@@ -1,6 +1,8 @@
 package it.bologna.ausl.bds_tools.jobs;
 
 import it.bologna.ausl.mongowrapper.MongoWrapper;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
@@ -36,8 +38,13 @@ public class PulitoreCestinoMongo implements Job {
 //                throw new JobExecutionException("intervallo troppo breve, minore di 24 ore: " + intervalDays);
 //            }
 //            targetDate.add(Calendar.HOUR, -intervalDays);
+            log.debug("intervalDays: " + intervalDays);
+            DateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+            log.debug("reading deleted file less than " + df.format(targetDate.getTime()));
+            log.debug("millis: " + targetDate.getTimeInMillis());
             List<String> uuidsToDelete = mw.getDeletedLessThan(targetDate.getTimeInMillis());
             uuidsToDelete.stream().forEach((uuid) -> {
+                log.debug("ereasing: " + uuid);
                 mw.erase(uuid);
             });
         } catch (Throwable t) {
@@ -53,11 +60,11 @@ public class PulitoreCestinoMongo implements Job {
         this.connectUri = uri;
     }
 
-    public void setInterval(int hour) {
+    public void setIntervalDays(int hour) {
         this.intervalDays = hour;
     }
 
-    public void setInterval(String hour) {
+    public void setIntervalDays(String hour) {
         this.intervalDays = Integer.valueOf(hour);
     }
 
