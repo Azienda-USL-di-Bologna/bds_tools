@@ -161,6 +161,10 @@ public class IodaFascicoliUtilities {
             res.addFascicolo(f);
         }
         
+        if(res.getSize() == 0){
+            res.createFascicoli();
+        }
+               
         return res;
     }
     
