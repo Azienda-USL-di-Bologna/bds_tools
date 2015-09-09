@@ -218,7 +218,7 @@ public class IodaFascicolazioniUtilities {
             throw new SQLException("fascicolazione non trovata");
         else{
             int index = 1;
-            DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+            DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
             String numerazioneGerarchica = res.getString(index++);
             String nomeFascicolo = res.getString(index++);
                         
