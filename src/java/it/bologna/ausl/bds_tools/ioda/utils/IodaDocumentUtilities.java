@@ -135,14 +135,15 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         
         String sqlText = 
                 "INSERT INTO " + getFascicoliGdDocTable() + "(" +
-                "id_fascicolo_gddoc, id_gddoc, id_fascicolo, data_assegnazione) " +
-                "VALUES (?, ?, ?, ?)";
+                "id_fascicolo_gddoc, id_gddoc, id_fascicolo, data_assegnazione, id_utente_fascicolatore) " +
+                "VALUES (?, ?, ?, ?, ?)";
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
         ps.setString(index++, idFascicoloGdDoc);
         ps.setString(index++, gdDoc.getId());
         ps.setString(index++, idFascicolo);
         ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
+        ps.setString(index++, fascicolo.getIdUtenteFascicolatore());
         
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
