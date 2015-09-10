@@ -83,7 +83,7 @@ public class IodaFascicoliUtilities {
         String sqlText = "select distinct(f.id_fascicolo), f.id_livello_fascicolo, " +
                             "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
                             "WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
-                            "ELSE NULL " +
+                            "ELSE nome_fascicolo " +
                             "END as nome_fascicolo_interfaccia, " +
                             "f.numero_fascicolo, " +
                             "f.nome_fascicolo,f.anno_fascicolo, f.id_utente_creazione, f.data_creazione, " +

@@ -198,7 +198,7 @@ public class IodaFascicolazioniUtilities {
                 "fg.id_utente_eliminazione, " +
                 "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
                 "WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
-                "ELSE NULL " +
+                "ELSE nome_fascicolo " +
                 "END as nome_fascicolo_interfaccia " +
                 "FROM " + getFascicoliTable() + " f, " + getFascicoliGdDocTable() + " fg, "+ getGdDocTable() + " g " +
                 "WHERE g.id_oggetto_origine = ? " +
