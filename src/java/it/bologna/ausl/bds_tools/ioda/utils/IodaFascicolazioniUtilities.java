@@ -221,8 +221,16 @@ public class IodaFascicolazioniUtilities {
             DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
             String numerazioneGerarchica = res.getString(index++);
             String nomeFascicolo = res.getString(index++);
-                        
-            DateTime dataAssegnazione = DateTime.parse(res.getString(index++), formatter);
+            DateTime dataAssegnazione = null;
+            String dataStr = res.getString(index++);
+            try{
+                
+                dataAssegnazione = DateTime.parse(dataStr, formatter);
+            } catch(Exception e){
+                formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+                dataAssegnazione = DateTime.parse(dataStr, formatter);
+            }
+            
             String idUtenteFascicolatore = res.getString(index++);
             
             // controllo che esista la data di eliminazione

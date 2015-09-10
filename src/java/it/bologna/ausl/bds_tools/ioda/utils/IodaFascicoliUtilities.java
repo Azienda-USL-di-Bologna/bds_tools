@@ -45,8 +45,9 @@ public class IodaFascicoliUtilities {
     }
     
     public IodaFascicoliUtilities(ServletContext context, HttpServletRequest request, Researcher r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(context, r);
         this.request = request;
-        this.researcher = r;
+//        this.researcher = r;
     }
     
     
@@ -117,11 +118,11 @@ public class IodaFascicoliUtilities {
         
         ResultSet results = ps.executeQuery();
               
-        String idFascicolo = results.getString(1);
+        
         
         while (results.next()) {
-            int index = 2;
-            
+            int index = 1;
+            String idFascicolo = results.getString(index++);
             String idLivelloFascicolo = results.getString(index++);
             String nomeFascicoloInterfaccia = results.getString(index++);
             int numeroFascicolo = results.getInt(index++);
