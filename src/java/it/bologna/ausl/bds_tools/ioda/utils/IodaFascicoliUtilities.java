@@ -1,6 +1,7 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
+import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
@@ -115,6 +116,8 @@ public class IodaFascicoliUtilities {
         log.debug("sql: " + ps.toString());
         
         ResultSet results = ps.executeQuery();
+              
+        String idFascicolo = results.getString(1);
         
         while (results.next()) {
             int index = 2;
@@ -158,6 +161,8 @@ public class IodaFascicoliUtilities {
             f.setAccesso(accesso);
             f.setIdUtenteResponsabileProposto(idUtenteResponsabileProposto);
             
+            f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
+            
             res.addFascicolo(f);
         }
         
@@ -169,7 +174,59 @@ public class IodaFascicoliUtilities {
     }
     
     
-    
+    private ClassificazioneFascicolo getClassificazioneFascicolo(Connection dbConn, PreparedStatement ps, String idFascicolo) throws SQLException{
+        
+        ClassificazioneFascicolo classificazioneFascicolo = null;
+        
+        String sqlText = 
+                "SELECT t.codice_gerarchico, t.codice_titolo " +
+                "FROM " + getFascicoliTable() + " f, " + getTitoliTable() + " t " +
+                "WHERE id_fascicolo = ? " +
+                "AND f.id_titolo = t.id_titolo ";          
+      
+        ps = dbConn.prepareStatement(sqlText);
+        ps.setString(1, idFascicolo);
+        log.debug("eseguo la query: " + ps.toString() + " ...");
+        ResultSet res = ps.executeQuery();
+        
+        String result;
+        
+        if (!res.next())
+            throw new SQLException("titolo non trovato");
+        else{
+            result = res.getString(1) + res.getString(2);
+            
+            classificazioneFascicolo = new ClassificazioneFascicolo();
+            
+            // calcolo la gerarchia e setta il corrispettivo nome
+            String[] parts = result.split("-");
+            int dim = parts.length;
+            
+            while(dim>0){
+                switch(dim){
+                case 3:
+                    String nomeSottoClasse = this.getTitolo(dbConn, ps, parts[0] + "-" + parts[1] + "-", parts[2]);
+                    classificazioneFascicolo.setNomeSottoclasse(nomeSottoClasse);
+                    classificazioneFascicolo.setCodiceSottoclasse(parts[0] + "-" + parts[1] + "-" + parts[2]);
+                    break;
+
+                case 2:
+                    String nomeClasse = this.getTitolo(dbConn, ps, parts[0] + "-", parts[1]);
+                    classificazioneFascicolo.setNomeClasse(nomeClasse);
+                    classificazioneFascicolo.setCodiceClasse(parts[0] + "-" + parts[1]);
+                    break;
+
+                case 1:
+                    String nomeCategoria = this.getTitolo(dbConn, ps, null, parts[0]);
+                    classificazioneFascicolo.setNomeCategoria(nomeCategoria);
+                    classificazioneFascicolo.setCodiceCategoria(parts[0]);
+                    break;
+                }
+                dim--;
+            }  
+        }
+        return classificazioneFascicolo;
+    }
     
     
     
