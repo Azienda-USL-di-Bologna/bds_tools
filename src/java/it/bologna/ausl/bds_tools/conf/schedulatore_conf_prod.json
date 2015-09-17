@@ -1,21 +1,31 @@
 {
-  "jobs":[
-             {"name":"PulitoreMongoDownload",
-              "schedule":"3600",
-              "class":"PulitoreDownloadMongo",
-              "params":{
-                        "interval":"6",
-                        "connectUri":"mongodb://argo:siamocaldi@babelmongo1,babelmongo2/downloadprod?safe=true&replicaSet=prod0"
-                        }
-              },
-              {
-              "name":"AzzeratoreUidEmailScaricate",
-              "schedule":"3600",
-              "class":"AzzeratoreUidEmailScaricate",
-              "params":{
-                        "driver":"org.postgresql.Driver",
-                        "connectUri":"jdbc:postgresql://toshiro/argo?user=pecgw&password=siamocaldi"
-                        }
-              }
-      ]
+    "jobs": [
+        {
+            "name": "PulitoreMongoDownload",
+            "schedule": "3600",
+            "class": "PulitoreDownloadMongo",
+            "params": {
+                "interval": "6",
+                "connectUri": "mongodb://argo:siamocaldi@babelmongo1,babelmongo2/downloadprod?safe=true&replicaSet=prod0"
+            }
+        },
+        {
+            "name": "AzzeratoreUidEmailScaricate",
+            "schedule": "3600",
+            "class": "AzzeratoreUidEmailScaricate",
+            "params": {
+                "driver": "org.postgresql.Driver",
+                "connectUri": "jdbc:postgresql://toshiro/argo?user=pecgw&password=siamocaldi"
+            }
+        },
+        {
+            "name": "PulitoreCestinoMongo",
+            "schedule": "3600",
+            "class": "PulitoreCestinoMongo",
+            "params": {
+                "interval": "60",
+                "connectUri": "mongodb://argo:siamocaldi@babelmongo1,babelmongo2/prod?safe=true&replicaSet=prod0"
+            }
+        }
+    ]
 }
