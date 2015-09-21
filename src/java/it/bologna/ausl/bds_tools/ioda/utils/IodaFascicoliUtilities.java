@@ -117,8 +117,6 @@ public class IodaFascicoliUtilities {
         log.debug("sql: " + ps.toString());
         
         ResultSet results = ps.executeQuery();
-              
-        
         
         while (results.next()) {
             int index = 1;
