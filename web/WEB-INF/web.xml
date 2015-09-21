@@ -219,6 +219,14 @@
         <param-value>gdml</param-value>
     </context-param>
     <context-param>
+        <param-name>redisinqueuegdml</param-name>
+        <param-value>chefingdml</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlgdml</param-name>
+        <param-value>http://gdml:9081/Indeutilities/GetIndeId</param-value>
+    </context-param>
+    <context-param>
         <param-name>mongoarena</param-name>
         <param-value>mongodb://argo:siamofreschi@procton3,procton4/arena?safe=true&amp;replicaSet=rs0</param-value>
     </context-param>
@@ -229,6 +237,14 @@
     <context-param>
         <param-name>redisarena</param-name>
         <param-value>arena</param-value>
+    </context-param>
+    <context-param>
+        <param-name>redisinqueuearena</param-name>
+        <param-value>chefingarena</param-value>
+    </context-param>
+    <context-param>
+        <param-name>getindeidurlarena</param-name>
+        <param-value>http://arena:9081/Indeutilities/GetIndeId</param-value>
     </context-param>
     <context-param>
         <param-name>mongoprod</param-name>
@@ -243,37 +259,20 @@
         <param-value>babelservice1</param-value>
     </context-param>
     <context-param>
-        <param-name>redisinqueuegdml</param-name>
-        <param-value>chefingdml</param-value>
-    </context-param>
-    <context-param>
-        <param-name>redisinqueuearena</param-name>
-        <param-value>chefingarena</param-value>
-    </context-param>
-    <context-param>
         <param-name>redisinqueueprod</param-name>
         <param-value>chefinprod</param-value>
     </context-param>
     <context-param>
-        <param-name>getindeidurlgdml</param-name>
-        <param-value>http://gdml:9081/Indeutilities/GetIndeId</param-value>
-    </context-param>
-    <context-param>
-        <param-name>getindeidurlarena</param-name>
-        <param-value>http://arena:9081/Indeutilities/GetIndeId</param-value>
-    </context-param>
-    <context-param>
         <param-name>getindeidurlprod</param-name>
         <param-value>http://babelservice3:8080/Indeutilities/GetIndeId</param-value>
-    </context-param>
-    
+    </context-param>   
     <context-param>
         <param-name>mongoprototipo</param-name>
-        <param-value>mongodb://argo:password@localhost/doc?safe=true&amp;replicaSet=rs0</param-value>
+        <param-value>mongodb://argo:password@localhost/doc?safe=true</param-value>
     </context-param>
     <context-param>
         <param-name>mongodownloadprototipo</param-name>
-        <param-value>mongodb://argo:password@localhost/download?safe=true&amp;replicaSet=rs0</param-value>
+        <param-value>mongodb://argo:password@localhost/download?safe=true</param-value>
     </context-param>
     <context-param>
         <param-name>redisprototipo</param-name>
