@@ -1,13 +1,11 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
-import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
+import it.bologna.ausl.ioda.iodaobjectlibrary.FascicoliSpecialiResearcher;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
-import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,7 +13,6 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -24,9 +21,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
-public class GetFascicoli extends HttpServlet {
+public class GetFascicoliSpeciali extends HttpServlet {
 
-    private static final Logger log = LogManager.getLogger(GetFascicoli.class);
+    private static final Logger log = LogManager.getLogger(GetFascicoliSpeciali.class);
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -41,7 +38,7 @@ public class GetFascicoli extends HttpServlet {
         IodaRequestDescriptor iodaReq;
         Connection dbConn = null;
         PreparedStatement ps = null;
-        Fascicoli fascicoli = null;
+        Fascicoli fascicoliSpeciali = null;
         
         IodaFascicoliUtilities fascicoliUtilities;
         
@@ -96,12 +93,9 @@ public class GetFascicoli extends HttpServlet {
             }
 
             try{
-                Researcher researcher = (Researcher) iodaReq.getObject();
-                
+                FascicoliSpecialiResearcher researcher = (FascicoliSpecialiResearcher) iodaReq.getObject();
                 fascicoliUtilities = new IodaFascicoliUtilities(getServletContext(), request, researcher);
-                
-                fascicoli = fascicoliUtilities.getFascicoli(dbConn, ps);
-
+                fascicoliSpeciali = fascicoliUtilities.getFascicoloSpeciale(dbConn, ps);
             }
 //            catch(SendHttpMessageException | IodaDocumentException | SQLException ex){
 //                log.error(ex);
@@ -111,15 +105,15 @@ public class GetFascicoli extends HttpServlet {
                     ps.close();
                 dbConn.close();
             }
-            
-           
-        } catch (Exception ex) {
+        }
+        catch (Exception ex) {
             throw new ServletException(ex);
         }
 
         response.setContentType(Detector.MEDIA_TYPE_APPLICATION_JSON.toString());
         try (PrintWriter out = response.getWriter()) {
-            out.print(fascicoli.getJSONString());
+            if (fascicoliSpeciali!= null)
+                out.print(fascicoliSpeciali.getJSONString());
         }
     }
 

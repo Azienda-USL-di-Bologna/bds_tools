@@ -2,9 +2,12 @@ package it.bologna.ausl.bds_tools.ioda.utils;
 
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
+import it.bologna.ausl.ioda.iodaobjectlibrary.FascicoliSpecialiResearcher;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Search;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -32,10 +35,10 @@ public class IodaFascicoliUtilities {
     private String fascicoliGdDocTable;
     private String utentiTable;
     private String prefixIds; // prefisso da anteporre agli id dei documenti che si inseriscono o che si ricercano (GdDoc, SottoDocumenti)
-    private Researcher researcher;
+    private Search researcher;
     HttpServletRequest request;
     
-    private IodaFascicoliUtilities(ServletContext context, Researcher r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    private IodaFascicoliUtilities(ServletContext context, Search r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this.gdDocTable = context.getInitParameter("GdDocsTableName");
         this.fascicoliTable = context.getInitParameter("FascicoliTableName");
         this.titoliTable = context.getInitParameter("TitoliTableName");
@@ -44,21 +47,18 @@ public class IodaFascicoliUtilities {
         this.researcher = r;
     }
     
-    public IodaFascicoliUtilities(ServletContext context, HttpServletRequest request, Researcher r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    public IodaFascicoliUtilities(ServletContext context, HttpServletRequest request, Search r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this(context, r);
         this.request = request;
 //        this.researcher = r;
     }
-    
-    
+ 
     public Fascicoli getFascicoli(Connection dbConn, PreparedStatement ps) throws SQLException{
         Fascicoli fascicoli = getFascicoli(dbConn, ps, researcher.getSearchString(), researcher.getIdUtente(), researcher.getLimiteDiRicerca());
         
         return fascicoli;
     }
-    
-    
-    
+ 
     private Fascicoli getFascicoli(Connection dbConn, PreparedStatement ps, String strToFind, String idUtente, int limit) throws SQLException{
         
         Fascicoli res = new Fascicoli();
@@ -171,7 +171,58 @@ public class IodaFascicoliUtilities {
                
         return res;
     }
-    
+
+    public Fascicoli getFascicoloSpeciale(Connection dbConn, PreparedStatement ps) throws SQLException {
+        
+        String sqlText =    "SELECT id_fascicolo, numerazione_gerarchica, " +
+                                "numero_fascicolo, nome_fascicolo, anno_fascicolo, stato_fascicolo, " +
+                                "id_utente_creazione, id_utente_responsabile, data_creazione, id_livello_fascicolo" +
+                            " FROM " + fascicoliTable + 
+                            " WHERE anno_fascicolo = ? AND speciale = ?";
+        ps = dbConn.prepareStatement(sqlText);
+        
+        FascicoliSpecialiResearcher specRes = (FascicoliSpecialiResearcher) researcher;
+//        ps.setString(1, specRes.getNomeFascicolo());
+        ps.setInt(1, specRes.getAnno());
+        ps.setInt(2, -1);
+        log.debug("sql: " + ps.toString());
+        
+        ResultSet results = ps.executeQuery();
+
+        Fascicoli fascicoliSpeciali = new Fascicoli();
+
+        while (results.next()) {
+
+            String idFascicolo = results.getString(1);
+            String numerazioneGerarchica = results.getString(2);
+            int numeroFascicolo = results.getInt(3);
+            String nomeFascicolo = results.getString(4);
+            int annoFascicolo = results.getInt(5);
+            String statoFascicolo = results.getString(6);
+            String idUtenteCreazione = results.getString(7);
+            String idUtenteResponsabile = results.getString(8);
+            DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd");
+            DateTime dataCreazione = DateTime.parse(results.getString(9), formatter);
+            String idLivelloFascicolo = results.getString(10);
+
+            Fascicolo f = new Fascicolo();
+            f.setCodiceFascicolo(numerazioneGerarchica);
+            f.setNumeroFascicolo(numeroFascicolo);
+            f.setNomeFascicolo(nomeFascicolo);
+            f.setIdUtenteResponsabile(idUtenteResponsabile);
+            f.setDataCreazione(dataCreazione);
+            f.setAnnoFascicolo(annoFascicolo);
+            f.setIdUtenteCreazione(idUtenteCreazione);
+            f.setStatoFascicolo(statoFascicolo);
+            f.setIdLivelloFascicolo(idLivelloFascicolo);
+            
+            f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
+
+            fascicoliSpeciali.addFascicolo(f);
+        }
+
+        return fascicoliSpeciali;
+    }
     
     private ClassificazioneFascicolo getClassificazioneFascicolo(Connection dbConn, PreparedStatement ps, String idFascicolo) throws SQLException{
         
@@ -226,12 +277,7 @@ public class IodaFascicoliUtilities {
         }
         return classificazioneFascicolo;
     }
-    
-    
-    
-    
-    
-        
+
     private String getTitolo(Connection dbConn, PreparedStatement ps, String codiceGerarchico, String codiceTitolo) throws SQLException{
         
         String sqlText = "SELECT titolo " +
@@ -258,9 +304,7 @@ public class IodaFascicoliUtilities {
             throw new SQLException("nessun titolo trovato");
         return res.getString(1);
     }
-    
-    
-    
+
     public String getNomeCognome(Connection dbConn, PreparedStatement ps, String idUtente) throws SQLException{
         
         String result = null;

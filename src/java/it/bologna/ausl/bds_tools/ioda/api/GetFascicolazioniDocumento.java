@@ -111,9 +111,9 @@ public class GetFascicolazioniDocumento extends HttpServlet {
 //              Fascicolazione fascicolazione = new Fascicolazione("codice", "nome", "g.demarco", "Giuseppe De Marco", DateTime.now(), false, DateTime.now(), null, null, classificazione);
 //              fascicolazioni.addFascicolazione(fascicolazione);
             }
-            catch(IOException | SendHttpMessageException | IodaDocumentException | SQLException ex){
-                log.error(ex);
-            }
+//            catch(IOException | SendHttpMessageException | IodaDocumentException | SQLException ex){
+//                log.error(ex);
+//            }
             finally{
                 if (ps != null)
                     ps.close();
@@ -121,7 +121,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
             }
             
            
-        } catch (IOException | NamingException | ServletException | SQLException ex) {
+        } catch (Exception ex) {
             throw new ServletException(ex);
         }
 
