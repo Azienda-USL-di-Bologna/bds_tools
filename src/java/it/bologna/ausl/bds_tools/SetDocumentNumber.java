@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -38,7 +39,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
     log.info("--------------------------------");
 
     Connection dbConn = null;
-    PreparedStatement ps = null;
+    
 
     String idapplicazione = null;
     String tokenapplicazione = null;
@@ -90,17 +91,6 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 throw new ServletException(message);
             }
 
-            // leggo i parametri per l'esecuzione della query dal web.xml
-            //String updateNumberFunctionName = getServletContext().getInitParameter(idapplicazione.toLowerCase() + "UpdateNumberFunctionName");
-            String updateNumberFunctionName = getServletContext().getInitParameter("UpdateNumberFunctionNameTemplate");
-            updateNumberFunctionName = updateNumberFunctionName.replace("[nome_sequenza]", nomesequenza);
-            
-            if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {
-                String message = "Errore nel calcolo del nome della funzione che esegue l'aggiornamento del numero di documento";
-                log.error(message);
-                throw new ServletException(message);
-            }
-
             // controllo se l'applicazione è autorizzata
             String prefix;
             try {
@@ -116,33 +106,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 return;
             }
 
-            // compongo la query
-            dbConn.setAutoCommit(false);
-            String sqlText = "select " + updateNumberFunctionName + "(?, ?)";
-            ps = dbConn.prepareStatement(sqlText);
-            ps.setString(1, iddocumento);
-            ps.setString(2, nomesequenza);
-            try {
-                String query = ps.toString();
-                log.debug("eseguo la query: " + query + " ...");
-                ResultSet result = ps.executeQuery();
-                boolean nextRow = result.next();
-                if (nextRow == false || result.getBoolean(1) == false)
-                    throw new SQLException("documento non trovato");
-                else
-                    dbConn.commit();
-            }
-            catch (SQLException sQLException) {
-                dbConn.rollback();
-                String message = "Errore nell'esecuzione della query";
-                throw new ServletException(message, sQLException);
-            }
-            finally {
-                if (ps != null)
-                    ps.close();
-                if (dbConn != null)
-                    dbConn.close();
-            }
+            setNumber(dbConn, getServletContext(), iddocumento, nomesequenza);
 
             response.setContentType("text/html;charset=UTF-8");
             PrintWriter out = response.getWriter();
@@ -169,8 +133,6 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
             try {
                 if (dbConn != null && dbConn.getAutoCommit() == false)
                     dbConn.rollback();
-                if (ps != null)
-                    ps.close();
                 if (dbConn != null)
                     dbConn.close();
             }
@@ -180,6 +142,44 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
             throw new ServletException(ex);
         }
     }   
+    
+    public static void setNumber(Connection dbConn, ServletContext context, String idDocumento, String nomesequenza) throws ServletException, SQLException {
+
+            String updateNumberFunctionName = context.getInitParameter("UpdateNumberFunctionNameTemplate");
+            updateNumberFunctionName = updateNumberFunctionName.replace("[nome_sequenza]", nomesequenza);
+            
+            if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {
+                String message = "Errore nel calcolo del nome della funzione che esegue l'aggiornamento del numero di documento";
+                log.error(message);
+                throw new ServletException(message);
+            }
+
+            // compongo la query
+            dbConn.setAutoCommit(false);
+            String sqlText = "select " + updateNumberFunctionName + "(?, ?)";
+            PreparedStatement ps = dbConn.prepareStatement(sqlText);
+            ps.setString(1, idDocumento);
+            ps.setString(2, nomesequenza);
+            try {
+                String query = ps.toString();
+                log.debug("eseguo la query: " + query + " ...");
+                ResultSet result = ps.executeQuery();
+                boolean nextRow = result.next();
+                if (nextRow == false || result.getBoolean(1) == false)
+                    throw new SQLException("documento non trovato");
+                else
+                    dbConn.commit();
+            }
+            catch (SQLException sQLException) {
+                dbConn.rollback();
+                String message = "Errore nell'esecuzione della query";
+                throw new ServletException(message, sQLException);
+            }
+            finally {
+                if (ps != null)
+                    ps.close();
+            }
+    }
     
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /** 
