@@ -106,22 +106,11 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 return;
             }
 
-            setNumber(dbConn, getServletContext(), iddocumento, nomesequenza);
+            String number = setNumber(dbConn, getServletContext(), iddocumento, nomesequenza);
 
-            response.setContentType("text/html;charset=UTF-8");
-            PrintWriter out = response.getWriter();
-            try {
-                out.println("<html>");
-                out.println("<head>");
-                out.println("<title>Servlet "  + SetDocumentNumber.class.getSimpleName() + "</title>");  
-                out.println("</head>");
-                out.println("<body>");
-                out.println("<h1>Operazione eseguita correttamente</h1>");
-                out.println("</body>");
-                out.println("</html>");
-            }
-            finally {            
-                out.close();
+            response.setContentType("text/plain");
+            try (PrintWriter out = response.getWriter()) {
+                out.print(number);
             }
         }
         catch (Exception ex) {
@@ -143,42 +132,48 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
         }
     }   
     
-    public static void setNumber(Connection dbConn, ServletContext context, String idDocumento, String nomesequenza) throws ServletException, SQLException {
+    public static String setNumber(Connection dbConn, ServletContext context, String idDocumento, String nomesequenza) throws ServletException, SQLException {
 
-            String updateNumberFunctionName = context.getInitParameter("UpdateNumberFunctionNameTemplate");
-            updateNumberFunctionName = updateNumberFunctionName.replace("[nome_sequenza]", nomesequenza);
-            
-            if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {
-                String message = "Errore nel calcolo del nome della funzione che esegue l'aggiornamento del numero di documento";
-                log.error(message);
-                throw new ServletException(message);
-            }
+        String res = null;
+        String updateNumberFunctionName = context.getInitParameter("UpdateNumberFunctionNameTemplate");
+        updateNumberFunctionName = updateNumberFunctionName.replace("[nome_sequenza]", nomesequenza);
 
-            // compongo la query
-            dbConn.setAutoCommit(false);
-            String sqlText = "select " + updateNumberFunctionName + "(?, ?)";
-            PreparedStatement ps = dbConn.prepareStatement(sqlText);
-            ps.setString(1, idDocumento);
-            ps.setString(2, nomesequenza);
-            try {
-                String query = ps.toString();
-                log.debug("eseguo la query: " + query + " ...");
-                ResultSet result = ps.executeQuery();
-                boolean nextRow = result.next();
-                if (nextRow == false || result.getBoolean(1) == false)
-                    throw new SQLException("documento non trovato");
-                else
-                    dbConn.commit();
+        if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {
+            String message = "Errore nel calcolo del nome della funzione che esegue l'aggiornamento del numero di documento";
+            log.error(message);
+            throw new ServletException(message);
+        }
+
+        // compongo la query
+        dbConn.setAutoCommit(false);
+        String sqlText = "select " + updateNumberFunctionName + "(?, ?)";
+        PreparedStatement ps = dbConn.prepareStatement(sqlText);
+        ps.setString(1, idDocumento);
+        ps.setString(2, nomesequenza);
+        try {
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+            boolean nextRow = result.next();
+            if (nextRow == false)
+                throw new SQLException("errore nella numerazione");
+            else {
+                res = result.getString(1);
+                if (res == null || res.equals(""))
+                    throw new SQLException("errore nella numerazione");
+                dbConn.commit();
             }
-            catch (SQLException sQLException) {
-                dbConn.rollback();
-                String message = "Errore nell'esecuzione della query";
-                throw new ServletException(message, sQLException);
-            }
-            finally {
-                if (ps != null)
-                    ps.close();
-            }
+        }
+        catch (SQLException ex) {
+            dbConn.rollback();
+            String message = "Errore nell'esecuzione della query";
+            throw new ServletException(message, ex);
+        }
+        finally {
+            if (ps != null)
+                ps.close();
+        }
+        return res;
     }
     
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
