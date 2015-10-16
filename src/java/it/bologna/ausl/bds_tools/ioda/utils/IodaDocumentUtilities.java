@@ -97,6 +97,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         this(context, operation, prefixIds);
         this.gdDoc = iodaRequestDescriptor.getGdDoc(operation);
         this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
+        
 
         if (operation != Document.DocumentOperationType.DELETE) {
             getIndeId();
@@ -202,14 +203,14 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "data_gddoc, guid_gddoc, codice_registro, " +
                         "data_registrazione, numero_registrazione, " +
                         "anno_registrazione, oggetto," +
-                        "id_oggetto_origine, tipo_oggetto_origine) " +
+                        "id_oggetto_origine, tipo_oggetto_origine, codice) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
                         "?, ?, ?, " +
                         "?, ?, " +
                         "?, ?, " +
-                        "?, ?)";
+                        "?, ?, ?)";
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
 
@@ -273,6 +274,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         
         // tipo_oggetto_origine
         ps.setString(index++, gdDoc.getTipoOggettoOrigine());
+        
+        // codice
+        ps.setString(index++, gdDoc.getCodice());
 
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
@@ -313,7 +317,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "oggetto = coalesce(?, oggetto) " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
-        
+
         
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
