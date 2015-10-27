@@ -107,6 +107,13 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
             }
 
             String number = setNumber(dbConn, getServletContext(), iddocumento, nomesequenza);
+            try {
+                if (dbConn != null)
+                    dbConn.close();
+            }
+            catch (Exception ex) {
+                log.fatal("Errore nella chiusura della connessione al database", ex);
+            }
 
             response.setContentType("text/plain");
             try (PrintWriter out = response.getWriter()) {
