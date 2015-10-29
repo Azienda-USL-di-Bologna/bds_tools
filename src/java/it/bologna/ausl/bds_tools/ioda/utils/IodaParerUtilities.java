@@ -95,6 +95,7 @@ public class IodaParerUtilities {
                         "forza_conservazione = ?, " +
                         "forza_accettazione = ?, " +
                         "forza_collegamento = ? " +
+                        "stato_versamento_proposto = ? " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
         PreparedStatement ps = null;
         try {
@@ -121,7 +122,9 @@ public class IodaParerUtilities {
                 ps.setInt(index++, -1);
             else
                 ps.setInt(index++, 0);
-
+            
+            ps.setString(index++, datiParer.getStatoVersamentoProposto());
+            
             ps.setString(index++, datiParer.getIdOggettoOrigine());
             ps.setString(index++, datiParer.getTipoOggettoOrigine());
 
