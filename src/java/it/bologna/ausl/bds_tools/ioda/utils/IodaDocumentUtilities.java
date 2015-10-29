@@ -489,6 +489,12 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         String guidSottoDocumento = (String) newIds.get(INDE_DOCUMENT_GUID_PARAM_NAME);
 
         String mongoPath = getMongoPath();
+        
+        // se esiste già un sotto documento con lo stesso codice, non lo inserisco
+        Boolean canInsertSottoDocumento = canInsertSottoDocumento(dbConn, sd.getCodiceSottoDocumento());
+        if(canInsertSottoDocumento == false){
+            return;
+        }
 
         String sqlText = 
                 "INSERT INTO " + getSottoDocumentiTable() + "(" +
@@ -777,4 +783,31 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 dbConn.close();
         }
     } 
+    
+    
+    private Boolean canInsertSottoDocumento(Connection dbConn, String idGdDoc) throws SQLException {
+        String sqlText =
+                        "SELECT codice_sottodocumento " +
+                        "FROM " + sottoDocumentiTable + " " +
+                        "WHERE codice_sottodocumento = ? ";
+        PreparedStatement ps = null;
+        try {
+            String codiceSottoDocumento;
+            ps = dbConn.prepareStatement(sqlText);
+            ps.setString(1, idGdDoc);
+            ResultSet res = ps.executeQuery();
+            if (res.next() == false)
+                return true;
+            else 
+                codiceSottoDocumento = res.getString(1);
+            return false;
+        }
+        finally {
+            try {
+                ps.close();
+            }
+            catch (Exception ex) {
+            }
+        }
+    }
 }
