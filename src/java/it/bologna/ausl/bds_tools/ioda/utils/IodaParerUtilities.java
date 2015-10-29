@@ -86,9 +86,12 @@ public class IodaParerUtilities {
     }
 
     public void insertAggiornamentoParer(Connection dbConn) throws SQLException, IodaDocumentException {
-        String xmlSpecifico = getXmlSpecificoGdDoc(dbConn);
-        if (xmlSpecifico != null && !xmlSpecifico.equals(""))
-            throw new IodaDocumentException("Versamento già predisposto, impossibile cambiarlo");
+        
+//        String xmlSpecifico = getXmlSpecificoGdDoc(dbConn);
+//      controllo da decommentare quando avremo un'idea chiara circa gli aggiornamenti al ParER  
+//        if (xmlSpecifico != null && !xmlSpecifico.equals(""))
+//            throw new IodaDocumentException("Versamento già predisposto, impossibile cambiarlo");
+        
         String sqlText =
                         "UPDATE " + gdDocTable + " SET " +
                         "xml_specifico_parer = ?, " +
