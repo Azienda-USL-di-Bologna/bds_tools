@@ -97,7 +97,7 @@ public class IodaParerUtilities {
                         "xml_specifico_parer = ?, " +
                         "forza_conservazione = ?, " +
                         "forza_accettazione = ?, " +
-                        "forza_collegamento = ? " +
+                        "forza_collegamento = ?, " +
                         "stato_versamento_proposto = ? " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
         PreparedStatement ps = null;
