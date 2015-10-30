@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -107,13 +109,6 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
             }
 
             String number = setNumber(dbConn, getServletContext(), iddocumento, nomesequenza);
-            try {
-                if (dbConn != null)
-                    dbConn.close();
-            }
-            catch (Exception ex) {
-                log.fatal("Errore nella chiusura della connessione al database", ex);
-            }
 
             response.setContentType("text/plain");
             try (PrintWriter out = response.getWriter()) {
@@ -136,6 +131,15 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 log.fatal("Errore nel rollback dell'operazione", sQLException);
             }
             throw new ServletException(ex);
+        }
+        finally {
+            if (dbConn != null)
+                try {
+                    dbConn.close();
+                }
+                catch (SQLException ex) {
+                    log.error("Errore nella chiusura della connessione", ex);
+                }
         }
     }   
     
@@ -170,11 +174,6 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                     throw new SQLException("errore nella numerazione");
                 dbConn.commit();
             }
-        }
-        catch (SQLException ex) {
-            dbConn.rollback();
-            String message = "Errore nell'esecuzione della query";
-            throw new ServletException(message, ex);
         }
         finally {
             if (ps != null)
