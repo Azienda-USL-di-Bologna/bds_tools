@@ -1,6 +1,7 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import com.mongodb.MongoException;
+import it.bologna.ausl.bds_tools.SetDocumentNumber;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
@@ -15,12 +16,18 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
 import it.bologna.ausl.mimetypeutility.Detector;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
 import it.bologna.ausl.mongowrapper.exceptions.MongoWrapperException;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -245,6 +252,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
         // numero_registrazione
         ps.setString(index++, gdDoc.getNumeroRegistrazione());
+        
 
         // anno_registrazione
         Integer annoRegistrazione = gdDoc.getAnnoRegistrazione();
@@ -299,7 +307,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 insertSottoDocumento(dbConn, ps, sottoDocumento);
             }
         }
-        return gdDoc.getId();
+        return gdDoc.getGuid();
+       
     }
     
     public void updateGdDoc(Connection dbConn, PreparedStatement ps) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
@@ -810,4 +819,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             }
         }
     }
+    
+    public String registraDocumento(Connection dbConn, ServletContext context, String guid, String codiceRegistro) throws ServletException, SQLException{
+      return SetDocumentNumber.setNumber(dbConn, context, guid, codiceRegistro);
+    }
+    
+    
 }

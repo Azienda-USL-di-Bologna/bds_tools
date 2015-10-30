@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaUtilities;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
+import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
@@ -113,7 +114,18 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                 dbConn.setAutoCommit(false);
                 
                 // inserimento GdDoc con fascicolazione e sottodocumenti
-                iodaUtilities.insertGdDoc(dbConn, ps);
+                
+                GdDoc gdDoc = iodaUtilities.getGdDoc();
+                
+                String guid = iodaUtilities.insertGdDoc(dbConn, ps);
+                
+                if(gdDoc.getNumerazioneAutomatica()== true){
+                    if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
+                        gdDoc.setCodiceRegistro("GEDI");
+                    }
+                    String registrazione = iodaUtilities.registraDocumento(dbConn, getServletContext(), guid, gdDoc.getCodiceRegistro());
+                }  
+                
                 
                 dbConn.commit();
             }
