@@ -67,7 +67,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 iodaRequest = IodaUtilities.extractIodaRequest(request);
             }
             catch (RequestException ex) {
-                log.error(ex);
+                log.error("errore nell'estrazione della richiesta: ", ex);
                 response.sendError(ex.getHttpStatusCode(), ex.getMessage());
                 return;
             }
@@ -82,7 +82,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             }
             catch (SQLException sQLException) {
                 String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();    
-                log.error(message);
+                log.error(message, sQLException);
                 throw new ServletException(message);
             }
 
@@ -106,7 +106,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.UPDATE, prefix);
             }
             catch (IodaDocumentException ex) {
-                log.error(ex);
+                log.error("errore nella gestione del gdddoc: ", ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
             }
@@ -122,9 +122,20 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 boolean updateComplete = false;
                 while (!updateComplete && times < ApplicationParams.getResourceLockedMaxRetryTimes()) {
                     if (lock.getLock()) {
+
                         // inserimento GdDoc con fascicolazione e sottodocumenti
                         iodaUtilities.updateGdDoc(dbConn, ps);
+                        String numero = null;
+                        if(gdDoc.getNumerazioneAutomatica()){
+                            if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
+                                gdDoc.setCodiceRegistro(ApplicationParams.getDefaultSequenceName());
+                            }
+                            numero = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), gdDoc.getGuid(), gdDoc.getCodiceRegistro());
+                        }
+                        
                         dbConn.commit();
+                        if(gdDoc.getNumerazioneAutomatica())
+                            log.info("numero assegnato: " + numero);
                         updateComplete = true;
                     }
                     Thread.sleep(ApplicationParams.getResourceLockedSleepMillis());
@@ -137,19 +148,19 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 }
             }
             catch (IodaFileException ex) {
-                log.error(ex);
+                log.error("errore nella gestione del gdddoc: ", ex);
                 dbConn.rollback();
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
             }
             catch (ResourceNotAvailableException ex) {
                 // eccezione che da risorsa non disponibile
-                log.error(ex);
+                log.error("errore nella gestione del gdddoc: ", ex);
                 response.sendError(HttpServletResponse.SC_CONFLICT, ex.getMessage());
                 return;
             }
             catch (Exception ex) {
-                log.error(ex);
+                log.error("errore nella gestione del gdddoc: ", ex);
                 dbConn.rollback();
                 iodaUtilities.deleteAllMongoFileUploaded();
                 throw ex;
@@ -163,7 +174,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             }
         }
         catch (Exception ex) {
-            log.error(ex);
+            log.error("errore della servlet: ", ex);
             throw new ServletException(ex);
         }
         
@@ -182,12 +193,12 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             out.println("</html>");
         }
         
-         try {
+        try {
             log.info("converting pdf...");
             iodaUtilities.convertPdf();
         }
         catch (Exception ex) {
-            log.error(ex);
+            log.error("errore nella conversione in pdf: ", ex);
         }
     }
 
@@ -227,7 +238,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
      */
     @Override
     public String getServletInfo() {
-        return "Short description";
+        return "Update GdDoc";
     }// </editor-fold>
 
 }

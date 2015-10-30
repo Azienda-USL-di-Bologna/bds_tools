@@ -4,6 +4,7 @@ import com.mongodb.MongoException;
 import it.bologna.ausl.bds_tools.SetDocumentNumber;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
+import it.bologna.ausl.bds_tools.utils.Registro;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
@@ -781,7 +782,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     }
                 }
                 catch (Exception ex) {
-                    log.error(ex);
+                    log.error("errore nella conversione in pdf dei sottodocumenti: ", ex);
                 }
             }
         }
@@ -820,8 +821,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
     
-    public String registraDocumento(Connection dbConn, ServletContext context, String guid, String codiceRegistro) throws ServletException, SQLException{
-      return SetDocumentNumber.setNumber(dbConn, context, guid, codiceRegistro);
+    public String registraDocumento(Connection dbConn, PreparedStatement ps, ServletContext context, String guid, String codiceRegistro) throws ServletException, SQLException {
+        Registro r = Registro.getRegistro(codiceRegistro, dbConn, ps);
+        return SetDocumentNumber.setNumber(dbConn, context, guid, r.getSequenzaAssociata());
     }
     
     

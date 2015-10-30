@@ -99,16 +99,18 @@ private static Context initContext;
 
     public static String getPubblicParameter(Connection dbConn, String parameterName) throws SQLException {
         String query = "SELECT val_parametro FROM " + ApplicationParams.getPublicParametersTableName() + " WHERE nome_parametro = ?";
-        PreparedStatement ps = dbConn.prepareStatement(query);
-        ps.setString(1, parameterName);
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
 
-        ResultSet result = ps.executeQuery();
-        String value = null;
+            ps.setString(1, parameterName);
 
-        if (result != null && result.next() == true) {
-            value = result.getString(1);
+            ResultSet result = ps.executeQuery();
+            String value = null;
+
+            if (result != null && result.next() == true) {
+                value = result.getString(1);
+            }
+            return value;
         }
-        return value;
     }
     
     public static String arrayToString(Object[] array, String separator) {

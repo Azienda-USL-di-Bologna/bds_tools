@@ -28,31 +28,36 @@ public class ApplicationParams {
     private static String mongoUri;
     private static String redisHost;
     private static String publicParametersTableName;
+    private static String registriTableName;
     private static String redisInQueue;
     private static String authenticationTable;
     private static int resourceLockedMaxRetryTimes;
     private static long resourceLockedSleepMillis;
+    private static String defaultSequenceName;
     
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
         try (Connection dbConn = UtilityFunctions.getDBConnection()) {
             appId = context.getInitParameter("appid");
             appToken = context.getInitParameter("apptoken");
             publicParametersTableName = context.getInitParameter("ParametersTableName");
+            registriTableName = context.getInitParameter("RegistriTableName");
             resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
             resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));
             
             readAuthenticationTable(context);
             initilizeSupporetdFiles(dbConn, context);
-            serverId = serverId = UtilityFunctions.getPubblicParameter(dbConn, "serverIdentifier");
+            serverId = UtilityFunctions.getPubblicParameter(dbConn, "serverIdentifier");
             //mongoUri = context.getInitParameter("mongo" + serverId);
             mongoUri = UtilityFunctions.getPubblicParameter(dbConn, "mongoConnectionString");
             //redisHost = context.getInitParameter("redis" + serverId);
             redisHost = UtilityFunctions.getPubblicParameter(dbConn, "masterChefHost");
             //redisInQueue = context.getInitParameter("redisinqueue" + serverId);
             redisInQueue = UtilityFunctions.getPubblicParameter(dbConn, "masterChefPushingQueue");
+            
+            defaultSequenceName = context.getInitParameter("DefaultSequenceName");
         }
         catch (Exception ex) {
-           log.error(ex);
+           log.error("errore nell'inizializzazione: ", ex);
         }
     }
 
@@ -120,6 +125,14 @@ public class ApplicationParams {
         ApplicationParams.publicParametersTableName = publicParametersTableName;
     }
 
+    public static String getRegistriTableName() {
+        return registriTableName;
+    }
+
+    public static void setRegistriTableName(String registriTableName) {
+        ApplicationParams.registriTableName = registriTableName;
+    }
+
     public static String getServerId() {
         return serverId;
     }
@@ -174,5 +187,13 @@ public class ApplicationParams {
 
     public static void setResourceLockedSleepMillis(long resourceLockedSleepMillis) {
         ApplicationParams.resourceLockedSleepMillis = resourceLockedSleepMillis;
+    }
+
+    public static String getDefaultSequenceName() {
+        return defaultSequenceName;
+    }
+
+    public static void setDefaultSequenceName(String defaultSequenceName) {
+        ApplicationParams.defaultSequenceName = defaultSequenceName;
     }
 }

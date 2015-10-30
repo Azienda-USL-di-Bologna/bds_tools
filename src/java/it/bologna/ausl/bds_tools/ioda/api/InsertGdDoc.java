@@ -118,25 +118,26 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                 GdDoc gdDoc = iodaUtilities.getGdDoc();
                 
                 String guid = iodaUtilities.insertGdDoc(dbConn, ps);
-                
-                if(gdDoc.getNumerazioneAutomatica()== true){
+                String numero = null;
+                if(gdDoc.getNumerazioneAutomatica()){
                     if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
-                        gdDoc.setCodiceRegistro("GEDI");
+                        gdDoc.setCodiceRegistro(ApplicationParams.getDefaultSequenceName());
                     }
-                    String registrazione = iodaUtilities.registraDocumento(dbConn, getServletContext(), guid, gdDoc.getCodiceRegistro());
-                }  
-                
+                    numero = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), guid, gdDoc.getCodiceRegistro());
+                }
                 
                 dbConn.commit();
+                if(gdDoc.getNumerazioneAutomatica())
+                    log.info("numero assegnato: " + numero);
             }
             catch (IodaFileException ex) {
-                log.error(ex);
+                log.error("errore nella gestione del gdddoc: ", ex);
                 dbConn.rollback();
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
             }
             catch (Exception ex) {
-                log.error(ex);
+                log.error("errore nella gestione del gdddoc: ", ex);
                 dbConn.rollback();
                 iodaUtilities.deleteAllMongoFileUploaded();
                 throw ex;
@@ -148,7 +149,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
             }
         }
         catch (Exception ex) {
-            log.error(ex);
+            log.error("errore nella gestione del gdddoc: ", ex);
             throw new ServletException(ex);
         }
         
@@ -166,14 +167,14 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
             out.println("</html>");
         }
         catch (Exception ex) {
-            log.error(ex);
+            log.error("errore della servlet: ", ex);
         }
         try {
             log.info("converting pdf...");
             iodaUtilities.convertPdf();
         }
         catch (Exception ex) {
-            log.error(ex);
+            log.error("errore nella conversione in pdf: ", ex);
         }
     }
 
