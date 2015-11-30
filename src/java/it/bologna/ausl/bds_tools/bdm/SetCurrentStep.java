@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class SetCurrentStep extends HttpServlet{
     
-    private static final Logger log = LogManager.getLogger(SetCurrentActivity.class);
+    private static final Logger log = LogManager.getLogger(SetCurrentStep.class);
     
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
     request.setCharacterEncoding("utf-8");
@@ -153,7 +153,7 @@ public class SetCurrentStep extends HttpServlet{
             try {
                 out.println("<html>");
                 out.println("<head>");
-                out.println("<title>Servlet " + SetCurrentActivity.class.getSimpleName() + "</title>");  
+                out.println("<title>Servlet " + SetCurrentStep.class.getSimpleName() + "</title>");  
                 out.println("</head>");
                 out.println("<body>");
                 out.println("<h1>Operazione eseguita correttamente</h1>");
