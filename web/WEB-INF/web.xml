@@ -20,6 +20,12 @@
     </servlet>
     <servlet>
         <description/>
+        <display-name>SetCurrentStep</display-name>
+        <servlet-name>SetCurrentStep</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.bdm.SetCurrentStep</servlet-class>
+    </servlet>
+    <servlet>
+        <description/>
         <display-name>SetDocumentNumber</display-name>
         <servlet-name>SetDocumentNumber</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.SetDocumentNumber</servlet-class>
@@ -95,6 +101,10 @@
         <url-pattern>/SetCurrentActivity</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
+        <servlet-name>SetCurrentStep</servlet-name>
+        <url-pattern>/SetCurrentStep</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
         <servlet-name>SetDocumentNumber</servlet-name>
         <url-pattern>/SetDocumentNumber</url-pattern>
     </servlet-mapping>
@@ -132,7 +142,7 @@
         <res-type>javax.sql.DataSource</res-type>
         <res-auth>Container</res-auth>
     </resource-ref>
-    <context-param> 
+    <context-param>
         <param-name>AuthenticationTable</param-name>
         <param-value>bds_tools.authorized_applications</param-value>
     </context-param>
@@ -159,6 +169,18 @@
     <context-param>
         <param-name>smistamentoSetCurrentActivityFunctionName</param-name>
         <param-value>bds_tools.set_current_activity</param-value>
+    </context-param>
+    <context-param>
+        <param-name>DocumentoPicoSetCurrentStepFunctionName</param-name>
+        <param-value>procton_tools.set_current_step(?, ?)</param-value>
+    </context-param>
+    <context-param>
+        <param-name>DeterminaSetCurrentStepFunctionName</param-name>
+        <param-value>dete_tools.set_current_step(?, ?)</param-value>
+    </context-param>
+    <context-param>
+        <param-name>DeliberaSetCurrentStepFunctionName</param-name>
+        <param-value>deli_tools.set_current_step(?, ?)</param-value>
     </context-param>
     <context-param>
         <param-name>RegistriTableName</param-name>
