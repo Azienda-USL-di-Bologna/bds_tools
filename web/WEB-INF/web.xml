@@ -102,7 +102,7 @@
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>SetCurrentStep</servlet-name>
-        <url-pattern>/SetCurrentStep</url-pattern>
+        <url-pattern>/bdm/SetCurrentStep</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>SetDocumentNumber</servlet-name>
