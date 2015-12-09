@@ -106,6 +106,11 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                 iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.UPDATE, prefix);
             }
             catch (IodaDocumentException ex) {
+                try {
+                    dbConn.close();
+                }
+                catch (Exception subEx) {
+                }
                 log.error("errore nella gestione del gdddoc: ", ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;

@@ -105,6 +105,11 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                 iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.INSERT, prefix);
             }
             catch (IodaDocumentException | JsonMappingException ex) {
+                try {
+                    dbConn.close();
+                }
+                catch (Exception subEx) {
+                }
                 log.error(ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
