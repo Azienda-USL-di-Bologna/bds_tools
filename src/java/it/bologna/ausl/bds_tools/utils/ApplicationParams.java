@@ -34,6 +34,9 @@ public class ApplicationParams {
     private static int resourceLockedMaxRetryTimes;
     private static long resourceLockedSleepMillis;
     private static String defaultSequenceName;
+    private static String gdDocToPublishExtractionQuery;
+    private static String balboServiceURI;
+    private static String gdDocUpdatePubblicato;
     
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
         try (Connection dbConn = UtilityFunctions.getDBConnection()) {
@@ -53,8 +56,14 @@ public class ApplicationParams {
             redisHost = UtilityFunctions.getPubblicParameter(dbConn, "masterChefHost");
             //redisInQueue = context.getInitParameter("redisinqueue" + serverId);
             redisInQueue = UtilityFunctions.getPubblicParameter(dbConn, "masterChefPushingQueue");
+            // balbo service URI in parametri pubblici
+            balboServiceURI = UtilityFunctions.getPubblicParameter(dbConn, "balboServiceURI");
             
             defaultSequenceName = context.getInitParameter("DefaultSequenceName");
+            
+            gdDocToPublishExtractionQuery = context.getInitParameter("GdDocToPublishExtractionQuery");
+            
+            gdDocUpdatePubblicato = context.getInitParameter("GdDocUpdatePubblicato");
         }
         catch (Exception ex) {
            log.error("errore nell'inizializzazione: ", ex);
@@ -195,5 +204,29 @@ public class ApplicationParams {
 
     public static void setDefaultSequenceName(String defaultSequenceName) {
         ApplicationParams.defaultSequenceName = defaultSequenceName;
+    }
+
+    public static String getGdDocToPublishExtractionQuery() {
+        return gdDocToPublishExtractionQuery;
+    }
+
+    public static void setGdDocToPublishExtractionQuery(String gdDocToPublishExtractionQuery) {
+        ApplicationParams.gdDocToPublishExtractionQuery = gdDocToPublishExtractionQuery;
+    }
+
+    public static String getBalboServiceURI() {
+        return balboServiceURI;
+    }
+
+    public static void setBalboServiceURI(String balboServiceURI) {
+        ApplicationParams.balboServiceURI = balboServiceURI;
+    }
+
+    public static String getGdDocUpdatePubblicato() {
+        return gdDocUpdatePubblicato;
+    }
+
+    public static void setGdDocUpdatePubblicato(String gdDocUpdatePubblicato) {
+        ApplicationParams.gdDocUpdatePubblicato = gdDocUpdatePubblicato;
     }
 }

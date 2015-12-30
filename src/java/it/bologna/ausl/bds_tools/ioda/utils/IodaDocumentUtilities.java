@@ -210,15 +210,21 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "data_ultima_modifica, stato_gd_doc, " +
                         "data_gddoc, guid_gddoc, codice_registro, " +
                         "data_registrazione, numero_registrazione, " +
-                        "anno_registrazione, oggetto," +
-                        "id_oggetto_origine, tipo_oggetto_origine, codice) " +
+                        "anno_registrazione, oggetto, " +
+                        "id_oggetto_origine, tipo_oggetto_origine, " +
+                        "codice, pubblicato, nome_struttura_firmatario, " +
+                        "giorni_pubblicazione, applicazione) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
                         "?, ?, ?, " +
                         "?, ?, " +
                         "?, ?, " +
-                        "?, ?, ?)";
+                        "?, ?, " +
+                        "?, ?, ?, " +
+                        "?, ?)";
+        
+        
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
 
@@ -286,7 +292,19 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         
         // codice
         ps.setString(index++, gdDoc.getCodice());
-
+        
+        // pubblicato
+        ps.setInt(index++, gdDoc.getPubblicato());
+        
+        // nomeStrutturaFirmatario
+        ps.setString(index++, gdDoc.getNomeStrutturaFirmatario());
+        
+        // giorniPubblicazione
+        ps.setInt(index++, gdDoc.getGiorniPubblicazione());
+        
+        // applicazione
+        ps.setString(index++, gdDoc.getApplicazione());
+        
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
         int result = ps.executeUpdate();
@@ -324,7 +342,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "data_registrazione = coalesce(?, data_registrazione), " +
                 "numero_registrazione = coalesce(?, numero_registrazione), " +
                 "anno_registrazione = coalesce(?, anno_registrazione), " +
-                "oggetto = coalesce(?, oggetto) " +
+                "oggetto = coalesce(?, oggetto), " +
+                "pubblicato = coalesce(?, pubblicato), " +
+                "nome_struttura_firmatario = coalesce(?, nome_struttura_firmatario), " +
+                "giorni_pubblicazione = coalesce(?, giorni_pubblicazione), " +
+                "applicazione = coalesce(?, applicazione) " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
 
@@ -398,6 +420,19 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 //            ps.setInt(index++, gdDoc.isForzaCollegamento() ? -1 : 0);
 //        else
 //            ps.setNull(index++, Types.INTEGER);
+        
+        
+        // pubblicato
+        ps.setInt(index++, gdDoc.getPubblicato());
+        
+        // nome_struttura_firmatario
+        ps.setString(index++, gdDoc.getNomeStrutturaFirmatario());
+        
+        // giorni_pubblicazione
+        ps.setInt(index++, gdDoc.getGiorniPubblicazione());
+        
+        // applicazione
+        ps.setString(index++, gdDoc.getApplicazione());
         
         // id_oggetto_origine
         ps.setString(index++, gdDoc.getIdOggettoOrigine());

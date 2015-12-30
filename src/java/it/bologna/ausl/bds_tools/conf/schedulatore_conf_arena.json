@@ -26,6 +26,13 @@
                 "interval": "1",
                 "connectUri": "mongodb://argo:siamofreschi@procton3,procton4/arena?replicaset=rs0&safe=true"
             }
+        },
+        {
+            "name": "PubblicatoreAlbo",
+            "schedule": "30",
+            "class": "PubblicatoreAlbo",
+            "params": {
+            }
         }
     ]
 }

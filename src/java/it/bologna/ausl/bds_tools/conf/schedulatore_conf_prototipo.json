@@ -26,6 +26,13 @@
                 "intervalDays": "1",
                 "connectUri": "mongodb://argo:password@localhost/doc?safe=true"
             }
+        },
+        {
+            "name": "PubblicatoreAlbo",
+            "schedule": "30",
+            "class": "PubblicatoreAlbo",
+            "params": {
+            }
         }
     ]
 }
