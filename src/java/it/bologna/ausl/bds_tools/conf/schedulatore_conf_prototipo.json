@@ -29,7 +29,7 @@
         },
         {
             "name": "PubblicatoreAlbo",
-            "schedule": "30",
+            "schedule": "60",
             "class": "PubblicatoreAlbo",
             "params": {
             }
