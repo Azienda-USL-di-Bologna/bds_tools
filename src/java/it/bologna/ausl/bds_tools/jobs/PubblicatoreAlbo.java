@@ -46,18 +46,24 @@ public class PubblicatoreAlbo implements Job {
 
         try {
             dbConn = UtilityFunctions.getDBConnection();
-
+            log.debug("connesisone db ottenuta");
+            
             String query = ApplicationParams.getGdDocToPublishExtractionQuery();
-
+            log.debug("query caricata");
+            
             PreparedStatement ps = dbConn.prepareStatement(query);
-
+            log.debug("preparedStatement settata");
+            
             ResultSet res = ps.executeQuery();
+            log.debug("query eseguita");
 
             LocalDateTime dataOdierna = LocalDateTime.now();
             ZonedDateTime timeZoneDal = dataOdierna.atZone(ZoneId.systemDefault());
             Date dataDal = Date.from(timeZoneDal.toInstant());
 
+            log.debug("setto balboClient...");
             BalboClient balboClient = new BalboClient(ApplicationParams.getBalboServiceURI());
+            log.debug("balboClient settato");
 
             while (res.next()) {
                 String idGdDoc = res.getString("id_gddoc");
@@ -95,13 +101,22 @@ public class PubblicatoreAlbo implements Job {
                 ZonedDateTime timeZoneAl = dataAlLocalDate.atZone(ZoneId.systemDefault());
                 Date dataAl = Date.from(timeZoneAl.toInstant());
 
+                log.debug("setto PubblicazioneAlbo...");
                 PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(dataDal, dataAl);
+                log.debug("settato PubblicazioneAlbo");
                 PubblicazioneTrasparenza datiTrasparenza = null;
 
-                if (!tipoProvvedimento.equalsIgnoreCase(TIPO_PROVVEDIMENTO_NON_RILEVANTE)) {
+                
+                log.debug("controllo tipo provvedimento");
+                if ((tipoProvvedimento != null)&&(!tipoProvvedimento.equalsIgnoreCase(TIPO_PROVVEDIMENTO_NON_RILEVANTE))){
                     datiTrasparenza = new PubblicazioneTrasparenza(oggettoTrasparenza, spesaPrevista, estremiDocumento);
                 }
+                else{
+                    log.debug("setto tipoProvvedimento a vuoto");
+                    tipoProvvedimento = "";
+                }
 
+                log.debug("setto Pubblicazione...");
                 Pubblicazione pubblicazione = new Pubblicazione(annoRegistrazione,
                         numeroRegistrazione,
                         descrizioneRegistro,
@@ -115,18 +130,31 @@ public class PubblicatoreAlbo implements Job {
                         dataRegistrazione,
                         datiAlbo,
                         datiTrasparenza);
+                log.debug("settata Pubblicazione");
 
                 // allego la stampa unica come allegato
+                log.debug("setto AllegatoPubblicazione...");
                 AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(nomeSottoDocumento, codiceSottoDocumento);
+                log.debug("settato AllegatoPubblicazione");
+                log.debug("aggiungo allegato...");
                 pubblicazione.addAllegato(allegatoPubblicazione);
-
+                log.debug("allegato inserito");
+                
+                log.debug("sto per pubblicare...");
                 balboClient.pubblica(pubblicazione);
+                log.debug("pubblicato");
 
+                log.debug("preparo query di update...");
                 String queryUpdatePubblicato = ApplicationParams.getGdDocUpdatePubblicato();
                 // queryUpdatePubblicato = queryUpdatePubblicato.replace("?", "'" + idGdDoc + "'");
+                log.debug("preparo statement...");
                 ps = dbConn.prepareStatement(queryUpdatePubblicato);
+                log.debug("statement eseguito");
+                
                 ps.setString(1, idGdDoc);
+                log.debug("sto per eseguire update...");
                 ResultSet r = ps.executeQuery();
+                log.debug("eseguito update");
             }
 
         } catch (Throwable t) {
