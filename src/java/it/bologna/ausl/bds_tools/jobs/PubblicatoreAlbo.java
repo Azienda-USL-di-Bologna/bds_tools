@@ -47,13 +47,13 @@ public class PubblicatoreAlbo implements Job {
         try {
             dbConn = UtilityFunctions.getDBConnection();
             log.debug("connesisone db ottenuta");
-            
+
             String query = ApplicationParams.getGdDocToPublishExtractionQuery();
             log.debug("query caricata");
-            
+
             PreparedStatement ps = dbConn.prepareStatement(query);
             log.debug("preparedStatement settata");
-            
+
             ResultSet res = ps.executeQuery();
             log.debug("query eseguita");
 
@@ -106,12 +106,10 @@ public class PubblicatoreAlbo implements Job {
                 log.debug("settato PubblicazioneAlbo");
                 PubblicazioneTrasparenza datiTrasparenza = null;
 
-                
                 log.debug("controllo tipo provvedimento");
-                if ((tipoProvvedimento != null)&&(!tipoProvvedimento.equalsIgnoreCase(TIPO_PROVVEDIMENTO_NON_RILEVANTE))){
+                if ((tipoProvvedimento != null) && (!tipoProvvedimento.equalsIgnoreCase(TIPO_PROVVEDIMENTO_NON_RILEVANTE))) {
                     datiTrasparenza = new PubblicazioneTrasparenza(oggettoTrasparenza, spesaPrevista, estremiDocumento);
-                }
-                else{
+                } else {
                     log.debug("setto tipoProvvedimento a vuoto");
                     tipoProvvedimento = "";
                 }
@@ -139,7 +137,7 @@ public class PubblicatoreAlbo implements Job {
                 log.debug("aggiungo allegato...");
                 pubblicazione.addAllegato(allegatoPubblicazione);
                 log.debug("allegato inserito");
-                
+
                 log.debug("sto per pubblicare...");
                 balboClient.pubblica(pubblicazione);
                 log.debug("pubblicato");
@@ -150,10 +148,10 @@ public class PubblicatoreAlbo implements Job {
                 log.debug("preparo statement...");
                 ps = dbConn.prepareStatement(queryUpdatePubblicato);
                 log.debug("statement eseguito");
-                
+
                 ps.setString(1, idGdDoc);
                 log.debug("sto per eseguire update...");
-                ResultSet r = ps.executeQuery();
+                ps.executeUpdate();
                 log.debug("eseguito update");
             }
 
