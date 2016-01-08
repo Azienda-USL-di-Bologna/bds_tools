@@ -351,7 +351,8 @@ mt.estremi_documento as estremi_documento,
 mt.id_tipo_provvedimento as tipo_provvedimento_trasparenza,
 nome_struttura_firmatario as articolazione, giorni_pubblicazione,
 prefix,
-coalesce(sdOmissis.nome_sottodocumento,sd.nome_sottodocumento), coalesce(sdOmissis.codice_sottodocumento,sd.codice_sottodocumento),
+coalesce(sdOmissis.nome_sottodocumento,sd.nome_sottodocumento) as nome_sottodocumento, 
+coalesce(sdOmissis.codice_sottodocumento,sd.codice_sottodocumento) as codice_sottodocumento,
 pubblicato
 FROM gd.gddocs g
 left join gd.sotto_documenti sdOmissis on sdOmissis.nome_sottodocumento='StampaUnicaOmissis' and g.id_gddoc=sdOmissis.id_gddoc
