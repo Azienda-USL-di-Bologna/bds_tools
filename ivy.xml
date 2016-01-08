@@ -4,25 +4,22 @@
             xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
     <info organisation="myorg" module="mymodule"/>
     <dependencies>
-            <dependency org="org.apache.logging.log4j" name="log4j-core" rev="2.+"/>
-            <dependency org="org.apache.logging.log4j" name="log4j-api" rev="2.+"/>
-            <dependency org="org.mongodb" name="mongo-java-driver" rev="2.+"/>
-            <dependency org="commons-io" name="commons-io" rev="latest.release"/>
-            <dependency org="com.googlecode.json-simple" name="json-simple" rev="1.+"/>
-            <dependency org="redis.clients" name="jedis" rev="2.6.+"/>
-            <dependency org="org.quartz-scheduler" name="quartz" rev="2.2.+"/>
-            <dependency org="joda-time" name="joda-time" rev="2.5"/>
-            <dependency org="com.fasterxml.jackson.core" name="jackson-annotations" rev="2.4.+"/>
-            <dependency org="com.fasterxml.jackson.core" name="jackson-databind" rev="2.4.+"/>
-            <dependency org="com.fasterxml.jackson.core" name="jackson-core" rev="2.4.+"/>
-            <dependency org="com.fasterxml.jackson.datatype" name="jackson-datatype-joda" rev="2.4.+"/>
-            <dependency org="org.apache.tika" name="tika-app" rev="1.+"/>
-            
-            <dependency org="javax.servlet" name="javax.servlet-api" rev="3.+"/>
-            
-            <dependency org="javax.servlet.jsp" name="javax.servlet.jsp-api" rev="2.2.1"/>
-
-            <dependency org="org.springframework" name="spring-web" rev="4.1.7.RELEASE"/>
-
+        <dependency org="org.apache.logging.log4j" name="log4j-core" rev="2.+"/>
+        <dependency org="org.apache.logging.log4j" name="log4j-api" rev="2.+"/>
+        <dependency org="org.mongodb" name="mongo-java-driver" rev="2.+"/>
+        <dependency org="commons-io" name="commons-io" rev="latest.release"/>
+        <dependency org="com.googlecode.json-simple" name="json-simple" rev="1.+"/>
+        <dependency org="redis.clients" name="jedis" rev="2.6.+"/>
+        <dependency org="org.quartz-scheduler" name="quartz" rev="2.2.+"/>
+        <dependency org="joda-time" name="joda-time" rev="2.5"/>
+        <dependency org="com.fasterxml.jackson.core" name="jackson-annotations" rev="2.4.+"/>
+        <dependency org="com.fasterxml.jackson.core" name="jackson-databind" rev="2.4.+"/>
+        <dependency org="com.fasterxml.jackson.core" name="jackson-core" rev="2.4.+"/>
+        <dependency org="com.fasterxml.jackson.datatype" name="jackson-datatype-joda" rev="2.4.+"/>
+        <dependency org="org.apache.tika" name="tika-java7" rev="1.+"/>
+        <dependency org="javax.servlet" name="javax.servlet-api" rev="3.+"/>    
+        <dependency org="javax.servlet.jsp" name="javax.servlet.jsp-api" rev="2.2.1"/>
+        <dependency org="org.springframework" name="spring-web" rev="4.1.7.RELEASE"/>
+        <dependency org="org.apache.commons" name="commons-dbcp2" rev="2.1.1"/>
     </dependencies>
 </ivy-module>
