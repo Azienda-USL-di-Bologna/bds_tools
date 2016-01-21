@@ -33,6 +33,15 @@
             "class": "PubblicatoreAlbo",
             "params": {
             }
+        },
+        {
+            "name": "Spedizioniere",
+            "schedule": "60",
+            "class": "Spedizioniere",
+            "params": {
+                "driver": "org.postgresql.Driver",
+                "connectUri": "jdbc:postgresql://localhost/argo?user=pecgw&password=siamofreschi"
+            }
         }
     ]
 }
