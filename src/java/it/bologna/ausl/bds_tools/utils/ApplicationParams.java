@@ -29,6 +29,7 @@ public class ApplicationParams {
     private static String redisHost;
     private static String publicParametersTableName;
     private static String registriTableName;
+    private static String spedizioniPecGlobaleTableName;
     private static String redisInQueue;
     private static String authenticationTable;
     private static int resourceLockedMaxRetryTimes;
@@ -44,6 +45,7 @@ public class ApplicationParams {
             appToken = context.getInitParameter("apptoken");
             publicParametersTableName = context.getInitParameter("ParametersTableName");
             registriTableName = context.getInitParameter("RegistriTableName");
+            spedizioniPecGlobaleTableName = context.getInitParameter("SpedizioniPecGlobaleTableName");
             resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
             resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));
             
@@ -140,6 +142,14 @@ public class ApplicationParams {
 
     public static void setRegistriTableName(String registriTableName) {
         ApplicationParams.registriTableName = registriTableName;
+    }
+
+    public static String getSpedizioniPecGlobaleTableName() {
+        return spedizioniPecGlobaleTableName;
+    }
+
+    public static void setSpedizioniPecGlobaleTableName(String spedizioniPecGlobaleTableName) {
+        ApplicationParams.spedizioniPecGlobaleTableName = spedizioniPecGlobaleTableName;
     }
 
     public static String getServerId() {

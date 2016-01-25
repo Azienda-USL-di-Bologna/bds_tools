@@ -36,6 +36,7 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -52,15 +53,31 @@ public class UtilityFunctions {
 
 private static final Logger log = LogManager.getLogger(UtilityFunctions.class);
 
-private static Context initContext;
+//private static Context initContext;
+private static  DataSource ds;
 
-    public synchronized static Connection getDBConnection() throws SQLException, NamingException {
-        if (initContext == null)
-            initContext = new InitialContext();
-        Context envContext = (Context) initContext.lookup("java:/comp/env");
-        DataSource ds = (DataSource) envContext.lookup("jdbc/argo");
-        Connection conn = ds.getConnection();
-        return conn;
+static {
+    try {
+//        initContext = new InitialContext();
+//        Context envContext = (Context) initContext.lookup("java:/comp/env");
+        ds = (DataSource) ((Context) new InitialContext().lookup("java:/comp/env")).lookup("jdbc/argo");
+    }
+    catch (Exception ex) {
+        log.error(ex);
+    }
+}
+
+    public static Connection getDBConnection() throws SQLException, NamingException {
+//        if (initContext == null)
+//            initContext = new InitialContext();
+//        Context envContext = (Context) initContext.lookup("java:/comp/env");
+//        DataSource ds = (DataSource) envContext.lookup("jdbc/argo");
+//        Connection conn = ds.getConnection();
+        return ds.getConnection();
+    }
+    
+    public static DataSource getDataSource() {
+        return ds;
     }
 
     /**

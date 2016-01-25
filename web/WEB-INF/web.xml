@@ -215,6 +215,10 @@
         <param-value>procton.titoli</param-value>
     </context-param>
     <context-param>
+        <param-name>SpedizioniPecGlobaleTableName</param-name>
+        <param-value>bds_tools.spedizioni_pec_globale</param-value>
+    </context-param>
+    <context-param>
         <param-name>AggiornamentiParerTableName</param-name>
         <param-value>gd.aggiornamenti_parer</param-value>
     </context-param>
