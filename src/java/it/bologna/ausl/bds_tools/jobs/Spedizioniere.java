@@ -6,6 +6,7 @@ import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
+import it.bologna.ausl.spedizioniereclient.SpedizioniereClient;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -168,7 +169,7 @@ public class Spedizioniere implements Job{
         
         private void spedisci(ResultSet res) throws SpedizioniereException {
             
-            
+            SpedizioniereClient spc = new SpedizioniereClient("https://procton-service.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
             
             try (
                     Connection dbConnection = UtilityFunctions.getDBConnection();

@@ -17,9 +17,10 @@
         <dependency org="com.fasterxml.jackson.core" name="jackson-core" rev="2.4.+"/>
         <dependency org="com.fasterxml.jackson.datatype" name="jackson-datatype-joda" rev="2.4.+"/>
         <dependency org="org.apache.tika" name="tika-java7" rev="1.+"/>
-        <dependency org="javax.servlet" name="javax.servlet-api" rev="3.+"/>    
-        <dependency org="javax.servlet.jsp" name="javax.servlet.jsp-api" rev="2.2.1"/>
-        <dependency org="org.springframework" name="spring-web" rev="4.1.7.RELEASE"/>
+        <dependency org="org.springframework" name="spring-web" rev="4.1.7.RELEASE">
+            <exclude matcher="regexp" org="javax.servlet" module="javax.servlet-api"/>
+            <exclude matcher="regexp" org="javax.servlet.jsp" name="javax.servlet.jsp-api"/>
+        </dependency>
         <dependency org="org.apache.commons" name="commons-dbcp2" rev="2.1.1"/>
         <dependency org="org.apache.httpcomponents" name="fluent-hc" rev="4.3.6"/>
         <dependency org="org.apache.httpcomponents" name="httpclient-cache" rev="4.3.6"/>
