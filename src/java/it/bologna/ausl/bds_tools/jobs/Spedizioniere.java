@@ -13,7 +13,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javax.naming.NamingException;
+import org.apache.jasper.tagplugins.jstl.core.Catch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.quartz.DisallowConcurrentExecution;
@@ -31,6 +35,17 @@ public class Spedizioniere implements Job{
     
     private String connectUri, driver;
     private static final Logger log = LogManager.getLogger(Spedizioniere.class);
+    private final ExecutorService pool;
+    private Integer maxThread;
+    private int timeOutHours;
+
+    public int getTimeOutHours() {
+        return timeOutHours;
+    }
+
+    public void setTimeOutHours(int timeOutHours) {
+        this.timeOutHours = timeOutHours;
+    }
     
     public enum StatiSpedizione {
             DA_INVIARE("da_inviare"),
@@ -46,6 +61,7 @@ public class Spedizioniere implements Job{
 
             StatiSpedizione(String key) {
                 this.key = key;
+                //Executors.newFixedThreadPool(i);
             }
 
             public static Spedizioniere.StatiSpedizione fromString(String key) {
@@ -64,7 +80,20 @@ public class Spedizioniere implements Job{
             }
     }
     
-    public Spedizioniere() {}
+    public Spedizioniere() throws SpedizioniereException {
+        
+        try {
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            maxThread = Integer.valueOf(UtilityFunctions.getPubblicParameter(dbConnection, "MaxThreadSpedizioniere"));
+            pool = Executors.newFixedThreadPool(maxThread);
+        }
+        catch(Exception ex) {
+            throw new SpedizioniereException("Errore nella costruzione dell'oggetto spedizioniere", ex);
+        }
+        
+        
+        
+    }
     
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
@@ -72,17 +101,22 @@ public class Spedizioniere implements Job{
         log.info("Job Spedizioniere started");
         try {
             
-            Connection dbConnection = UtilityFunctions.getDBConnection();
-            
-            Class.forName(driver);
-            Connection c = DriverManager.getConnection(connectUri);
-            c.setAutoCommit(true);
-            Statement s = c.createStatement();
-            s.executeUpdate("");
-            c.close();
-        } catch (Throwable t) {
+            for(int i = 1; i <= maxThread; i++){
+                pool.execute(new SpedizioniereThread(i, maxThread));
+                pool.shutdown();
+                boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
+                if (timedOut){
+                    throw new SpedizioniereException("timeout");
+                }
+                else {
+                    System.out.println("nothing to do");
+                }
+            }
+        }
+        catch (Throwable t) {
             log.fatal("Spedizioniere: Errore ...", t);
-        } finally {
+        }
+        finally {
 
             log.info("Job Spedizioniere finished");
         }

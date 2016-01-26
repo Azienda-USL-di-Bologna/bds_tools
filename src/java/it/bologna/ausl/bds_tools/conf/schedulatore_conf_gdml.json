@@ -40,7 +40,8 @@
             "class": "Spedizioniere",
             "params": {
                 "driver": "org.postgresql.Driver",
-                "connectUri": "jdbc:postgresql://gdml/argo?user=pecgw&password=siamofreschi"
+                "connectUri": "jdbc:postgresql://gdml/argo?user=pecgw&password=siamofreschi",
+                "timeOutHours": "2"
             }
         }
     ]
