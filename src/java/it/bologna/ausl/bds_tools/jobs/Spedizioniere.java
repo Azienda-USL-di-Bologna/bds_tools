@@ -6,13 +6,20 @@ import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
+import it.bologna.ausl.mongowrapper.MongoWrapper;
+import it.bologna.ausl.spedizioniereclient.SpedizioniereAttachment;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereClient;
+import it.bologna.ausl.spedizioniereclient.SpedizioniereMessage;
+import it.bologna.ausl.spedizioniereobjectlibrary.Attachment;
+import it.bologna.ausl.spedizioniereobjectlibrary.Mail;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -204,12 +211,42 @@ public class Spedizioniere implements Job{
         private void spedisci(ResultSet res) throws SpedizioniereException {
             
             SpedizioniereClient spc = new SpedizioniereClient("https://procton-service.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
+            ArrayList<SpedizioniereAttachment> attachments = new ArrayList<SpedizioniereAttachment>();
+            String mongoUri = ApplicationParams.getMongoUri();
+            MongoWrapper mongo;
             
             try (
                     Connection dbConnection = UtilityFunctions.getDBConnection();
 //                    PreparedStatement ps = dbConnection.prepareStatement(query)
                 ) {
+                String externalId = res.getString(5);
+                String oggettoDaSpedire = res.getString(9);
+                Mail mail = Mail.parse(oggettoDaSpedire);
+                SpedizioniereMessage message = new SpedizioniereMessage(mail.getFrom(), mail.getTo(), mail.getCc(), mail.getSubject(), mail.getMessage(), externalId);
+                mongo = new MongoWrapper(mongoUri);
                 
+                mail.getAttachments().stream().map((attachment) -> {
+                    // scaricare da mongo l'inputstream
+                    
+                    InputStream is = mongo.get(attachment.getUuid());                    
+                    SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), is);
+                    return att;
+                }).forEach((att) -> {
+                    attachments.add(att);
+                });
+                message.setAttachments(attachments);
+                
+                /* versione classica
+                    for (Attachment attachment : mail.getAttachments()) {
+                        // scaricare da mongo l'inputstream
+
+                        InputStream is = mongo.get(attachment.getUuid());                    
+                        SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), is);
+                        attachments.add(att);
+                    }
+                    message.setAttachments(attachments);
+                */
+                String messageId = spc.sendMail(message, false);                
             }
             catch(Exception ex) {
                 throw new SpedizioniereException("Errore nel reperimento dei documenti da spedire", ex);
