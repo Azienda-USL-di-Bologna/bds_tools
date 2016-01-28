@@ -10,20 +10,31 @@ import it.bologna.ausl.mongowrapper.MongoWrapper;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereAttachment;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereClient;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereMessage;
+import it.bologna.ausl.spedizioniereclient.SpedizioniereRecepit;
+import it.bologna.ausl.spedizioniereclient.SpedizioniereStatus;
 import it.bologna.ausl.spedizioniereobjectlibrary.Attachment;
 import it.bologna.ausl.spedizioniereobjectlibrary.Mail;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import javax.naming.NamingException;
+import org.apache.commons.io.IOUtils;
 import org.apache.jasper.tagplugins.jstl.core.Catch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -210,7 +221,7 @@ public class Spedizioniere implements Job{
         
         private void spedisci(ResultSet res) throws SpedizioniereException {
             
-            SpedizioniereClient spc = new SpedizioniereClient("https://procton-service.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
+            SpedizioniereClient spc = new SpedizioniereClient("https://gdml.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
             ArrayList<SpedizioniereAttachment> attachments = new ArrayList<SpedizioniereAttachment>();
             String mongoUri = ApplicationParams.getMongoUri();
             MongoWrapper mongo;
@@ -219,13 +230,19 @@ public class Spedizioniere implements Job{
                     Connection dbConnection = UtilityFunctions.getDBConnection();
 //                    PreparedStatement ps = dbConnection.prepareStatement(query)
                 ) {
-                String externalId = res.getString(5);
-                String oggettoDaSpedire = res.getString(9);
+                String externalId = res.getString("id_oggetto");
+                String oggettoDaSpedire = res.getString("oggetto_da_spedire_json");
+                
+                String idOggetto = res.getString("id_oggetto_origine");
+                String tipoOggetto =  res.getString("tipo_oggetto_origine");
+                
+                int numErrori = res.getInt("numero_errori");
+                
                 Mail mail = Mail.parse(oggettoDaSpedire);
                 SpedizioniereMessage message = new SpedizioniereMessage(mail.getFrom(), mail.getTo(), mail.getCc(), mail.getSubject(), mail.getMessage(), externalId);
                 mongo = new MongoWrapper(mongoUri);
                 
-                mail.getAttachments().stream().map((attachment) -> {
+                /*mail.getAttachments().stream().map((attachment) -> {
                     // scaricare da mongo l'inputstream
                     
                     InputStream is = mongo.get(attachment.getUuid());                    
@@ -234,26 +251,141 @@ public class Spedizioniere implements Job{
                 }).forEach((att) -> {
                     attachments.add(att);
                 });
+                message.setAttachments(attachments);*/
+                // versione classica
+                for (Attachment attachment : mail.getAttachments()) {
+                    // scaricare da mongo l'inputstream
+                    InputStream is = mongo.get(attachment.getUuid());
+                    /*
+                    File ilFile = new File("c:/tmp/fileTemporaneo.txt");
+                    ilFile.deleteOnExit();
+                    OutputStream outputStream = new FileOutputStream(ilFile);
+                    IOUtils.copy(is, outputStream);
+                    outputStream.close();
+                    */
+                    File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
+                    tmpFile.deleteOnExit();
+                    OutputStream outputStream = new FileOutputStream(tmpFile);
+                    IOUtils.copy(is, outputStream);
+                    outputStream.close();
+                    //SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), is);
+                    //attachments.add(att);
+                   SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), tmpFile);
+                   attachments.add(att);
+                }
                 message.setAttachments(attachments);
                 
-                /* versione classica
-                    for (Attachment attachment : mail.getAttachments()) {
-                        // scaricare da mongo l'inputstream
+                // Utilizziamo un altro Try Catch per evitare di fare il rollback su tutta la funzione
+                try{
+                    String messageId = spc.sendMail(message, false);
+                    String updateMessageId =    "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                                "SET id_spedizione_pecgw=? and stato=? " +
+                                                "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
+                    try (
+                        Connection conn = UtilityFunctions.getDBConnection();
+                        PreparedStatement ps = conn.prepareStatement(updateMessageId)
+                    ) {
 
-                        InputStream is = mongo.get(attachment.getUuid());                    
-                        SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), is);
-                        attachments.add(att);
+                        ps.setInt(1, Integer.valueOf(messageId));
+                        ps.setString(2, StatiSpedizione.PRESA_IN_CARICO.toString());
+                        ps.setString(3, idOggetto);
+                        ps.setString(4, tipoOggetto);
+
+                        ps.executeUpdate();
                     }
-                    message.setAttachments(attachments);
-                */
-                String messageId = spc.sendMail(message, false);                
+                }catch(Exception ex){
+                    String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                                "SET stato=? AND da_ritentare = ? and numero_errori=? " +
+                                                "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
+                    try (
+                        Connection conn = UtilityFunctions.getDBConnection();
+                        PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb)
+                    ) {
+
+                        ps.setString(1, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
+                        ps.setBoolean(2, true);
+                        ps.setInt(3, numErrori++);
+                        ps.setString(4, idOggetto);
+                        ps.setString(5, tipoOggetto);
+
+                        ps.executeUpdate();
+                    }
+                }finally{
+                    
+                }            
             }
             catch(Exception ex) {
                 throw new SpedizioniereException("Errore nel reperimento dei documenti da spedire", ex);
             }
         }
-        private void controlloSpedizione(){}
-    
+        private void controlloSpedizione(){
+    /*        String query = "SELECT " +
+                            "id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine " +
+                            "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                            "WHERE stato = '" + StatiSpedizione.PRESA_IN_CARICO + "' OR da_ritentare = '" + true + "'";
+            
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(query)
+            ){
+                ResultSet res = ps.executeQuery();
+                while(res.next()){
+                    try {
+                        controllaRicevuta(res);
+                    } catch (Exception e) {
+                    }
+                }
+                int idMessage = res.getInt("id_spedizione_pecgw");
+            } catch (SQLException ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NamingException ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            }
+    */    }
+        
+        private void controllaRicevuta(ResultSet res){
+    /*        SpedizioniereClient spc = new SpedizioniereClient("https://gdml.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
+            
+            try {
+                String idMsg = String.valueOf(res.getInt("id_spedizione_pecgw"));
+                SpedizioniereStatus spStatus = spc.getStatus(idMsg);
+                if (spStatus.equals("ACCEPTED") || spStatus.equals("CONFIRMED")) {
+                    ArrayList<SpedizioniereRecepit> ricevuteMsg = spc.getRecepits(idMsg);
+                    
+                    // ANNESSI E NOME TABELLA ANNESSI
+                    
+                    String query = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                                "SET stato=? AND verifica_timestamp=? " +
+                                                "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
+                    
+                    try (
+                        Connection conn = UtilityFunctions.getDBConnection();
+                        PreparedStatement ps = conn.prepareStatement(query)
+                    ) {
+                        if (spStatus.equals("ACCEPTED")) {
+                            ps.setString(1, StatiSpedizione.PRESA_IN_CARICO.toString());
+                        }else{
+                            ps.setString(1, StatiSpedizione.CONSEGNATO.toString());
+                        }
+                        ps.setTimestamp(2, new Timestamp(new Date().getTime()));
+                        ps.setString(3, res.getString("id_oggetto_origine"));
+                        ps.setString(4, res.getString("tipo_oggetto_origine"));
+
+                        ps.executeUpdate();
+                    } catch (NamingException ex) {
+                        java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    
+                    
+                }
+            } catch (SQLException ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+    */    }
+        
         private void controlloConsegna(){}
     
         private void gestioneErrore(){}
