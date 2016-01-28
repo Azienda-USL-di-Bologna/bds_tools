@@ -102,7 +102,7 @@ public class Spedizioniere implements Job{
         
         try {
             Connection dbConnection = UtilityFunctions.getDBConnection();
-            maxThread = Integer.valueOf(UtilityFunctions.getPubblicParameter(dbConnection, "MaxThreadSpedizioniere"));
+            maxThread = Integer.valueOf(ApplicationParams.getMaxThreadSpedizioniere());
             pool = Executors.newFixedThreadPool(maxThread);
         }
         catch(Exception ex) {

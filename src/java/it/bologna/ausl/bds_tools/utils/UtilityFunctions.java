@@ -13,6 +13,7 @@ import it.bologna.ausl.masterchefclient.WorkerData;
 import it.bologna.ausl.masterchefclient.WorkerResponse;
 import it.bologna.ausl.masterchefclient.WorkerResult;
 import it.bologna.ausl.mimetypeutility.Detector;
+import it.bologna.ausl.parameters_client.ParametersRestClient;
 import it.bologna.ausl.redis.RedisClient;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -36,7 +37,6 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -55,6 +55,8 @@ private static final Logger log = LogManager.getLogger(UtilityFunctions.class);
 
 //private static Context initContext;
 private static  DataSource ds;
+private static Map<String, String> publicParameters;
+
 
 static {
     try {
@@ -114,22 +116,6 @@ static {
         }
     }
 
-    public static String getPubblicParameter(Connection dbConn, String parameterName) throws SQLException {
-        String query = "SELECT val_parametro FROM " + ApplicationParams.getPublicParametersTableName() + " WHERE nome_parametro = ?";
-        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
-
-            ps.setString(1, parameterName);
-
-            ResultSet result = ps.executeQuery();
-            String value = null;
-
-            if (result != null && result.next() == true) {
-                value = result.getString(1);
-            }
-            return value;
-        }
-    }
-    
     public static String arrayToString(Object[] array, String separator) {
         StringBuilder builder = new StringBuilder();
         if (array == null || array.length == 0) {
