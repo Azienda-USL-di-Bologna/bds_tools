@@ -54,6 +54,7 @@ public class ApplicationParams {
     private static String balboServiceURI;
     private static String maxThreadSpedizioniere;
     private static String getIndeUrlServiceUri;
+     private static String spedizioniereApplicazioni;
 
 
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
@@ -78,6 +79,7 @@ public class ApplicationParams {
         spedizioniPecTableName = context.getInitParameter("SpedizioniPecTableName");
         updateNumberFunctionNameTemplate = context.getInitParameter("UpdateNumberFunctionNameTemplate");
         aggiornamentiParerTableName = context.getInitParameter("AggiornamentiParerTableName");
+        spedizioniereApplicazioni = context.getInitParameter("SpedizioniereApplicazioni");
 
         schedulatoreActive = Boolean.parseBoolean(context.getInitParameter("schedulatore.active"));
 
