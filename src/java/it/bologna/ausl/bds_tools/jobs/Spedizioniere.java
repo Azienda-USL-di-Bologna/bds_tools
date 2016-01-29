@@ -324,12 +324,14 @@ public class Spedizioniere implements Job{
             String query = "SELECT " +
                             "id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                            "WHERE stato = '" + StatiSpedizione.PRESA_IN_CARICO + "' OR da_ritentare = '" + true + "'";
+                            "WHERE id%? = ? AND stato = '" + StatiSpedizione.PRESA_IN_CARICO + "' OR da_ritentare = '" + true + "' FOR UPDATE";
             
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(query)
             ){
+                ps.setInt(1, threadsTotal);
+                ps.setInt(2, threadsTotal);
                 ResultSet res = ps.executeQuery();
                 while(res.next()){
                     try {
@@ -528,12 +530,14 @@ public class Spedizioniere implements Job{
             String query = "SELECT " +
                             "id_oggetto_origine, tipo_oggetto_origine, verifica_timestamp " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                            "WHERE stato='" + StatiSpedizione.SPEDITO + "'";
+                            "WHERE id%? = ? AND stato='" + StatiSpedizione.SPEDITO + "' FOR UPDATE";
             
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(query)
             ){
+                ps.setInt(1, threadsTotal);
+                ps.setInt(2, threadsTotal);
                 ResultSet res = ps.executeQuery();
                 while(res.next()){
                     try {
