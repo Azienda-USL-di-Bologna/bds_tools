@@ -57,6 +57,9 @@ public class Spedizioniere implements Job{
     private final ExecutorService pool;
     private Integer maxThread;
     private int timeOutHours;
+    private String spedizioniereUrl;
+    private String username;
+    private String password;
 
     public int getTimeOutHours() {
         return timeOutHours;
@@ -154,6 +157,30 @@ public class Spedizioniere implements Job{
         this.connectUri = connectUri;
     }
 
+    public String getSpedizioniereUrl() {
+        return spedizioniereUrl;
+    }
+
+    public void setSpedizioniereUrl(String spedizioniereUrl) {
+        this.spedizioniereUrl = spedizioniereUrl;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
     public String getDriver() {
         return driver;
     }
@@ -208,7 +235,9 @@ public class Spedizioniere implements Job{
                 
                 while (res.next()) {
                     try {
-                        spedisci(res);
+                        if(canSend(res)){
+                           spedisci(res); 
+                        }
                     }
                     catch (SpedizioniereException ex) {
                         log.error(ex);
@@ -222,7 +251,7 @@ public class Spedizioniere implements Job{
         
         private void spedisci(ResultSet res) throws SpedizioniereException {
             
-            SpedizioniereClient spc = new SpedizioniereClient("https://gdml.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
+            SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
             ArrayList<SpedizioniereAttachment> attachments = new ArrayList<SpedizioniereAttachment>();
             String mongoUri = ApplicationParams.getMongoUri();
             MongoWrapper mongo;
@@ -347,7 +376,7 @@ public class Spedizioniere implements Job{
         }
         
         private void controllaRicevuta(ResultSet res){
-            SpedizioniereClient spc = new SpedizioniereClient("https://gdml.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
+            SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
             
             try {
                 String idMsg = String.valueOf(res.getInt("id_spedizione_pecgw"));
@@ -554,6 +583,27 @@ public class Spedizioniere implements Job{
     
         private void gestioneErrore(){}
     
+    }
+    
+    public Boolean canSend(ResultSet res){
+        String query = "SELECT attivo " +
+                        "FROM " +  ApplicationParams.getSpedizioniereApplicazioni() + " " +
+                        "WHERE  id_applicazione_spedizioniere = ? ";              
+        try (
+                Connection dbConnection = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = dbConnection.prepareStatement(query);
+            )  {
+            
+                String idApplicazione = res.getString("id_applicazione"); 
+                ps.setString(1, idApplicazione);
+                ResultSet r = ps.executeQuery();
+            if (r.next()) {
+                return r.getInt("attivo") == -1 ? true : false ;
+            }
+        } catch (SQLException | NamingException ex) {
+            return false;
+        }
+       return false;
     }
     
 }

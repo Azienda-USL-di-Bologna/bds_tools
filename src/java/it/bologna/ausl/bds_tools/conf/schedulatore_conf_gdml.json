@@ -41,7 +41,10 @@
             "params": {
                 "driver": "org.postgresql.Driver",
                 "connectUri": "jdbc:postgresql://gdml/argo?user=pecgw&password=siamofreschi",
-                "timeOutHours": "2"
+                "timeOutHours": "2",
+                "spedizioniereUrl": "https://gdml.internal.ausl.bologna.it/spedizioniere",
+                "username": "testapp",
+                "password": "testapp"
             }
         }
     ]

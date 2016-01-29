@@ -7,10 +7,18 @@ package it.bologna.ausl.bds_tools.jobs.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
+import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
 
 /**
@@ -20,6 +28,30 @@ import org.apache.commons.io.IOUtils;
 public class Test {
 
     public static void main(String[] args) throws JsonProcessingException, FileNotFoundException, IOException {
+               
+        String query = "SELECT attivo " +
+                        "FROM bds_tools.spedizioniere_applicazioni " +
+                        "WHERE  id_applicazione_spedizioniere = ? ;";              
+        try (
+                
+                Connection connection = DriverManager.getConnection("jdbc:postgresql://gdml:5432/argo","argo", "siamofreschi");
+           
+                //Connection dbConnection = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = connection.prepareStatement(query);
+            )  {
+            String idApplicazione = "procton";
+            ps.setString(1, idApplicazione);
+            ResultSet re = ps.executeQuery();
+            re.next();
+            System.out.println( re.getBoolean("attivo"));
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            System.out.println("Eccezione!");
+        }
+        
+        
+        System.exit(0);
+        
         JobParams jp = new JobParams();
         jp.addParam("k1", "v1");
         jp.addParam("k2", "v2");

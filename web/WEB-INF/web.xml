@@ -227,6 +227,10 @@
         <param-value>gd.aggiornamenti_parer</param-value>
     </context-param>
     <context-param>
+        <param-name>SpedizioniereApplicazioni</param-name>
+        <param-value>bds_tools.spedizioniere_applicazioni</param-value>
+    </context-param>
+    <context-param>
         <param-name>UtentiTableName</param-name>
         <param-value>procton.utenti</param-value>
     </context-param>
@@ -242,6 +246,7 @@
         <param-name>DefaultSequenceName</param-name>
         <param-value>gddocs</param-value>
     </context-param>
+
     <!--
     <context-param>
         <param-name>redis.host</param-name>

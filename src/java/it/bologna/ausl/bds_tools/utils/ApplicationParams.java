@@ -32,6 +32,7 @@ public class ApplicationParams {
     private static String defaultSequenceName;
     private static String gdDocToPublishExtractionQuery;
     private static String gdDocUpdatePubblicato;
+    private static String spedizioniereApplicazioni;
 
     // parametri pubblici letti dalla tabella dei parametri pubblici tramite il servizio
     private static String serverId;
@@ -53,6 +54,7 @@ public class ApplicationParams {
             defaultSequenceName = context.getInitParameter("DefaultSequenceName");
             gdDocToPublishExtractionQuery = context.getInitParameter("GdDocToPublishExtractionQuery");
             gdDocUpdatePubblicato = context.getInitParameter("GdDocUpdatePubblicato");
+            spedizioniereApplicazioni = context.getInitParameter("SpedizioniereApplicazioni");
 
             readAuthenticationTable(context);
             initilizeSupporetdFiles(dbConn, context);
@@ -250,6 +252,14 @@ public class ApplicationParams {
 
     public static void setMaxThreadSpedizioniere(String maxThreadSpedizioniere) {
         ApplicationParams.maxThreadSpedizioniere = maxThreadSpedizioniere;
+    }
+
+    public static String getSpedizioniereApplicazioni() {
+        return spedizioniereApplicazioni;
+    }
+
+    public static void setSpedizioniereApplicazioni(String spedizioniereApplicazioni) {
+        ApplicationParams.spedizioniereApplicazioni = spedizioniereApplicazioni;
     }
 
 }
