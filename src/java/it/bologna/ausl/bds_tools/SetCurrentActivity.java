@@ -1,6 +1,7 @@
 package it.bologna.ausl.bds_tools;
 
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -81,8 +82,7 @@ private static final Logger log = LogManager.getLogger(SetCurrentActivity.class)
                 throw new ServletException(message);
             }
 
-            // leggo i parametri per l'esecuzione della query dal web.xml
-            String setCurrentActivityFunctionName = getServletContext().getInitParameter(idapplicazione.toLowerCase() + "SetCurrentActivityFunctionName");
+            String setCurrentActivityFunctionName = ApplicationParams.getSetCurrentActivityFunctionName(getServletContext(), idapplicazione.toLowerCase());
 
             if(setCurrentActivityFunctionName == null || setCurrentActivityFunctionName.equals("")) {
                 String message = "Manca il nome della funzione che scrive l'attivita sulla tabbella dei documenti. Indicarlo nel file \"web.xml\"";

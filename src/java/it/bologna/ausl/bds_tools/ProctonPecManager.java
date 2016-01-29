@@ -1,6 +1,7 @@
 package it.bologna.ausl.bds_tools;
 
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -85,7 +86,7 @@ private static final Logger log = LogManager.getLogger(ProctonPecManager.class);
             }
 
             // leggo i parametri per l'esecuzione della query dal web.xml
-            String spedizioniPecTableName = getServletContext().getInitParameter("SpedizioniPecTableName");
+            String spedizioniPecTableName = ApplicationParams.getSpedizioniPecTableName();
 
             if(spedizioniPecTableName == null || spedizioniPecTableName.equals("")) {
                 String message = "Manca il nome della tabella nella quale inserire la spedizione PEC da gestire. Indicarlo nel file \"web.xml\"";

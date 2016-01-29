@@ -103,7 +103,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
 
             try {
                 //iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.UPDATE, prefix);
-                iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.UPDATE, prefix);
+                iodaUtilities = new IodaDocumentUtilities(iodaRequest, Document.DocumentOperationType.UPDATE, prefix);
             }
             catch (IodaDocumentException ex) {
                 try {

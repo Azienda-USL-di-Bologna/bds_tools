@@ -102,7 +102,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
             
             try {
 //                iodaUtilities = new IodaDocumentUtilities(getServletContext(), request, Document.DocumentOperationType.INSERT, prefix);
-                iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.INSERT, prefix);
+                iodaUtilities = new IodaDocumentUtilities(iodaRequest, Document.DocumentOperationType.INSERT, prefix);
             }
             catch (IodaDocumentException | JsonMappingException ex) {
                 try {

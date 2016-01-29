@@ -1,13 +1,12 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParer;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import javax.servlet.ServletContext;
 
 /**
  *
@@ -19,19 +18,18 @@ public class IodaParerUtilities {
 
     private DatiParer datiParer;
 
-    private IodaParerUtilities(ServletContext context) {
-        this.gdDocTable = context.getInitParameter("GdDocsTableName");
-        this.aggiornamentiParerTable = context.getInitParameter("AggiornamentiParerTableName");
+    private IodaParerUtilities() {
+        this.gdDocTable = ApplicationParams.getGdDocsTableName();
+        this.aggiornamentiParerTable = ApplicationParams.getAggiornamentiParerTableName();
     }
 
     /**
      * 
-     * @param context
      * @param datiParer
      * @param prefixIds prefisso da anteporre agli id dei documenti che si ricercano (GdDoc)
      */
-    public IodaParerUtilities(ServletContext context, DatiParer datiParer, String prefixIds) {
-        this(context);
+    public IodaParerUtilities(DatiParer datiParer, String prefixIds) {
+        this();
         this.datiParer = datiParer;
         datiParer.setPrefissoApplicazioneOrigine(prefixIds);
     }

@@ -13,7 +13,6 @@ import it.bologna.ausl.masterchefclient.WorkerData;
 import it.bologna.ausl.masterchefclient.WorkerResponse;
 import it.bologna.ausl.masterchefclient.WorkerResult;
 import it.bologna.ausl.mimetypeutility.Detector;
-import it.bologna.ausl.parameters_client.ParametersRestClient;
 import it.bologna.ausl.redis.RedisClient;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;

@@ -82,10 +82,18 @@ public class Downloader extends HttpServlet {
             String plugin = (String) downloadParams.get("plugin");
             //String server = parts[1];
             String server = (String) downloadParams.get("server");
-//            String server = ApplicationParams.getServerId();
-            String connParameters = getServletContext().getInitParameter(server);
-            if (connParameters == null) {
-                throw new ServletException(server + " not found in parameters");
+            String connParameters = null;
+            
+            // temporaneo, per farlo funzionare anche prima della fine della modifica delle applicazioni con la nuova modalità
+            if (server.contains("gdml") || server.contains("arena") || server.contains("prod") || server.contains("prototipo")) {            
+                connParameters = getServletContext().getInitParameter(server);
+                if (connParameters == null) {
+                    throw new ServletException(server + " not found in parameters");
+                }
+            }
+            else {
+                // il parametro server è il nome del parametro da leggere dai parametri pubblici
+                connParameters = ApplicationParams.getOtherPublicParam(server);
             }
             Class<DownloaderPlugin> pluginClass = (Class<DownloaderPlugin>) Class.forName("it.bologna.ausl.bds_tools.downloader." + plugin + "Downloader", true, this.getClass().getClassLoader());
             Constructor<DownloaderPlugin> downloaderPluginConstructor = pluginClass.getDeclaredConstructor(String.class);

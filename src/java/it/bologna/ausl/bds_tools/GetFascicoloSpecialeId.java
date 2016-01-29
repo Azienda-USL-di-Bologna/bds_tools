@@ -84,7 +84,7 @@ public class GetFascicoloSpecialeId extends HttpServlet {
                 throw new ServletException(message);
             }
             
-            String fascicoliTable = getServletContext().getInitParameter("FascicoliTableName");
+            String fascicoliTable = ApplicationParams.getFascicoliTableName();
             
             if(fascicoliTable == null || fascicoliTable.equals("")) {
                 String message = "Manca il nome della tabella fascicoli. Indicarlo nel file \"web.xml\"";

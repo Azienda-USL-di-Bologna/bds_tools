@@ -223,11 +223,11 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
             if(fileExt != null)
                 endFileExt="." + fileExt;
 
-            String mongoUri = ApplicationParams.getMongoUri();
+            String mongoUri = ApplicationParams.getMongoRepositoryUri();
             mongo = new MongoWrapper(mongoUri);
 
             //Creo la cartella dove inserire i file su mongo-- è quella del fascicolo passato
-            String cartellaFascicolo = getServletContext().getInitParameter("UploadGdDocMongoPath") + "/" +pathMongoNumerazioneGerarchica;
+            String cartellaFascicolo = ApplicationParams.getUploadGdDocMongoPath() + "/" +pathMongoNumerazioneGerarchica;
 
             boolean exists = true;
 
@@ -407,7 +407,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
         
         String[] campiFascicolo = new String[3];
         
-        String parametersTable = getServletContext().getInitParameter("FascicoliTableName");
+        String parametersTable = ApplicationParams.getFascicoliTableName();
         String query = "SELECT nome_fascicolo, numerazione_gerarchica, anno_fascicolo FROM " + parametersTable + " WHERE id_fascicolo = ? ";
         
         PreparedStatement ps = dbConn.prepareStatement(query);
@@ -477,7 +477,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
     
     private Boolean insertGdDoc(String nomeGddoc, String uuidUploadFile) {
 
-        String gdDocsTable = getServletContext().getInitParameter("GdDocsTableName");
+        String gdDocsTable = ApplicationParams.getGdDocsTableName();
         String query = "INSERT INTO " + gdDocsTable + " (id_gddoc, nome_gddoc, categoria_origine, multiplo, uuid_mongo, tipo_gddoc, uuid_mongo_pdf,"
                 + " stato_gd_doc, data_gddoc) VALUES (?,?,?,?,?,?,?,?,?)";
                
@@ -523,7 +523,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
     
     private Boolean insertSottoDocumento(String idGdDoc, String nomeFile, String uuidUploaFile)
     {
-        String sottoDocumentiTable = getServletContext().getInitParameter("SottoDocumentiTableName");
+        String sottoDocumentiTable = ApplicationParams.getSottoDocumentiTableName();
         String query = "INSERT INTO " + sottoDocumentiTable + "(id_sottodocumento, id_gddoc, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_originale, codice_sottodocumento) "
                        + " VALUES(?,?,?,?,?,?) ";
         
@@ -567,7 +567,7 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
     
     private Boolean insertFascicoliGddocCross(String idGddoc, String idFascicolo)
     {
-        String crossFascGdDocTable = getServletContext().getInitParameter("FascicoliGdDocsTableName");
+        String crossFascGdDocTable = ApplicationParams.getFascicoliGdDocsTableName();
         String query = "INSERT INTO " + crossFascGdDocTable + "(id_fascicolo_gddoc, id_gddoc, id_fascicolo, visibile, data_assegnazione, conservazione) "
                        + " VALUES(?,?,?,?,?,?) ";
         

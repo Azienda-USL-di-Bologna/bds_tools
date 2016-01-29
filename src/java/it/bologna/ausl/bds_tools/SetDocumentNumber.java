@@ -146,7 +146,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
     public static String setNumber(Connection dbConn, ServletContext context, String idDocumento, String nomesequenza) throws ServletException, SQLException {
 
         String res = null;
-        String updateNumberFunctionName = context.getInitParameter("UpdateNumberFunctionNameTemplate");
+        String updateNumberFunctionName = ApplicationParams.getUpdateNumberFunctionNameTemplate();
         updateNumberFunctionName = updateNumberFunctionName.replace("[nome_sequenza]", nomesequenza);
 
         if(updateNumberFunctionName == null || updateNumberFunctionName.equals("")) {

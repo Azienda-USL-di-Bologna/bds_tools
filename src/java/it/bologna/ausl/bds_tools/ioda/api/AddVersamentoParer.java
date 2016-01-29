@@ -109,7 +109,7 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
                 return;
             }
             
-            iodaParerUtilities = new IodaParerUtilities(getServletContext(), datiParer, prefix);
+            iodaParerUtilities = new IodaParerUtilities(datiParer, prefix);
 
             iodaParerUtilities.insertAggiornamentoParer(dbConn);
 

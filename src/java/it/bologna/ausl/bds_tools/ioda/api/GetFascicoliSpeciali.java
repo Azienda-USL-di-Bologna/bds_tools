@@ -94,7 +94,7 @@ public class GetFascicoliSpeciali extends HttpServlet {
 
             try{
                 FascicoliSpecialiResearcher researcher = (FascicoliSpecialiResearcher) iodaReq.getObject();
-                fascicoliUtilities = new IodaFascicoliUtilities(getServletContext(), request, researcher);
+                fascicoliUtilities = new IodaFascicoliUtilities(request, researcher);
                 fascicoliSpeciali = fascicoliUtilities.getFascicoloSpeciale(dbConn, ps);
             }
 //            catch(SendHttpMessageException | IodaDocumentException | SQLException ex){

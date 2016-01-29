@@ -253,7 +253,7 @@ public class Spedizioniere implements Job{
             
             SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
             ArrayList<SpedizioniereAttachment> attachments = new ArrayList<SpedizioniereAttachment>();
-            String mongoUri = ApplicationParams.getMongoUri();
+            String mongoUri = ApplicationParams.getMongoRepositoryUri();
             MongoWrapper mongo;
             
             try (
