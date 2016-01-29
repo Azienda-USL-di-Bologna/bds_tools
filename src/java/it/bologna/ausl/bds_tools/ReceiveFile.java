@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools;
 
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
 import java.io.IOException;
@@ -83,8 +84,8 @@ private static final Logger log = LogManager.getLogger(ReceiveFile.class);
                     response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"serverIdentifier\" non trovato");
                     return;
                 }
-                String mongoDonwnloadParamsName = "mongodownload[server]".replace("[server]", serverIdentifier);
-                String mongoDownloadUrl = getServletContext().getInitParameter(mongoDonwnloadParamsName);
+                
+                String mongoDownloadUrl = ApplicationParams.getMongoDownloadUri();
 
                 if (mongoDownloadUrl == null || mongoDownloadUrl.equals("")) {
                     response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"mongoDownloadUrl\" non trovato");

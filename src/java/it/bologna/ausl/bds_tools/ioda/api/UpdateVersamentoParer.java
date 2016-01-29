@@ -1,6 +1,5 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
-import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaParerUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -99,7 +98,7 @@ public class UpdateVersamentoParer extends HttpServlet{
                 return;
             }
             
-            iodaParerUtilities = new IodaParerUtilities(getServletContext(), datiParer, prefix);
+            iodaParerUtilities = new IodaParerUtilities(datiParer, prefix);
 
             iodaParerUtilities.updateAggiornamentoParer(dbConn);
         }

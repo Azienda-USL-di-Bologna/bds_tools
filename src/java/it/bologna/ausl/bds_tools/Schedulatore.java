@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.bologna.ausl.bds_tools.jobs.utils.JobDescriptor;
 import it.bologna.ausl.bds_tools.jobs.utils.JobList;
 import it.bologna.ausl.bds_tools.jobs.utils.JobParams;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -48,11 +49,9 @@ public class Schedulatore extends HttpServlet {
         super.init();
         log.info("Inizio avvio Schedulatore");
 
-        String activeString = getServletContext().getInitParameter("schedulatore.active");
-        if (activeString != null) {
-            active = Boolean.parseBoolean(activeString);
-        }
+        active = ApplicationParams.isSchedulatoreActive();
 
+        // questo va cambiato con il parsing del json letto dai parametri pubblici
         String configFile = getServletContext().getInitParameter("schedulatore.configfile");
         if (configFile != null) {
             CONF_FILE_NAME = configFile;
@@ -68,16 +67,11 @@ public class Schedulatore extends HttpServlet {
             sf.initialize(prop);
             sched = sf.getScheduler();
             quarzInit();
-        } catch (SchedulerException ex) {
-            log.fatal(ex);
-        } catch (IOException ex) {
-            log.fatal(ex);
-        } catch (ClassNotFoundException ex) {
+        } catch (SchedulerException | IOException | ClassNotFoundException ex) {
             log.fatal(ex);
         }
 
         log.info("Termine avvio Schedulatore");
-
     }
 
     private void quarzStop() throws SchedulerException {

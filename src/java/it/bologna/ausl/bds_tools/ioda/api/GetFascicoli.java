@@ -1,13 +1,11 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
-import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
-import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,7 +13,6 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -98,7 +95,7 @@ public class GetFascicoli extends HttpServlet {
             try{
                 Researcher researcher = (Researcher) iodaReq.getObject();
                 
-                fascicoliUtilities = new IodaFascicoliUtilities(getServletContext(), request, researcher);
+                fascicoliUtilities = new IodaFascicoliUtilities(request, researcher);
                 
                 fascicoli = fascicoliUtilities.getFascicoli(dbConn, ps);
 

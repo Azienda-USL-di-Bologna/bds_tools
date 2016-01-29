@@ -1,12 +1,11 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.FascicoliSpecialiResearcher;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Search;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.io.IOException;
@@ -16,8 +15,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.joda.time.DateTime;
@@ -38,17 +35,18 @@ public class IodaFascicoliUtilities {
     private Search researcher;
     HttpServletRequest request;
     
-    private IodaFascicoliUtilities(ServletContext context, Search r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this.gdDocTable = context.getInitParameter("GdDocsTableName");
-        this.fascicoliTable = context.getInitParameter("FascicoliTableName");
-        this.titoliTable = context.getInitParameter("TitoliTableName");
-        this.fascicoliGdDocTable = context.getInitParameter("FascicoliGdDocsTableName");
-        this.utentiTable = context.getInitParameter("UtentiTableName");
+    private IodaFascicoliUtilities(Search r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this.gdDocTable = ApplicationParams.getGdDocsTableName();
+        this.fascicoliTable = ApplicationParams.getFascicoliTableName();
+        this.titoliTable = ApplicationParams.getTitoliTableName();
+        this.fascicoliGdDocTable = ApplicationParams.getFascicoliGdDocsTableName();
+        this.utentiTable = ApplicationParams.getUtentiTableName();
+
         this.researcher = r;
     }
     
-    public IodaFascicoliUtilities(ServletContext context, HttpServletRequest request, Search r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, r);
+    public IodaFascicoliUtilities(HttpServletRequest request, Search r) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(r);
         this.request = request;
 //        this.researcher = r;
     }

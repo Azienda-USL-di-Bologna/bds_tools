@@ -1,13 +1,11 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
-import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
-import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.mimetypeutility.Detector;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,7 +13,6 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -102,7 +99,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
                 //SimpleDocument sd = (SimpleDocument) iodaReq.getDocument();
                 SimpleDocument sd = (SimpleDocument) iodaReq.getObject();
                 
-                fascicoliUtilities = new IodaFascicolazioniUtilities(getServletContext(), request, sd, prefix);
+                fascicoliUtilities = new IodaFascicolazioniUtilities(request, sd, prefix);
                 
                 fascicolazioni = fascicoliUtilities.getFascicolazioni(dbConn, ps);
                   

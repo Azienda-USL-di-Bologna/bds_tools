@@ -31,43 +31,72 @@ public class ApplicationParams {
     private static String defaultSequenceName;
     private static String gdDocToPublishExtractionQuery;
     private static String gdDocUpdatePubblicato;
+    private static String uploadGdDocMongoPath;
+    private static String fascicoliTableName;
+    private static String gdDocsTableName;
+    private static String sottoDocumentiTableName;
+    private static String fascicoliGdDocsTableName;
+    private static String titoliTableName;
+    private static String utentiTableName;
+    private static String spedizioniPecTableName;
+    private static String updateNumberFunctionNameTemplate;
+    private static String aggiornamentiParerTableName;
+
+    private static boolean schedulatoreActive = false;
 
     // parametri pubblici letti dalla tabella dei parametri pubblici tramite il servizio
     private static String serverId;
-    private static String mongoUri;
+    private static String mongoRepositoryUri;
+    private static String mongoDownloadUri;
     private static String redisHost;
     private static String redisInQueue;
     private static String balboServiceURI;
     private static String maxThreadSpedizioniere;
+    private static String getIndeUrlServiceUri;
+
 
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
-        try (Connection dbConn = UtilityFunctions.getDBConnection()) {
-            appId = context.getInitParameter("appid");
-            appToken = context.getInitParameter("apptoken");
-            registriTableName = context.getInitParameter("RegistriTableName");
-            spedizioniPecGlobaleTableName = context.getInitParameter("SpedizioniPecGlobaleTableName");
-            resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
-            resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));     
-            defaultSequenceName = context.getInitParameter("DefaultSequenceName");
-            gdDocToPublishExtractionQuery = context.getInitParameter("GdDocToPublishExtractionQuery");
-            gdDocUpdatePubblicato = context.getInitParameter("GdDocUpdatePubblicato");
 
-            readAuthenticationTable(context);
+        appId = context.getInitParameter("appid");
+        appToken = context.getInitParameter("apptoken");
+        registriTableName = context.getInitParameter("RegistriTableName");
+        spedizioniPecGlobaleTableName = context.getInitParameter("SpedizioniPecGlobaleTableName");
+        resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
+        resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));     
+        defaultSequenceName = context.getInitParameter("DefaultSequenceName");
+        gdDocToPublishExtractionQuery = context.getInitParameter("GdDocToPublishExtractionQuery");
+        gdDocUpdatePubblicato = context.getInitParameter("GdDocUpdatePubblicato");
+        uploadGdDocMongoPath = context.getInitParameter("UploadGdDocMongoPath");
+        fascicoliTableName = context.getInitParameter("FascicoliTableName");
+        fascicoliGdDocsTableName = context.getInitParameter("FascicoliGdDocsTableName");
+        titoliTableName = context.getInitParameter("TitoliTableName");
+        utentiTableName = context.getInitParameter("UtentiTableName");
+        gdDocsTableName = context.getInitParameter("GdDocsTableName");
+        sottoDocumentiTableName = context.getInitParameter("SottoDocumentiTableName");
+        spedizioniPecTableName = context.getInitParameter("SpedizioniPecTableName");
+        updateNumberFunctionNameTemplate = context.getInitParameter("UpdateNumberFunctionNameTemplate");
+        aggiornamentiParerTableName = context.getInitParameter("AggiornamentiParerTableName");
+
+        schedulatoreActive = Boolean.parseBoolean(context.getInitParameter("schedulatore.active"));
+
+        readAuthenticationTable(context);
+
+        try (Connection dbConn = UtilityFunctions.getDBConnection()) {
             initilizeSupporetdFiles(dbConn, context);
 
             ConfigParams.initConfigParams();
-
             serverId = ConfigParams.getParam("serverIdentifier");
-            //mongoUri = context.getInitParameter("mongo" + serverId);
-            mongoUri = ConfigParams.getParam("mongoConnectionString");
-            //redisHost = context.getInitParameter("redis" + serverId);
+            mongoRepositoryUri = ConfigParams.getParam("mongoConnectionString");
+            mongoDownloadUri = ConfigParams.getParam("mongoDownloadConnectionString");
             redisHost = ConfigParams.getParam("masterChefHost");
-            //redisInQueue = context.getInitParameter("redisinqueue" + serverId);
             redisInQueue = ConfigParams.getParam("masterChefPushingQueue");
+
             // balbo service URI in parametri pubblici
             balboServiceURI = ConfigParams.getParam("balboServiceURI");
             // numero massimo di threads dello spedizioniere
             maxThreadSpedizioniere = ConfigParams.getParam("MaxThreadSpedizioniere");
+            
+            getIndeUrlServiceUri = ConfigParams.getParam("getIndeUrlServiceUri");
         }
         catch (Exception ex) {
            log.error("errore nell'inizializzazione: ", ex);
@@ -106,6 +135,10 @@ public class ApplicationParams {
         }
     }
 
+    public static Logger getLog() {
+        return log;
+    }
+
     public static List<SupportedFile> getSupportedFileList() {
         return supportedFileList;
     }
@@ -118,128 +151,135 @@ public class ApplicationParams {
         return appId;
     }
 
-    public static void setAppId(String appId) {
-        ApplicationParams.appId = appId;
-    }
-
     public static String getAppToken() {
         return appToken;
-    }
-
-    public static void setAppToken(String appToken) {
-        ApplicationParams.appToken = appToken;
     }
 
     public static String getRegistriTableName() {
         return registriTableName;
     }
 
-    public static void setRegistriTableName(String registriTableName) {
-        ApplicationParams.registriTableName = registriTableName;
-    }
-
     public static String getSpedizioniPecGlobaleTableName() {
         return spedizioniPecGlobaleTableName;
-    }
-
-    public static void setSpedizioniPecGlobaleTableName(String spedizioniPecGlobaleTableName) {
-        ApplicationParams.spedizioniPecGlobaleTableName = spedizioniPecGlobaleTableName;
     }
 
     public static String getAuthenticationTable() {
         return authenticationTable;
     }
 
-    public static void setAuthenticationTable(String authenticationTable) {
-        ApplicationParams.authenticationTable = authenticationTable;
-    }
-
     public static int getResourceLockedMaxRetryTimes() {
         return resourceLockedMaxRetryTimes;
-    }
-
-    public static void setResourceLockedMaxRetryTimes(int resourceLockedMaxRetryTimes) {
-        ApplicationParams.resourceLockedMaxRetryTimes = resourceLockedMaxRetryTimes;
     }
 
     public static long getResourceLockedSleepMillis() {
         return resourceLockedSleepMillis;
     }
 
-    public static void setResourceLockedSleepMillis(long resourceLockedSleepMillis) {
-        ApplicationParams.resourceLockedSleepMillis = resourceLockedSleepMillis;
-    }
-
     public static String getDefaultSequenceName() {
         return defaultSequenceName;
-    }
-
-    public static void setDefaultSequenceName(String defaultSequenceName) {
-        ApplicationParams.defaultSequenceName = defaultSequenceName;
     }
 
     public static String getGdDocToPublishExtractionQuery() {
         return gdDocToPublishExtractionQuery;
     }
 
-    public static void setGdDocToPublishExtractionQuery(String gdDocToPublishExtractionQuery) {
-        ApplicationParams.gdDocToPublishExtractionQuery = gdDocToPublishExtractionQuery;
-    }
-
     public static String getGdDocUpdatePubblicato() {
         return gdDocUpdatePubblicato;
     }
 
-    public static void setGdDocUpdatePubblicato(String gdDocUpdatePubblicato) {
-        ApplicationParams.gdDocUpdatePubblicato = gdDocUpdatePubblicato;
+    public static String getUploadGdDocMongoPath() {
+        return uploadGdDocMongoPath;
+    }
+
+    public static String getFascicoliTableName() {
+        return fascicoliTableName;
+    }
+
+    public static String getGdDocsTableName() {
+        return gdDocsTableName;
+    }
+
+    public static String getSottoDocumentiTableName() {
+        return sottoDocumentiTableName;
+    }
+
+    public static String getFascicoliGdDocsTableName() {
+        return fascicoliGdDocsTableName;
+    }
+
+    public static String getTitoliTableName() {
+        return titoliTableName;
+    }
+
+    public static String getUtentiTableName() {
+        return utentiTableName;
+    }
+
+    public static String getSpedizioniPecTableName() {
+        return spedizioniPecTableName;
+    }
+
+    public static String getUpdateNumberFunctionNameTemplate() {
+        return updateNumberFunctionNameTemplate;
+    }
+
+    public static String getAggiornamentiParerTableName() {
+        return aggiornamentiParerTableName;
+    }
+
+    public static boolean isSchedulatoreActive() {
+        return schedulatoreActive;
     }
 
     public static String getServerId() {
         return serverId;
     }
 
-    public static void setServerId(String serverId) {
-        ApplicationParams.serverId = serverId;
+    public static String getMongoRepositoryUri() {
+        return mongoRepositoryUri;
     }
 
-    public static String getMongoUri() {
-        return mongoUri;
-    }
-
-    public static void setMongoUri(String mongoUri) {
-        ApplicationParams.mongoUri = mongoUri;
+    public static String getMongoDownloadUri() {
+        return mongoDownloadUri;
     }
 
     public static String getRedisHost() {
         return redisHost;
     }
 
-    public static void setRedisHost(String redisHost) {
-        ApplicationParams.redisHost = redisHost;
-    }
-
     public static String getRedisInQueue() {
         return redisInQueue;
-    }
-
-    public static void setRedisInQueue(String redisInQueue) {
-        ApplicationParams.redisInQueue = redisInQueue;
     }
 
     public static String getBalboServiceURI() {
         return balboServiceURI;
     }
 
-    public static void setBalboServiceURI(String balboServiceURI) {
-        ApplicationParams.balboServiceURI = balboServiceURI;
-    }
-
     public static String getMaxThreadSpedizioniere() {
         return maxThreadSpedizioniere;
     }
 
-    public static void setMaxThreadSpedizioniere(String maxThreadSpedizioniere) {
-        ApplicationParams.maxThreadSpedizioniere = maxThreadSpedizioniere;
+    public static String getGetIndeUrlServiceUri() {
+        return getIndeUrlServiceUri;
     }
 
+    /**
+     * torna un parametro pubblico in base al suo nome
+     * NB. cercare di non usare questa funzione a meno che non sia strettamente necessario
+     * @param paramName il nome del parametro
+     * @return  il valore del parametro identificato dal nome passato
+     */
+    public static String getOtherPublicParam(String paramName) {
+        return ConfigParams.getParam(paramName);
+    }
+    
+    // per i processi bonita
+    public static String getSetCurrentActivityFunctionName(ServletContext context, String idApplicazione) {
+        return context.getInitParameter(idApplicazione + "SetCurrentActivityFunctionName");
+    }
+
+    // per i processi bdm
+    public static String getSetCurrentStepFunctionName(ServletContext context, String tipoOggetto) {
+        return context.getInitParameter(tipoOggetto + "SetCurrentStepFunctionName");
+    }
 }

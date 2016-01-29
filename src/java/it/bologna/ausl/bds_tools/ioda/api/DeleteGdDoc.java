@@ -97,7 +97,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
             
             try {
                 //iodaUtilities = new IodaDocumentUtilities(getServletContext(), gdDoc, Document.DocumentOperationType.DELETE, prefix);
-                iodaUtilities = new IodaDocumentUtilities(getServletContext(), iodaRequest, Document.DocumentOperationType.DELETE, prefix);
+                iodaUtilities = new IodaDocumentUtilities(iodaRequest, Document.DocumentOperationType.DELETE, prefix);
             }
             catch (IodaDocumentException ex) {
                 try {

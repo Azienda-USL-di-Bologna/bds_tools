@@ -1,6 +1,7 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
+import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
@@ -14,7 +15,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.joda.time.DateTime;
@@ -35,20 +35,20 @@ public class IodaFascicolazioniUtilities {
     private SimpleDocument sd;
     HttpServletRequest request;
     
-    private IodaFascicolazioniUtilities(ServletContext context, SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this.gdDocTable = context.getInitParameter("GdDocsTableName");
-        this.fascicoliTable = context.getInitParameter("FascicoliTableName");
-        this.titoliTable = context.getInitParameter("TitoliTableName");
-        this.fascicoliGdDocTable = context.getInitParameter("FascicoliGdDocsTableName");
-        this.utentiTable = context.getInitParameter("UtentiTableName");
+    private IodaFascicolazioniUtilities(SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this.gdDocTable = ApplicationParams.getGdDocsTableName();
+        this.fascicoliTable = ApplicationParams.getFascicoliTableName();
+        this.titoliTable = ApplicationParams.getTitoliTableName();
+        this.fascicoliGdDocTable = ApplicationParams.getFascicoliGdDocsTableName();
+        this.utentiTable = ApplicationParams.getUtentiTableName();
         this.prefixIds = prefixIds;
         this.sd = sd;
         sd.setPrefissoApplicazioneOrigine(this.prefixIds);
         
     }
     
-    public IodaFascicolazioniUtilities(ServletContext context, HttpServletRequest request, SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, sd, prefixIds);
+    public IodaFascicolazioniUtilities(HttpServletRequest request, SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(sd, prefixIds);
         this.request = request;
     }
     
@@ -221,7 +221,7 @@ public class IodaFascicolazioniUtilities {
             DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
             String numerazioneGerarchica = res.getString(index++);
             String nomeFascicolo = res.getString(index++);
-            DateTime dataAssegnazione = null;
+            DateTime dataAssegnazione;
             String dataStr = res.getString(index++);
             try{
                 

@@ -17,18 +17,12 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
 import it.bologna.ausl.mimetypeutility.Detector;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
 import it.bologna.ausl.mongowrapper.exceptions.MongoWrapperException;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -84,25 +78,25 @@ private final List<SottoDocumento> toConvert = new ArrayList<>();
 private final List<String> uploadedUuids = new ArrayList<>();
 private final List<String> uuidsToDelete = new ArrayList<>();
 
-    private IodaDocumentUtilities(ServletContext context, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this.gdDocTable = context.getInitParameter("GdDocsTableName");
-        String mongoUri = ApplicationParams.getMongoUri();
+    private IodaDocumentUtilities(Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this.gdDocTable = ApplicationParams.getGdDocsTableName();
+        String mongoUri = ApplicationParams.getMongoRepositoryUri();
         this.mongo = new MongoWrapper(mongoUri);
-        this.sottoDocumentiTable = context.getInitParameter("SottoDocumentiTableName");
+        this.sottoDocumentiTable = ApplicationParams.getSottoDocumentiTableName();
 
         if (operation != Document.DocumentOperationType.DELETE) {
             this.prefixIds = prefixIds;
             this.detector = new Detector();
             this.indeIdIndex = 0; 
-            this.mongoParentPath = context.getInitParameter("UploadGdDocMongoPath");
-            this.getIndeIdServletUrl = context.getInitParameter("getindeidurl" + ApplicationParams.getServerId());
-            this.fascicoliTable = context.getInitParameter("FascicoliTableName");
-            this.fascicoliGdDocTable = context.getInitParameter("FascicoliGdDocsTableName");
+            this.mongoParentPath = ApplicationParams.getUploadGdDocMongoPath();
+            this.getIndeIdServletUrl = ApplicationParams.getGetIndeUrlServiceUri();
+            this.fascicoliTable = ApplicationParams.getFascicoliTableName();
+            this.fascicoliGdDocTable = ApplicationParams.getFascicoliGdDocsTableName();
         }
     }
 
-    public IodaDocumentUtilities(ServletContext context, IodaRequestDescriptor iodaRequestDescriptor, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(context, operation, prefixIds);
+    public IodaDocumentUtilities(IodaRequestDescriptor iodaRequestDescriptor, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(operation, prefixIds);
         this.gdDoc = iodaRequestDescriptor.getGdDoc(operation);
         this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
         
@@ -735,9 +729,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     }
 
     public void deleteAllMongoFileToDelete() {
-        for (String uuid : uuidsToDelete) {
+        uuidsToDelete.stream().forEach((uuid) -> {
             mongo.delete(uuid);
-        }
+    });
     }
 
     private void getIndeId() throws IOException, MalformedURLException, SendHttpMessageException {
