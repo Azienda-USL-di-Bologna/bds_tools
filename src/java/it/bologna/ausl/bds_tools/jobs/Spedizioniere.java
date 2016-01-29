@@ -277,32 +277,50 @@ public class Spedizioniere implements Job{
                 message.setAttachments(attachments);
                 
                 // Utilizziamo un altro Try Catch per evitare di fare il rollback su tutta la funzione
+                String messageId = null;
                 try{
-                    String messageId = spc.sendMail(message, false);
-                    String updateMessageId =    "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                    messageId = spc.sendMail(message, false);
+                    
+                    try (Connection conn = UtilityFunctions.getDBConnection();) {
+                        String updateMessageId = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                                                 "SET id_spedizione_pecgw=? and stato=? " +
                                                 "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
-                    try (
-                        Connection conn = UtilityFunctions.getDBConnection();
-                        PreparedStatement ps = conn.prepareStatement(updateMessageId)
-                    ) {
+
+                        PreparedStatement ps = conn.prepareStatement(updateMessageId);
 
                         ps.setInt(1, Integer.valueOf(messageId));
                         ps.setString(2, StatiSpedizione.PRESA_IN_CARICO.toString());
                         ps.setString(3, idOggetto);
                         ps.setString(4, tipoOggetto);
-
                         ps.executeUpdate();
                     }
-                }catch(Exception ex){
+                    
+                }
+                catch(IllegalArgumentException ex){
+                    // errori della famiglia 400
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                                                 "SET stato=? AND da_ritentare = ? and numero_errori=? " +
                                                 "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
-                    try (
-                        Connection conn = UtilityFunctions.getDBConnection();
-                        PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb)
-                    ) {
+                    
+                    try (Connection conn = UtilityFunctions.getDBConnection();) {
+                        PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb);
+                        ps.setString(1, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
+                        ps.setBoolean(2, false);
+                        ps.setInt(3, numErrori++);
+                        ps.setString(4, idOggetto);
+                        ps.setString(5, tipoOggetto);
 
+                        ps.executeUpdate();
+                    }
+                }               
+                catch(Exception ex){
+                    // errori che necessitano un altro tentativo di invio
+                    String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                                "SET stato=? AND da_ritentare = ? and numero_errori=? " +
+                                                "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
+                    
+                    try (Connection conn = UtilityFunctions.getDBConnection();) {
+                        PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb);
                         ps.setString(1, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
                         ps.setBoolean(2, true);
                         ps.setInt(3, numErrori++);
@@ -311,9 +329,7 @@ public class Spedizioniere implements Job{
 
                         ps.executeUpdate();
                     }
-                }finally{
-                    
-                }            
+                }finally{}            
             }
             catch(Exception ex) {
                 throw new SpedizioniereException("Errore nel reperimento dei documenti da spedire", ex);
