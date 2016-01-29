@@ -62,7 +62,7 @@ public class ApplicationParams {
         appToken = context.getInitParameter("apptoken");
         registriTableName = context.getInitParameter("RegistriTableName");
         spedizioniPecGlobaleTableName = context.getInitParameter("SpedizioniPecGlobaleTableName");
-            ricevutePecTableName = context.getInitParameter("RicevutePecTableName");
+        ricevutePecTableName = context.getInitParameter("RicevutePecTableName");
         resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
         resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));     
         defaultSequenceName = context.getInitParameter("DefaultSequenceName");

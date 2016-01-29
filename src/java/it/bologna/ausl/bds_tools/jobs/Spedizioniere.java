@@ -224,7 +224,7 @@ public class Spedizioniere implements Job{
             
             SpedizioniereClient spc = new SpedizioniereClient("https://gdml.internal.ausl.bologna.it/spedizioniere", "testapp", "testapp");
             ArrayList<SpedizioniereAttachment> attachments = new ArrayList<SpedizioniereAttachment>();
-            String mongoUri = ApplicationParams.getMongoUri();
+            String mongoUri = ApplicationParams.getMongoRepositoryUri();
             MongoWrapper mongo;
             
             try (
