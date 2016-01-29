@@ -25,6 +25,7 @@ public class ApplicationParams {
 
     private static String registriTableName;
     private static String spedizioniPecGlobaleTableName;
+    private static String ricevutePecTableName;
     private static String authenticationTable;
     private static int resourceLockedMaxRetryTimes;
     private static long resourceLockedSleepMillis;
@@ -61,6 +62,7 @@ public class ApplicationParams {
         appToken = context.getInitParameter("apptoken");
         registriTableName = context.getInitParameter("RegistriTableName");
         spedizioniPecGlobaleTableName = context.getInitParameter("SpedizioniPecGlobaleTableName");
+            ricevutePecTableName = context.getInitParameter("RicevutePecTableName");
         resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
         resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));     
         defaultSequenceName = context.getInitParameter("DefaultSequenceName");
@@ -163,6 +165,14 @@ public class ApplicationParams {
         return spedizioniPecGlobaleTableName;
     }
 
+    public static String getRicevutePecTableName() {
+        return ricevutePecTableName;
+    }
+
+    public static void setRicevutePecTableName(String ricevutePecTableName) {
+        ApplicationParams.ricevutePecTableName = ricevutePecTableName;
+    }
+    
     public static String getAuthenticationTable() {
         return authenticationTable;
     }
