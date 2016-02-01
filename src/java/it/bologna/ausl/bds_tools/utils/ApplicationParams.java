@@ -54,8 +54,9 @@ public class ApplicationParams {
     private static String balboServiceURI;
     private static String maxThreadSpedizioniere;
     private static String getIndeUrlServiceUri;
-     private static String spedizioniereApplicazioni;
-
+    private static String spedizioniereApplicazioni;
+    private static String schedulatoreConf;  
+    
 
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
 
@@ -101,6 +102,9 @@ public class ApplicationParams {
             maxThreadSpedizioniere = ConfigParams.getParam("MaxThreadSpedizioniere");
             
             getIndeUrlServiceUri = ConfigParams.getParam("getIndeUrlServiceUri");
+            
+            schedulatoreConf= ConfigParams.getParam("schedulatoreConfJson");
+                   
         }
         catch (Exception ex) {
            log.error("errore nell'inizializzazione: ", ex);
@@ -281,6 +285,10 @@ public class ApplicationParams {
 
     public static void setSpedizioniereApplicazioni(String spedizioniereApplicazioni) {
         ApplicationParams.spedizioniereApplicazioni = spedizioniereApplicazioni;
+    }
+    
+    public static String  getSchedulatoreConf(){
+        return schedulatoreConf;
     }
 
     /**

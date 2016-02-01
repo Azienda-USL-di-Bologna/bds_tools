@@ -52,10 +52,10 @@ public class Schedulatore extends HttpServlet {
         active = ApplicationParams.isSchedulatoreActive();
 
         // questo va cambiato con il parsing del json letto dai parametri pubblici
-        String configFile = getServletContext().getInitParameter("schedulatore.configfile");
-        if (configFile != null) {
-            CONF_FILE_NAME = configFile;
-        }
+       // String configFile = getServletContext().getInitParameter("schedulatore.configfile");
+       // if (configFile != null) {
+//            CONF_FILE_NAME = configFile;
+//        }
         try {
             StdSchedulerFactory sf = new StdSchedulerFactory();
             Properties prop = new Properties();
@@ -86,11 +86,12 @@ public class Schedulatore extends HttpServlet {
             log.info("Inizializzazione schedulatore");
             quarzStop();
 
-            URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
-            if (jobConfURL == null) {
-                throw new FileNotFoundException("Schedulatore configuration file not found");
-            }
-            String jobString = IOUtils.toString(jobConfURL);
+           // URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
+           // if (jobConfURL == null) {
+//                throw new FileNotFoundException("Schedulatore configuration file not found");
+//            }
+        
+            String jobString = ApplicationParams.getSchedulatoreConf();
             ObjectMapper mapper = new ObjectMapper();
             JobList jobList = mapper.readValue(jobString, JobList.class);
             for (JobDescriptor jd : jobList.getJobs()) {
