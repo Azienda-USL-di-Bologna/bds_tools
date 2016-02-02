@@ -99,7 +99,7 @@ public class ApplicationParams {
             // balbo service URI in parametri pubblici
             balboServiceURI = ConfigParams.getParam("balboServiceURI");
             // numero massimo di threads dello spedizioniere
-            maxThreadSpedizioniere = ConfigParams.getParam("MaxThreadSpedizioniere");
+            
             
             getIndeUrlServiceUri = ConfigParams.getParam("getIndeUrlServiceUri");
             
@@ -269,10 +269,6 @@ public class ApplicationParams {
 
     public static String getBalboServiceURI() {
         return balboServiceURI;
-    }
-
-    public static String getMaxThreadSpedizioniere() {
-        return maxThreadSpedizioniere;
     }
 
     public static String getGetIndeUrlServiceUri() {
