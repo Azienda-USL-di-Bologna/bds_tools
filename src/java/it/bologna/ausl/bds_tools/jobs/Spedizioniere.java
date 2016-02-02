@@ -12,6 +12,7 @@ import it.bologna.ausl.spedizioniereclient.SpedizioniereAttachment;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereClient;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereMessage;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereRecepit;
+import it.bologna.ausl.spedizioniereclient.SpedizioniereRecepit.TipoRicevuta;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereStatus;
 import it.bologna.ausl.spedizioniereobjectlibrary.Attachment;
 import it.bologna.ausl.spedizioniereobjectlibrary.Mail;
@@ -276,6 +277,7 @@ public class Spedizioniere implements Job{
 //                log.error(ex);
 //            }
             try {
+                log.debug("Lancio ControlloSpedizione..");
                 controlloSpedizione();
             }
             catch (Exception ex) {
@@ -459,6 +461,7 @@ public class Spedizioniere implements Job{
         }
         
         private void controlloSpedizione() throws SpedizioniereException{
+            log.debug("ControlloSpedizione avviato!");
             String query = "SELECT " +
                             "id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -475,9 +478,11 @@ public class Spedizioniere implements Job{
                 ps.setString(3, StatiSpedizione.PRESA_IN_CARICO.toString());
                 ps.setString(4, StatiSpedizione.ERRORE_SPEDIZIONE.toString());
                 ps.setBoolean(5, true);
+                log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 while(res.next()){
                     try {
+                        log.debug("Richiamo controllaricevuta()");
                         controllaRicevuta(res);
                     } catch (Exception e) {
                     }
@@ -489,61 +494,101 @@ public class Spedizioniere implements Job{
         }
         
         private void controllaRicevuta(ResultSet res) throws SpedizioniereException{
+            log.debug("Dentro controlloRicevuta");
             SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
             
             try {
                 String idMsg = String.valueOf(res.getInt("id_spedizione_pecgw"));
+                log.debug("Richiesta stato mail...");
                 SpedizioniereStatus spStatus = spc.getStatus(idMsg);
+                log.debug("Stato mail ricevuto: " + spStatus.getStatus().name());
+                log.debug("Stato mail ricevuto2: " + spStatus);
+                log.debug("Richiesta Ricevute mail al Pecgw");
                 ArrayList<SpedizioniereRecepit> ricevuteMsg = spc.getRecepits(idMsg); // OTTENGO LE RICEVUTE DAL PECGW  
-                
-                if (spStatus.equals("ACCEPTED") || spStatus.equals("CONFIRMED")) {
+                log.debug("Ottenute le ricevute dal Pecgw");
+                int n = ricevuteMsg != null ? ricevuteMsg.size() : 0;
+                log.debug("Size ricevute:" + n);
+                if (spStatus.getStatus().name().equals("ACCEPTED") || spStatus.getStatus().name().equals("CONFIRMED")) {
+                    log.debug("Dentro IF");
                     if(ricevuteMsg != null){ // SE CI SONO RICEVUTE -- SE NON CI SONO CONTROLLO IL TIMESTAMP PER VEDERE SE è UNA MAIL O UNA PEC
+                        log.debug("Ricevute != null");
                         String ricevutaFromDb = "SELECT id " +
                             "FROM " + ApplicationParams.getRicevutePecTableName() + " " +
-                            "uuid=?";
+                            "WHERE uuid=?";
                         for (SpedizioniereRecepit spedizioniereRecepit : ricevuteMsg) { // PER OGNI RICEVUTA CONTROLLO SE è PRESENTE NEL DB
-                            try (
-                                Connection dbConnection = UtilityFunctions.getDBConnection();
-                                PreparedStatement ps = dbConnection.prepareStatement(ricevutaFromDb)
-                            ) {
+                            log.debug("Tipo Ricevuta: " + spedizioniereRecepit.getTipo().getAbbreviation());
+                            if (spedizioniereRecepit.getTipo().equals(TipoRicevuta.ERRORE_CONSEGNA.getAbbreviation())
+                                    || spedizioniereRecepit.getTipo().equals(TipoRicevuta.NON_ACCETTAZIONE.getAbbreviation())
+                                    || spedizioniereRecepit.getTipo().equals(TipoRicevuta.RILEVAZIONE_VIRUS.getAbbreviation())
+                                    || spedizioniereRecepit.getTipo().equals(TipoRicevuta.UNKNOWN.getAbbreviation())) {
+                                log.debug("Setto da ritentare a false");
+                                String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                                            "SET da_ritentare = ? " +
+                                                            "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
+                                try (
+                                    Connection conn = UtilityFunctions.getDBConnection();
+                                    PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb)
+                                ) {
 
-                                ps.setString(1, spedizioniereRecepit.getUuid());
+                                    ps.setBoolean(1, false);
+                                    ps.setString(2, res.getString("id_oggetto_origine"));
+                                    ps.setString(3, res.getString("tipo_oggetto_origine"));
+                                    log.debug("Query: " + ps);
+                                    ps.executeUpdate();
+                                }
+                                catch(Exception e){
+                                    log.debug("eccezione nell'update su eccezione della funzione controllaRicevuta(): " + e);
+                                }
+                            }else{
+                                log.debug("Ricevuta senza errore");
+                                try (
+                                    Connection dbConnection = UtilityFunctions.getDBConnection();
+                                    PreparedStatement ps = dbConnection.prepareStatement(ricevutaFromDb)
+                                ) {
 
-                                ResultSet idRicevuta = ps.executeQuery(); // OTTENGO LA RICEVUTA DAL DB
+                                    ps.setString(1, spedizioniereRecepit.getUuid());
+                                    log.debug("Query verifica: " + ps);
+                                    ResultSet idRicevuta = ps.executeQuery(); // OTTENGO LA RICEVUTA DAL DB
 
-                                // QUERY CHE SCRIVE SUL DB LA RICEVUTA 
-                                String insertRicevuta = "INSERT INTO " + ApplicationParams.getRicevutePecTableName() + "(" +
-                                                        "tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data, descrizione) " +
-                                                        "VALUES (?::bds_tools.tipi_ricevuta, ?, ?, ?, ?, ?, ?)";
+                                    // QUERY CHE SCRIVE SUL DB LA RICEVUTA 
+                                    String insertRicevuta = "INSERT INTO " + ApplicationParams.getRicevutePecTableName() + "(" +
+                                                            "tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data_inserimento, descrizione) " +
+                                                            "VALUES (?::bds_tools.tipi_ricevuta, ?, ?, ?, now(), ?)";
 
-                                //while (idRicevuta.next()) {
-                                    // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
-                                    if (idRicevuta == null) {
-                                        try (
-                                            Connection settaUuid = UtilityFunctions.getDBConnection();
-                                            PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
-                                        ) {
-                                            if(spStatus.equals("ACCEPTED")){
-                                                prepared.setString(1, TipiRicevuta.RICEVUTA_ACCETTAZIONE.toString());
-                                            }else{
-                                                prepared.setString(1, TipiRicevuta.RICEVUTA_CONSEGNA.toString());
+                                      //while (idRicevuta.next()) {
+                                        // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
+                                        if (!idRicevuta.next()) {
+                                            log.debug("idRicevuta == null");
+                                            try (
+                                                Connection settaUuid = UtilityFunctions.getDBConnection();
+                                                PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
+                                            ) {
+                                                if(spStatus.getStatus().name().equals("ACCEPTED")){
+                                                    prepared.setString(1, TipiRicevuta.RICEVUTA_ACCETTAZIONE.toString());
+                                                }else{
+                                                    prepared.setString(1, TipiRicevuta.RICEVUTA_CONSEGNA.toString());
+                                                }
+                                                prepared.setString(2, spedizioniereRecepit.getUuid());
+                                                prepared.setString(3, res.getString("id_oggetto_origine"));
+                                                prepared.setString(4, res.getString("tipo_oggetto_origine"));
+                                                prepared.setString(5, "");
+                                                log.debug("Query idRicevuta(INSERT): " + prepared);
+                                                prepared.executeUpdate();
+                                            } catch (NamingException ex) {
+                                                log.debug("Errore: ", ex);
+                                                throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
                                             }
-                                            prepared.setString(2, spedizioniereRecepit.getUuid());
-                                            prepared.setString(3, res.getString("id_oggetto_origine"));
-                                            prepared.setString(4, res.getString("tipo_oggetto_origine"));
-                                            ps.setTimestamp(5, new Timestamp(new Date().getTime()));
-                                            prepared.setString(6, "");
-                                            prepared.executeUpdate();
-                                        } catch (NamingException ex) {
-                                            log.debug("Errore: ", ex.getMessage());
-                                            throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
                                         }
-                                    }
-                               // }
-                            } catch (NamingException e) {
-                                log.debug(e.getMessage());
-                                throw new SpedizioniereException("Errore nel reperimento delle ricevute", e);
+                                   // }
+                                } catch (NamingException | SpedizioniereException e) {
+                                    log.debug(e);
+                                    throw new SpedizioniereException("Errore nel reperimento delle ricevute dal DB", e);
+                                }
                             }
+                            
+                            
+                            
+                            
                         }
                         // QUERY DI AGGIORNAMENTO DEGLI STATI CONFIRMED -> CONSEGNATO E ACCEPTED -> PRESA IN CARICO
                         String query = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -554,7 +599,7 @@ public class Spedizioniere implements Job{
                             Connection conn = UtilityFunctions.getDBConnection();
                             PreparedStatement ps = conn.prepareStatement(query)
                         ) {
-                            if (spStatus.equals("ACCEPTED")) {
+                            if (spStatus.getStatus().name().equals("ACCEPTED")) {
                                 ps.setString(1, StatiSpedizione.SPEDITO.toString());
                             }else{
                                 ps.setString(1, StatiSpedizione.CONSEGNATO.toString());
@@ -568,8 +613,12 @@ public class Spedizioniere implements Job{
                             log.debug("eccezione aggiornamento stato SPEDITO o CONSEGNATO nella funzione controllaRicevuta()" + ex.getMessage());
                         }
                     }else{ // NEL CASO SIA UNA MAIL NORMALE E NON UNA PEC DOPO TOT GG DEVE ESSERE MESSA A CONSEGNATA. SETTARE IL TIMESTAMP
-                        if (spStatus.equals("ACCEPTED")) {
+                        log.debug("Senza ricevute ELSE");
+                        if (spStatus.getStatus().name().equals("ACCEPTED")) {
+                            log.debug("Accepted");
                             int ggDiff = (int) (res.getDate("verifica_timestamp").getTime() - new Date().getTime()) * 1000*60*60*24; // DIFF TRA IL TIMESTAMP NEL DB E OGGI
+                            log.debug("Giorni differenza: " + ggDiff);
+                            log.debug("Giorni Expired: " + getExpired());
                             if(ggDiff >= getExpired()){ 
                                 // QUERY DI AGGIORNAMENTO DEGLI STATI CONFIRMED -> CONSEGNATO E ACCEPTED -> PRESA IN CARICO
                                 String query = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -584,19 +633,20 @@ public class Spedizioniere implements Job{
                                     ps.setTimestamp(2, new Timestamp(new Date().getTime()));
                                     ps.setString(3, res.getString("id_oggetto_origine"));
                                     ps.setString(4, res.getString("tipo_oggetto_origine"));
-
+                                    log.debug("Query Expired: " + ps);
                                     ps.executeUpdate();
                                 } catch (NamingException ex) {
-                                    java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                                    log.debug("Eccezione aggiornamento stato email expired: ", ex);
                                 }
+                            }else{
+                                log.debug("aTTENDO ANCORA");
                             }
                         }
                     } 
-                } else if (spStatus.equals("ERROR")) { // NEL CASO DI STATO DI ERRORE
-                    String ricevutaFromDb = "SELECT " + // QUERY PER CONTROLLARE SE LA RICEVUTA è PRESENTE SUL DB
-                            "id " +
+                } else if (spStatus.getStatus().name().equals("ERROR")) { // NEL CASO DI STATO DI ERRORE
+                    String ricevutaFromDb = "SELECT id " +
                             "FROM " + ApplicationParams.getRicevutePecTableName() + " " +
-                            "uuid=?";
+                            "WHERE uuid=?";
                     
                     for (SpedizioniereRecepit spedizioniereRecepit : ricevuteMsg) { // PER OGNI RICEVUTA CONTROLLO SE è PRESENTE NEL DB
                         try (
@@ -611,7 +661,7 @@ public class Spedizioniere implements Job{
                             // QUERY CHE SCRIVE SUL DB LA RICEVUTA 
                             String insertRicevuta = "INSERT INTO " + ApplicationParams.getRicevutePecTableName() + "(" +
                                                     "tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data, descrizione) " +
-                                                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                                                    "VALUES (?::bds_tools.tipi_ricevuta, ?, ?, ?, ?, ?, ?)";
 
                             //while (idRicevuta.next()) {
                                 // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
@@ -620,24 +670,26 @@ public class Spedizioniere implements Job{
                                         Connection settaUuid = UtilityFunctions.getDBConnection();
                                         PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
                                     ) {
-                                        if(spStatus.equals("ACCEPTED")){
-                                            prepared.setString(1, "ricevuta_accettazione");
+                                        if(spStatus.getStatus().name().equals("ACCEPTED")){
+                                            prepared.setString(1, TipiRicevuta.RICEVUTA_ACCETTAZIONE.toString());
                                         }else{
-                                            prepared.setString(1, "ricevuta_conferma");
+                                            prepared.setString(1, TipiRicevuta.RICEVUTA_CONSEGNA.toString());
                                         }
                                         prepared.setString(2, spedizioniereRecepit.getUuid());
                                         prepared.setString(3, res.getString("id_oggetto_origine"));
                                         prepared.setString(4, res.getString("tipo_oggetto_origine"));
                                         ps.setTimestamp(5, new Timestamp(new Date().getTime()));
-                                        prepared.setString(6, "Descrizioneeeee");
+                                        prepared.setString(6, "");
                                         prepared.executeUpdate();
                                     } catch (NamingException ex) {
-                                        java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                                        log.debug("Errore: ", ex.getMessage());
+                                        throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
                                     }
                                 }
                            // }
-                        } catch (NamingException ex) {
-                            java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                        } catch (NamingException e) {
+                            log.debug(e.getMessage());
+                            throw new SpedizioniereException("Errore nel reperimento delle ricevute", e);
                         }
                     }
                     
@@ -657,19 +709,16 @@ public class Spedizioniere implements Job{
 
                         ps.executeUpdate();
                     } catch (NamingException ex) {
-                        java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                        log.debug("eccezione aggiornamento stato ERRORE nella funzione controllaRicevuta()" + ex.getMessage());
                     }
-                    
                 }
-            } catch (SQLException ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (IOException ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (SQLException | IOException ex) {
+                log.debug(ex.getMessage());
+                throw new SpedizioniereException("Errore nel reperimento dello stato o delle ricevute dal Pecgw", ex);
             }
-            
         }
         
-        private void controlloConsegna(){
+        private void controlloConsegna() throws SpedizioniereException{
             String query = "SELECT " +
                             "id_oggetto_origine, tipo_oggetto_origine, verifica_timestamp " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -687,12 +736,12 @@ public class Spedizioniere implements Job{
                     try {
                         controllaRicevuta(res);
                     } catch (Exception e) {
+                        log.debug(e.getMessage());
                     }
                 }
-            } catch (SQLException ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (NamingException ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (SQLException | NamingException ex) {
+                log.debug(ex.getMessage());
+                throw new SpedizioniereException("Errore nel reperimento delle mail dal DB", ex);
             }
         }
     
@@ -721,7 +770,7 @@ public class Spedizioniere implements Job{
                 return r.getInt("attivo") == 1 ? true : false ;
             }
         } catch (SQLException | NamingException ex) {
-            log.debug("ECCEZZIONE: " + ex.getMessage());
+            log.debug("ECCEZIONE: " + ex.getMessage());
             return false;
         }
        return false;
