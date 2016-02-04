@@ -31,9 +31,14 @@ import java.sql.SQLType;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -828,11 +833,8 @@ public class Spedizioniere implements Job{
                 String rangeNonPermesso = res.getString("val_parametro");  
                 String tempList[] = rangeNonPermesso.split(";");
                 
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
-                Date parsedDate = dateFormat.parse(tempList[0]);
-                min = new java.sql.Timestamp(parsedDate.getTime());
-                parsedDate = dateFormat.parse(tempList[1]);
-                max =  new java.sql.Timestamp(parsedDate.getTime());
+                min = getTimestamp(tempList[0]);
+                max =  getTimestamp(tempList[1]);
             }
         }
         catch(Exception ex){
@@ -873,9 +875,61 @@ public class Spedizioniere implements Job{
             log.debug("eccezione nella select param servizio: " + ex);
         }
         
+        // Controlliamo che non si siano verificate anomalie nell'ultimo ciclo dello spedizioniere
+        if(dataInizio != null && dataFine == null){
+            String query =   "UPDATE " + ApplicationParams.getServiziTableName() + " " +
+                            "SET data_inizio=null " +
+                            "WHERE nome_servizio ='spedizioniere_controllo_consegna'";
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(query)
+            ) {
+                log.debug("Query: " + ps);
+                ps.executeUpdate();
+            } catch (NamingException | SQLException ex) {
+                log.debug("eccezione aggiornamento stato ERRORE nella funzione controllaRicevuta()" + ex);
+            }
+        }
         
+        // Calcolo giorni
+        Long giorni =  getDays(dataInizio, new Timestamp(new Date().getTime()));
         
+        // Se l'ora è maggiore o uguale a quella di lancio e non ho ancora eseguito nella giornata
+        LocalDateTime now = LocalDateTime.now();
+        int ora = now.getHour();
+        if(ora >= Integer.valueOf(oraLancio) && giorni > 0){
+            // Controllo se sono fuori dall'orario non consentito
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeZone(TimeZone.getDefault());
+            
+            calendar.setTimeInMillis(min.getTime() * 1000);
+            int dalle = calendar.get(Calendar.HOUR_OF_DAY);
+            
+            calendar.setTimeInMillis(max.getTime() * 1000);
+            int alle = calendar.get(Calendar.HOUR_OF_DAY);
+            
+            if(!(dalle < ora && ora < alle )){
+                String query =  "UPDATE " + ApplicationParams.getServiziTableName() + " " +
+                                "SET data_inizio=null " +
+                                "WHERE nome_servizio ='spedizioniere_controllo_consegna'";
+                try (
+                    Connection conn = UtilityFunctions.getDBConnection();
+                    PreparedStatement ps = conn.prepareStatement(query)
+                ) {
+                    log.debug("Query: " + ps);
+                    ps.executeUpdate();
+                } catch (NamingException | SQLException ex) {
+                    log.debug("eccezione aggiornamento stato ERRORE nella funzione controllaRicevuta()" + ex);
+                }
+            }
+        }
         return false;
+    }
+    
+    private java.sql.Timestamp getTimestamp(String data) throws ParseException{
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+        Date parsedDate = dateFormat.parse(data);
+        return (new java.sql.Timestamp(parsedDate.getTime()));
     }
     
 }
