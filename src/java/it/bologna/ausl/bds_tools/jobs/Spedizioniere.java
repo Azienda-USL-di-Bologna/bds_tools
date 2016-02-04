@@ -1,12 +1,8 @@
 package it.bologna.ausl.bds_tools.jobs;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-import groovy.sql.Sql;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereAttachment;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereClient;
@@ -14,48 +10,37 @@ import it.bologna.ausl.spedizioniereclient.SpedizioniereMessage;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereRecepit;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereRecepit.TipoRicevuta;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereStatus;
+import it.bologna.ausl.spedizioniereclient.SpedizioniereStatus.Status;
 import it.bologna.ausl.spedizioniereobjectlibrary.Attachment;
 import it.bologna.ausl.spedizioniereobjectlibrary.Mail;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLType;
-import java.sql.Statement;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
-import org.apache.jasper.tagplugins.jstl.core.Catch;
-import org.apache.jasper.tagplugins.jstl.core.ForEach;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.xmlbeans.SchemaProperty;
-import org.joda.time.Days;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
-import org.quartz.impl.jdbcjobstore.PostgreSQLDelegate;
 
 /**
  *
@@ -65,7 +50,6 @@ import org.quartz.impl.jdbcjobstore.PostgreSQLDelegate;
 @DisallowConcurrentExecution
 public class Spedizioniere implements Job{
     
-    private String connectUri, driver;
     private static final Logger log = LogManager.getLogger(Spedizioniere.class);
     private ExecutorService pool;
     private int maxThread;
@@ -137,39 +121,6 @@ public class Spedizioniere implements Job{
             }
     }
     
-//    public Spedizioniere() throws SpedizioniereException, SQLException {
-//         log.info("Dentro costruttore Spedizioniere");
-//        Connection dbConnection = null;
-//        try {
-//            //log.debug("prendo la connessione...");
-//            //dbConnection = UtilityFunctions.getDBConnection();
-//            //log.debug("ottenuta connessione");
-//            //log.debug("MaxThread= " + maxThread);
-////            log.debug("Inizializzo il pool...");
-////            pool = Executors.newFixedThreadPool(maxThread);
-////            log.debug("pool inizializzato");
-//            //pool = null;
-//            //log.debug("max thread: " + Integer.valueOf(maxThread));
-//            //pool = Executors.newFixedThreadPool(maxThread);
-//        }
-//        catch(Exception ex) {
-//            log.info("Errore nella costruzione dell'oggetto spedizioniere");
-//            throw new SpedizioniereException("Errore nella costruzione dell'oggetto spedizioniere", ex);
-//        }
-//        finally{
-//            if (dbConnection != null) {
-//                log.debug("dbConnection != null");
-//                try {
-//                    //dbConnection.close();
-//                } catch (Exception ex) {
-//                    log.error(ex);
-//                }
-//            }
-//            else{
-//                log.debug("dbConnection == null");
-//            }
-//        }  
-//    }
     
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
@@ -201,14 +152,6 @@ public class Spedizioniere implements Job{
         }
         
     }
- 
-    public String getConnectUri() {
-        return connectUri;
-    }
-
-    public void setConnectUri(String connectUri) {
-        this.connectUri = connectUri;
-    }
 
     public String getSpedizioniereUrl() {
         return spedizioniereUrl;
@@ -232,14 +175,6 @@ public class Spedizioniere implements Job{
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public String getDriver() {
-        return driver;
-    }
-
-    public void setDriver(String driver) {
-        this.driver = driver;
     }
     
      public int getTimeOutHours() {
@@ -563,10 +498,10 @@ public class Spedizioniere implements Job{
                         for (SpedizioniereRecepit spedizioniereRecepit : ricevuteMsg) { // PER OGNI RICEVUTA CONTROLLO SE è PRESENTE NEL DB
                             log.debug("Tipo Ricevuta: " + spedizioniereRecepit.getTipo().getAbbreviation());
                             
-                            if (spedizioniereRecepit.getTipo().equals(TipoRicevuta.ERRORE_CONSEGNA.getAbbreviation())
-                                    || spedizioniereRecepit.getTipo().equals(TipoRicevuta.NON_ACCETTAZIONE.getAbbreviation())
-                                    || spedizioniereRecepit.getTipo().equals(TipoRicevuta.RILEVAZIONE_VIRUS.getAbbreviation())
-                                    || spedizioniereRecepit.getTipo().equals(TipoRicevuta.UNKNOWN.getAbbreviation())) {
+                            if (spedizioniereRecepit.getTipo() == TipoRicevuta.ERRORE_CONSEGNA
+                                    || spedizioniereRecepit.getTipo() == TipoRicevuta.NON_ACCETTAZIONE
+                                    || spedizioniereRecepit.getTipo() == TipoRicevuta.RILEVAZIONE_VIRUS
+                                    || spedizioniereRecepit.getTipo() == TipoRicevuta.UNKNOWN) {
                                 log.debug("Ricevuta con errore");
                                 
                                 String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -609,7 +544,7 @@ public class Spedizioniere implements Job{
                                             Connection settaUuid = UtilityFunctions.getDBConnection();
                                             PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
                                         ) {
-                                            if(spStatus.getStatus().name().equals("ACCEPTED")){
+                                            if(spStatus.getStatus() == Status.ACCEPTED){
                                                 prepared.setString(1, TipiRicevuta.RICEVUTA_ACCETTAZIONE.toString());
                                             }else{
                                                 prepared.setString(1, TipiRicevuta.RICEVUTA_CONSEGNA.toString());
@@ -640,7 +575,7 @@ public class Spedizioniere implements Job{
                             Connection conn = UtilityFunctions.getDBConnection();
                             PreparedStatement ps = conn.prepareStatement(query)
                         ) {
-                            if (spStatus.getStatus().name().equals("ACCEPTED")) {
+                            if (spStatus.getStatus() == Status.ACCEPTED) {
                                 ps.setString(1, StatiSpedizione.SPEDITO.toString());
                             }else{
                                 ps.setString(1, StatiSpedizione.CONSEGNATO.toString());
@@ -654,7 +589,7 @@ public class Spedizioniere implements Job{
                         }
                     }else{ // NEL CASO SIA UNA MAIL NORMALE E NON UNA PEC DOPO TOT GIORNI DEVE ESSERE MESSA A CONFIMED E SETTARE IL TIMESTAMP
                         log.debug("SONO NELLO STATO CONTROLLO CONSEGNA OPPURE NON HO RICEVUTE");
-                        if (spStatus.getStatus().name().equals("ACCEPTED")) {
+                        if (spStatus.getStatus() == Status.ACCEPTED) {
                             
                             // calcolo i giorni, DIFF TRA IL TIMESTAMP DI E QUELLO SU DB
                             Long ggDiff = getDays(res.getTimestamp("verifica_timestamp"), new Timestamp(new Date().getTime()));
@@ -682,7 +617,7 @@ public class Spedizioniere implements Job{
                             }
                         }
                     } 
-                } else if (spStatus.getStatus().name().equals("ERROR")) { // NEL CASO DI STATO DI ERRORE
+                } else if (spStatus.getStatus() == SpedizioniereStatus.Status.ERROR) { // NEL CASO DI STATO DI ERRORE
                     String ricevutaFromDb = "SELECT id " +
                             "FROM " + ApplicationParams.getRicevutePecTableName() + " " +
                             "WHERE uuid=?";
@@ -707,7 +642,7 @@ public class Spedizioniere implements Job{
                                     Connection settaUuid = UtilityFunctions.getDBConnection();
                                     PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
                                 ) {
-                                    if(spStatus.getStatus().name().equals("ACCEPTED")){
+                                    if(spStatus.getStatus() == Status.ACCEPTED){
                                         prepared.setString(1, TipiRicevuta.RICEVUTA_ACCETTAZIONE.toString());
                                     }else{
                                         prepared.setString(1, TipiRicevuta.RICEVUTA_CONSEGNA.toString());
