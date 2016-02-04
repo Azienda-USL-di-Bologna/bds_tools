@@ -199,6 +199,10 @@
         <param-value>bds_tools.parametri_pubblici</param-value>
     </context-param>
     <context-param>
+        <param-name>ServiziTableName</param-name>
+        <param-value>bds_tools.servizi</param-value>
+    </context-param>
+    <context-param>
         <param-name>GdDocsTableName</param-name>
         <param-value>gd.gddocs</param-value>
     </context-param>
