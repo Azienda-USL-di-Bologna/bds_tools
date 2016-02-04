@@ -318,17 +318,17 @@ public class Spedizioniere implements Job{
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                             "WHERE id%? = ? AND (stato = ?::bds_tools.stati_spedizione or stato = ?::bds_tools.stati_spedizione) AND da_ritentare = ? for update";
                             
-            try 
-                    
-                 {
-                log.debug("Inizio spedizione()");
+            try (
                 Connection dbConnection = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = dbConnection.prepareStatement(query)
+            ){
+                log.debug("Inizio spedizione()");
                 if (dbConnection != null) {
                     log.debug("dbConnection is not null");
                                     }else{
                     log.debug("dbConnction == null");
                 }
-                PreparedStatement ps = dbConnection.prepareStatement(query);
+
                 ps.setInt(1, threadsTotal);
                 ps.setInt(2, threadSerial);
                 //ps.setString(3, "da_inviare");
