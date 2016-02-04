@@ -54,7 +54,8 @@ public class ApplicationParams {
     private static String balboServiceURI;
     private static String maxThreadSpedizioniere;
     private static String getIndeUrlServiceUri;
-     private static String spedizioniereApplicazioni;
+    private static String spedizioniereApplicazioni;
+    private static String fileSupportatiTable;
 
 
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
@@ -80,13 +81,14 @@ public class ApplicationParams {
         updateNumberFunctionNameTemplate = context.getInitParameter("UpdateNumberFunctionNameTemplate");
         aggiornamentiParerTableName = context.getInitParameter("AggiornamentiParerTableName");
         spedizioniereApplicazioni = context.getInitParameter("SpedizioniereApplicazioni");
+        fileSupportatiTable = context.getInitParameter("FileSupportatiTableName");
 
         schedulatoreActive = Boolean.parseBoolean(context.getInitParameter("schedulatore.active"));
 
         readAuthenticationTable(context);
 
-        try (Connection dbConn = UtilityFunctions.getDBConnection()) {
-            initilizeSupporetdFiles(dbConn, context);
+        try {
+            initilizeSupporetdFiles(context, fileSupportatiTable);
 
             ConfigParams.initConfigParams();
             serverId = ConfigParams.getParam("serverIdentifier");
@@ -115,14 +117,13 @@ public class ApplicationParams {
             throw new ServletException(message);
         }
     }
-    private static void initilizeSupporetdFiles(Connection dbConn, ServletContext context) throws SQLException {
-        // ottengo una connessione al db
+    private static void initilizeSupporetdFiles(ServletContext context, String fileSupportatiTable) throws SQLException, NamingException {
         
-        PreparedStatement ps = null;
-        try {
-            String fileSupportatiTable = context.getInitParameter("FileSupportatiTableName");
-            String sqlText = "SELECT * FROM " +  fileSupportatiTable;
-            ps = dbConn.prepareStatement(sqlText);
+        
+        String sqlText = "SELECT * FROM " +  fileSupportatiTable;
+        // ottengo una connessione al db
+        try (Connection dbConn = UtilityFunctions.getDBConnection();
+             PreparedStatement ps = dbConn.prepareStatement(sqlText);) {
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -132,10 +133,6 @@ public class ApplicationParams {
                 supportedFiles.add(new SupportedFile(results.getString("mime_type"), results.getString("estensione"), results.getBoolean("convertibile_pdf")));
             }
             ApplicationParams.setSupportedFileList(supportedFiles);
-        }
-        finally {
-            if (ps != null)
-                ps.close();
         }
     }
 
@@ -279,8 +276,8 @@ public class ApplicationParams {
         return spedizioniereApplicazioni;
     }
 
-    public static void setSpedizioniereApplicazioni(String spedizioniereApplicazioni) {
-        ApplicationParams.spedizioniereApplicazioni = spedizioniereApplicazioni;
+    public static String getFileSupportatiTable() {
+        return fileSupportatiTable;
     }
 
     /**

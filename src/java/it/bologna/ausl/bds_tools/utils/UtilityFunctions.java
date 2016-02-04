@@ -33,6 +33,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -54,8 +55,6 @@ private static final Logger log = LogManager.getLogger(UtilityFunctions.class);
 
 //private static Context initContext;
 private static  DataSource ds;
-private static Map<String, String> publicParameters;
-
 
 static {
     try {
@@ -73,8 +72,12 @@ static {
 //            initContext = new InitialContext();
 //        Context envContext = (Context) initContext.lookup("java:/comp/env");
 //        DataSource ds = (DataSource) envContext.lookup("jdbc/argo");
-//        Connection conn = ds.getConnection();
-        return ds.getConnection();
+        Connection conn = ds.getConnection();
+        
+        try (Statement st = conn.createStatement()) {
+            st.execute("set application_name to '" + new Exception().getStackTrace()[1].getClassName() + "'");
+        }
+        return conn;
     }
     
     public static DataSource getDataSource() {
