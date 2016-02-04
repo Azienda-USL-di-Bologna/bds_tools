@@ -39,9 +39,11 @@ public class ApplicationParams {
     private static String fascicoliGdDocsTableName;
     private static String titoliTableName;
     private static String utentiTableName;
+    private static String serviziTableName;
     private static String spedizioniPecTableName;
     private static String updateNumberFunctionNameTemplate;
     private static String aggiornamentiParerTableName;
+    private static String parametriPubbliciTableName;
 
     private static boolean schedulatoreActive = false;
 
@@ -81,6 +83,8 @@ public class ApplicationParams {
         updateNumberFunctionNameTemplate = context.getInitParameter("UpdateNumberFunctionNameTemplate");
         aggiornamentiParerTableName = context.getInitParameter("AggiornamentiParerTableName");
         spedizioniereApplicazioni = context.getInitParameter("SpedizioniereApplicazioni");
+        parametriPubbliciTableName = context.getInitParameter("ParametersTableName");
+        serviziTableName = context.getInitParameter("ServiziTableName");
 
         schedulatoreActive = Boolean.parseBoolean(context.getInitParameter("schedulatore.active"));
 
@@ -285,6 +289,22 @@ public class ApplicationParams {
     
     public static String  getSchedulatoreConf(){
         return schedulatoreConf;
+    }
+
+    public static String getParametriPubbliciTableName() {
+        return parametriPubbliciTableName;
+    }
+
+    public static void setParametriPubbliciTableName(String parametriPubbliciTableName) {
+        ApplicationParams.parametriPubbliciTableName = parametriPubbliciTableName;
+    }
+
+    public static String getServiziTableName() {
+        return serviziTableName;
+    }
+
+    public static void setServiziTableName(String serviziTableName) {
+        ApplicationParams.serviziTableName = serviziTableName;
     }
 
     /**
