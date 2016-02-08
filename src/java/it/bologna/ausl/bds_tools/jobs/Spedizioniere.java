@@ -297,9 +297,11 @@ public class Spedizioniere implements Job{
         }
         
         private void spedisci(ResultSet res) throws SpedizioniereException {
-            
+            log.debug("Dentro Spedisci()");
+            log.debug("Istanzio lo SpedizioniereClient");
             SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
             ArrayList<SpedizioniereAttachment> attachments = new ArrayList<SpedizioniereAttachment>();
+            log.debug("Richiesta mongoUri");
             String mongoUri = ApplicationParams.getMongoRepositoryUri();
             MongoWrapper mongo;
             
@@ -310,9 +312,13 @@ public class Spedizioniere implements Job{
                 String tipoOggetto =  res.getString("tipo_oggetto_origine");
                 int numErrori = res.getInt("numero_errori");
                 
+                log.debug("Parse mail");
                 Mail mail = Mail.parse(oggettoDaSpedire);
+                log.debug("Generate Random externalId");
                 int rand = (int)(Math.random()*1000);
+                log.debug("Create new SpedizioniereMessage)");
                 SpedizioniereMessage message = new SpedizioniereMessage(mail.getFrom(), mail.getTo(), mail.getCc(), mail.getSubject(), mail.getMessage(), externalId + "_" + rand);
+                log.debug("new MongoWrapper con URI");
                 mongo = new MongoWrapper(mongoUri);
                 
                 for (Attachment attachment : mail.getAttachments()) {
@@ -360,6 +366,7 @@ public class Spedizioniere implements Job{
                 }
                 catch(IllegalArgumentException ex){
                     // errori della famiglia 400
+                    log.debug("Eccezione nell'ottenimento del messageId dal percgw: " + ex);
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                                                 "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ? and numero_errori=? " +
                                                 "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
