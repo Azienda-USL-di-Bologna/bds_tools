@@ -58,7 +58,7 @@ public class Spedizioniere implements Job{
     private String username;
     private String password;
     private int expired;
-    private MetodiSincronizzati metodiSincronizzati = new MetodiSincronizzati();
+    private MetodiSincronizzati metodiSincronizzati;
 
    
     
@@ -128,6 +128,7 @@ public class Spedizioniere implements Job{
     
         log.info("Job Spedizioniere started");
         try {
+            metodiSincronizzati = new MetodiSincronizzati();
             log.debug("MaxThread su execute: " + maxThread);
             log.debug("Inizializzo il pool...");
             pool = Executors.newFixedThreadPool(maxThread);
@@ -371,9 +372,9 @@ public class Spedizioniere implements Job{
                                                 "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ? and numero_errori=? " +
                                                 "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
                     try (
-                            Connection conn = UtilityFunctions.getDBConnection();
-                    ) {
+                        Connection conn = UtilityFunctions.getDBConnection();
                         PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb);
+                    ) {
                         ps.setString(1, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
                         ps.setBoolean(2, false);
                         ps.setInt(3, numErrori++);
@@ -488,7 +489,7 @@ public class Spedizioniere implements Job{
                 int n = ricevuteMsg != null ? ricevuteMsg.size() : 0;
                 log.debug("numero di ricevute:" + n);
                 
-                if (spStatus.getStatus().name().equals("ACCEPTED") || spStatus.getStatus().name().equals("CONFIRMED")) {
+                if (spStatus.getStatus() == Status.ACCEPTED || spStatus.getStatus() == Status.CONFIRMED) {
                     log.debug("stato ACCEPTED o CONFIRMED");
                     
                     if(ricevuteMsg != null && ricevuteMsg.size() > 0 && controlloSpedizione){ // SE CI SONO RICEVUTE -- SE NON CI SONO CONTROLLO IL TIMESTAMP PER VEDERE SE è UNA MAIL O UNA PEC
@@ -797,11 +798,14 @@ public class Spedizioniere implements Job{
                     throw new SpedizioniereException("Errore nel calcolo nella differenza giorni"); // Sollevo Eccezione perchè la dataInizio è presente 
                                                                                                     // ma si è verificato un errore nel calcolo dei giorni
                 }
-                // Se la dataInizio è uguale a null la setto e ritorno true per far partire controlloSpedizione() al primo thread 
-                // e setto canControllo per per i successivi
-                setDataInizio();
-                canStartControllo = true;
-                return true;
+                else{
+                    // Se la dataInizio è uguale a null la setto e ritorno true per far partire controlloSpedizione() al primo thread 
+                    // e setto canControllo per per i successivi
+                    setDataInizio();
+                    canStartControllo = true;
+                    return true;
+                }
+                
             }
             return false;
         }
