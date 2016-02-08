@@ -746,11 +746,14 @@ public class Spedizioniere implements Job{
         }
 
         protected synchronized boolean check() throws SQLException, NamingException, SpedizioniereException{
+            log.debug("Dentro Check()");
             // Conto quanti thread ho in totale cosi da poter far settare la data di fine all'ultimo con il setDataFine()
             numThread++;
             if (canStartControllo) { // Il primo thread troverà sempre false questa condizione e sarà costretto a fare il check
+                log.debug("Check: First if: return true");
                 return true;
             }else if(haveTocheck){ // Il primo thread fa il check poi setto la variabile a false così i successivi thread non lo effettuano
+                log.debug("Elese if havetocheck");
                 haveTocheck = false;
                 String queryRange = "SELECT nome_parametro, val_parametro " +
                                     "FROM " + ApplicationParams.getParametriPubbliciTableName() + " " +
@@ -777,6 +780,7 @@ public class Spedizioniere implements Job{
                 }
 
                 if(dataInizio != null){
+                    log.debug("dataInizio != null");
                     Long giorni =  getDays(dataInizio, new Timestamp(new Date().getTime()));
                     log.debug("Controllo consegna giorni differenza: " + giorni);
                     if (giorni != null) {
@@ -803,6 +807,7 @@ public class Spedizioniere implements Job{
         }
 
         private void setDataInizio() throws SQLException, NamingException{
+            log.debug("Dentro setDataInizio()");
             String query =  "UPDATE " + ApplicationParams.getServiziTableName() + " " +
                             "SET data_inizio=now() " +
                             "WHERE nome_servizio ='spedizioniere_controllo_consegna'";
@@ -839,8 +844,10 @@ public class Spedizioniere implements Job{
         }
     */
         protected synchronized void setDataFine() throws SQLException, NamingException{
+            log.debug("Dentro setDataFine()");
             numThread--;
             if (numThread == 0) {
+                log.debug("Dentro setDataFine() numThread = 0");
                 String query =  "UPDATE " + ApplicationParams.getServiziTableName() + " " +
                                 "SET data_fine=now() " +
                                 "WHERE nome_servizio ='spedizioniere_controllo_consegna'";
