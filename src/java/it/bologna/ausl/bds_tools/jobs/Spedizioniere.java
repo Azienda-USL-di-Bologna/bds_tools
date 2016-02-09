@@ -756,12 +756,11 @@ public class Spedizioniere implements Job{
             }else if(haveTocheck){ // Il primo thread fa il check poi setto la variabile a false così i successivi thread non lo effettuano
                 log.debug("Elese if havetocheck");
                 haveTocheck = false;
-                String queryRange = "SELECT nome_parametro, val_parametro " +
-                                    "FROM " + ApplicationParams.getParametriPubbliciTableName() + " " +
-                                    "WHERE nome_parametro=?";
-                String nomeServizio = null;
+                String queryRange = "SELECT data_inizio " +
+                                    "FROM " + ApplicationParams.getServiziTableName() + " " +
+                                    "WHERE nome_servizio=?";
+
                 Timestamp dataInizio = null;
-                Timestamp dataFine = null;
 
                 try (
                     Connection conn = UtilityFunctions.getDBConnection();
@@ -771,9 +770,7 @@ public class Spedizioniere implements Job{
 
                     ResultSet res = ps.executeQuery();
                     while (res.next()) {
-                        nomeServizio = res.getString("nome_servizio"); 
                         dataInizio = res.getTimestamp("data_inizio");
-                        dataFine = res.getTimestamp("data_fine");
                     }
                 }
                 catch(Exception ex){
@@ -782,11 +779,14 @@ public class Spedizioniere implements Job{
 
                 if(dataInizio != null){
                     log.debug("dataInizio != null");
-                    Long giorni =  getDays(dataInizio, new Timestamp(new Date().getTime()));
+                    log.debug("dataInizio = " + dataInizio);
+                    Timestamp ora = new Timestamp(new Date().getTime());
+                    log.debug("Ora: " + ora);
+                    Long giorni =  getDays(dataInizio, ora);
                     log.debug("Controllo consegna giorni differenza: " + giorni);
                     if (giorni != null) {
 
-                        if(giorni > 1){ // Se il controlloSpedizione() è stato effettuato almeno un giorno fa 
+                        if(giorni >= 1){ // Se il controlloSpedizione() è stato effettuato almeno un giorno fa 
                             setDataInizio();
                             canStartControllo = true; // Setto la variabile a true così i successivi thread partono senza effettuare il check
                             return true; // Ritorno true per far eseguire controlloSpedizione() al primo thread
@@ -799,13 +799,13 @@ public class Spedizioniere implements Job{
                                                                                                     // ma si è verificato un errore nel calcolo dei giorni
                 }
                 else{
+                    log.debug("dataInizio == null");
                     // Se la dataInizio è uguale a null la setto e ritorno true per far partire controlloSpedizione() al primo thread 
                     // e setto canControllo per per i successivi
                     setDataInizio();
                     canStartControllo = true;
                     return true;
                 }
-                
             }
             return false;
         }
