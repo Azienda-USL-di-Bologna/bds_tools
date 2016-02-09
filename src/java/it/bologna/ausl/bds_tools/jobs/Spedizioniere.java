@@ -37,6 +37,8 @@ import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -709,22 +711,26 @@ public class Spedizioniere implements Job{
     }
     
     private Long getDays(Timestamp old, Timestamp now){
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+//        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+//        
+//        Date d1 = null;
+//        Date d2 = null;
+//        Long diffDays = null;
+//        try {
+//            d1 = format.parse(old.toString());
+//            d2 = format.parse(now.toString());
+//
+//            //in milliseconds
+//            long diff = d2.getTime() - d1.getTime();
+//            diffDays = diff / (24 * 60 * 60 * 1000);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         
-        Date d1 = null;
-        Date d2 = null;
-        Long diffDays = null;
-        try {
-            d1 = format.parse(old.toString());
-            d2 = format.parse(now.toString());
-
-            //in milliseconds
-            long diff = d2.getTime() - d1.getTime();
-            diffDays = diff / (24 * 60 * 60 * 1000);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return diffDays;
+        DateTime dtOld = new DateTime(old.getTime());
+        DateTime dtNow = new DateTime(now.getTime());
+        Duration duration = new Duration(dtOld, dtNow);
+        return (duration.getStandardDays());
     }
     
     private java.sql.Timestamp getTimestamp(String data) throws ParseException{
