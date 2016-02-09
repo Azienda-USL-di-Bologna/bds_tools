@@ -309,6 +309,7 @@ public class Spedizioniere implements Job{
             MongoWrapper mongo;
             
             try {
+                // sarebbe id_destinatario del documento
                 String externalId = res.getString("id_oggetto");
                 String oggettoDaSpedire = res.getString("oggetto_da_spedire_json");
                 String idOggetto = res.getString("id_oggetto_origine");
