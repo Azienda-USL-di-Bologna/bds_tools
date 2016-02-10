@@ -1,9 +1,14 @@
 package it.bologna.ausl.bds_tools.jobs;
 
+import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import it.bologna.ausl.masterchefclient.UpdateBabelParams;
+import it.bologna.ausl.masterchefclient.WorkerData;
+import it.bologna.ausl.masterchefclient.WorkerResponse;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
+import it.bologna.ausl.redis.RedisClient;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereAttachment;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereClient;
 import it.bologna.ausl.spedizioniereclient.SpedizioniereMessage;
@@ -151,7 +156,6 @@ public class Spedizioniere implements Job{
             log.fatal("Spedizioniere: Errore ...", t);
         }
         finally {
-
             log.info("Job Spedizioniere finished");
         }
         
@@ -216,38 +220,40 @@ public class Spedizioniere implements Job{
 
         @Override
         public void run() {
-            try {
-                log.debug("==============Lancio Spedizione====================");
-                spedizione();
-                log.debug("==============Fine Spedizione====================");
-            }
-            catch (Exception ex) {
-                log.error(ex);
-            }
-            try {
-                log.debug("=============Lancio ControlloSpedizione============");
-                controlloSpedizione();
-                log.debug("=============Fine ControlloSpedizione============");
-            }
-            catch (Exception ex) {
-                log.error(ex);
-            }
-            try {
-                log.debug("=============Lancio ControlloConsegna==============");
-                if(metodiSincronizzati.check()){
-                    controlloConsegna();
-                }
-                log.debug("=============Fine ControlloConsegna==============");
-            }
-            catch (Exception ex) {
-                log.error(ex);
-            }
 //            try {
-//                gestioneErrore();
+//                log.debug("==============Lancio Spedizione====================");
+//                spedizione();
+//                log.debug("==============Fine Spedizione====================");
 //            }
 //            catch (Exception ex) {
 //                log.error(ex);
-//            }  
+//            }
+//            try {
+//                log.debug("=============Lancio ControlloSpedizione============");
+//                controlloSpedizione();
+//                log.debug("=============Fine ControlloSpedizione============");
+//            }
+//            catch (Exception ex) {
+//                log.error(ex);
+//            }
+//            try {
+//                log.debug("=============Lancio ControlloConsegna==============");
+//                if(metodiSincronizzati.check()){
+//                    controlloConsegna();
+//                }
+//                log.debug("=============Fine ControlloConsegna==============");
+//            }
+//            catch (Exception ex) {
+//                log.error(ex);
+//            }
+            try {
+                log.debug("=============Lancio GestioneErrore==============");
+                gestioneErrore();
+                log.debug("=============Fine GestioneErrore================");
+            }
+            catch (Exception ex) {
+                log.error(ex);
+            }  
         }
         
         
@@ -257,7 +263,7 @@ public class Spedizioniere implements Job{
                             "stato, id_applicazione, verifica_timestamp, oggetto_da_spedire_json, " +
                             "utenti_da_notificare, notifica_inviata, numero_errori, da_ritentare " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                            "WHERE id%? = ? AND (stato = ?::bds_tools.stati_spedizione or stato = ?::bds_tools.stati_spedizione) AND da_ritentare = ? for update";         
+                            "WHERE id%? = ? AND (stato = ?::bds_tools.stati_spedizione OR (stato = ?::bds_tools.stati_spedizione AND numero_errori >=?)) AND da_ritentare = ? for update";         
             try (
                 Connection dbConnection = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = dbConnection.prepareStatement(query)
@@ -275,8 +281,9 @@ public class Spedizioniere implements Job{
                 ps.setString(3, StatiSpedizione.DA_INVIARE.toString());
                 //ps.setObject(3, StatiSpedizione.DA_INVIARE);
                 ps.setString(4, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
+                ps.setInt(5, expired);
                 //ps.setString(4, "errore_presa_in_carico");
-                ps.setBoolean(5, true);
+                ps.setBoolean(6, true);
                 
                 log.debug("PrepareStatment: " + ps);
                 ResultSet res = ps.executeQuery();
@@ -474,7 +481,91 @@ public class Spedizioniere implements Job{
             }
         }
         
-        private void gestioneErrore(){}
+        private void gestioneErrore(){ 
+            log.debug("Dentro gestioneErrore()");
+            String query =  "SELECT id_oggetto_origine, tipo_oggetto_origine, id_oggetto, stato, id_applicazione, utenti_da_notificare " +
+                            "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                            "WHERE id%? = ? AND ((stato = '" + StatiSpedizione.ERRORE_PRESA_INCARICO + "'::bds_tools.stati_spedizione " +
+                            "AND numero_errori >=?) " +
+                            "OR stato = '" + StatiSpedizione.ERRORE + "'::bds_tools.stati_spedizione " +
+                            "OR stato = '" + StatiSpedizione.ERRORE_SPEDIZIONE + "'::bds_tools.stati_spedizione " +
+                            "OR stato = '" + StatiSpedizione.ERRORE_CONTRLLO_CONSEGNA + "'::bds_tools.stati_spedizione)";
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(query)
+            ) {
+                ps.setInt(1, threadsTotal);
+                ps.setInt(2, threadSerial);
+                ps.setInt(3, expired);
+                log.debug("Query: " + ps);
+                ResultSet res = ps.executeQuery();
+                while (res.next()) {
+                    if(res.getString("utenti_da_notificare") != null){
+                        log.debug("Utente da notificare presente");
+                        gestisciErrore(res);
+                    }else{
+                        log.debug("Utente da notificare mpm presente");
+                    }
+                }
+            }
+            catch(Exception ex){
+                log.debug("Eccezione Select gestioneErrore()" + ex);     
+            }
+        }
+        
+        private void gestisciErrore(ResultSet res) throws Exception{
+            log.debug("Dentro gestisciErrore()");
+            String nomeApp = null;
+            String tokenApp = null;
+            
+            String query =  "SELECT nome, token " +
+                            "FROM " + ApplicationParams.getAuthenticationTable() + " " + 
+                            "WHERE  id_applicazione = ?";
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(query)
+            ) {
+                ps.setString(1, res.getString("id_applicazione"));
+                log.debug("Query: " + ps);
+                ResultSet r = ps.executeQuery();
+                while (r.next()) {
+                    nomeApp = r.getString("nome");
+                    tokenApp = r.getString("token");
+                }
+            }
+            catch(Exception e){
+                log.debug("Eccezione nell'ottenimento del nome dell'applicazione: " + e);
+            }
+            String urlCommand = "http://gdml:9081/Babel/Babel.htm?CMD=GestioneErroreSpedizioni;" + res.getString("id_oggetto_origine");
+            UpdateBabelParams updateBabelParams = new UpdateBabelParams(res.getString("id_applicazione"), tokenApp, null, "false", "false", "insert");
+            updateBabelParams.addAttivita(res.getString("id_oggetto_origine") + "_" + res.getString("utenti_da_notificare"), res.getString("id_oggetto_origine"), res.getString("utenti_da_notificare"), "3", 
+                res.getString("stato"), res.getString("id_oggetto"), null, nomeApp, null, "Apri", urlCommand, null, null, null, null, null, null, null, null, 
+                null, null, null, null, res.getString("id_oggetto_origine"), res.getString("tipo_oggetto_origine"), null, res.getString("id_oggetto_origine"), "group_" + res.getString("id_oggetto_origine"), null);
+            
+            String retQueue = "notifica_errore" + "_" + ApplicationParams.getAppId() + "_updateBabelRetQueue_" + ApplicationParams.getServerId();
+            log.debug("Creazione Worker..");
+            WorkerData wd = new WorkerData(ApplicationParams.getAppId(), "1", retQueue);
+            log.debug("Worker creato");
+            wd.addNewJob("1", null, updateBabelParams);
+
+//            RedisClient rd = new RedisClient("gdml", null);
+//            rd.put(wd.getStringForRedis(), "chefingdml");
+            RedisClient rd = new RedisClient(ApplicationParams.getRedisHost(), null);
+            log.debug("Add Worker to redis..");
+            rd.put(wd.getStringForRedis(), ApplicationParams.getRedisInQueue());
+            log.debug("Worker added to redis");
+
+            String extractedValue = rd.bpop(retQueue, 86400);
+            WorkerResponse wr = new WorkerResponse(extractedValue);
+            
+            if (wr.getStatus().equalsIgnoreCase("ok")) {
+                log.debug("Worker status: Ok");
+            }
+            else {
+                throw new ConvertPdfExeption("errore tornato dal masterchef: " + wr.getError());
+//                System.out.println("KO");
+            }
+        }
         
         private void controllaRicevuta(ResultSet res, boolean controlloSpedizione) throws SpedizioniereException{
             log.debug("Dentro controllaRicevuta");
