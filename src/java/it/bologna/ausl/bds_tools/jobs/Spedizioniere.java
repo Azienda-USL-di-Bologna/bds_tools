@@ -66,6 +66,7 @@ public class Spedizioniere implements Job{
     private String password;
     private int expired;
     private MetodiSincronizzati metodiSincronizzati;
+    private final String gestioneErroreSpedizioni = "?CMD=gestione_errore_spedizioni;";
 
    
     
@@ -486,11 +487,11 @@ public class Spedizioniere implements Job{
             log.debug("Dentro gestioneErrore()");
             String query =  "SELECT id, id_oggetto_origine, tipo_oggetto_origine, id_oggetto, stato, id_applicazione, utenti_da_notificare " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                            "WHERE id%? = ? AND ((stato = '" + StatiSpedizione.ERRORE_PRESA_INCARICO + "'::bds_tools.stati_spedizione " +
+                            "WHERE id%? = ? AND ((stato = ?::bds_tools.stati_spedizione " +
                             "AND numero_errori >=?) " +
-                            "OR stato = '" + StatiSpedizione.ERRORE + "'::bds_tools.stati_spedizione " +
-                            "OR stato = '" + StatiSpedizione.ERRORE_SPEDIZIONE + "'::bds_tools.stati_spedizione " +
-                            "OR stato = '" + StatiSpedizione.ERRORE_CONTRLLO_CONSEGNA + "'::bds_tools.stati_spedizione) " + 
+                            "OR stato = ?::bds_tools.stati_spedizione " +
+                            "OR stato = ?::bds_tools.stati_spedizione " +
+                            "OR stato = ?::bds_tools.stati_spedizione) " + 
                             "AND notifica_inviata = ?";
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
@@ -498,7 +499,11 @@ public class Spedizioniere implements Job{
             ) {
                 ps.setInt(1, threadsTotal);
                 ps.setInt(2, threadSerial);
+                ps.setString(2, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
                 ps.setInt(3, expired);
+                ps.setString(2, StatiSpedizione.ERRORE.toString());
+                ps.setString(2, StatiSpedizione.ERRORE_SPEDIZIONE.toString());
+                ps.setString(2, StatiSpedizione.ERRORE_CONTRLLO_CONSEGNA.toString());
                 ps.setBoolean(4, false);
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
@@ -539,7 +544,7 @@ public class Spedizioniere implements Job{
             catch(Exception e){
                 log.debug("Eccezione nell'ottenimento del nome dell'applicazione: " + e);
             }
-            String urlCommand = "http://gdml:9081/Procton/Procton.htm?CMD=gestione_errore_spedizioni;" + res.getString("id_oggetto_origine");
+            String urlCommand = ApplicationParams.getSpedizioniereApplicazioni() + gestioneErroreSpedizioni + res.getString("id_oggetto_origine");
             UpdateBabelParams updateBabelParams = new UpdateBabelParams(res.getString("id_applicazione"), tokenApp, null, "false", "false", "insert");
             
             updateBabelParams.addAttivita(res.getString("id_oggetto_origine") + "_" + res.getString("utenti_da_notificare"), res.getString("id_oggetto_origine"), res.getString("utenti_da_notificare"), "3", 
