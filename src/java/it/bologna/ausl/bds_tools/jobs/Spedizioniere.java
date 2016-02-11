@@ -310,7 +310,7 @@ public class Spedizioniere implements Job{
             log.debug("Dentro Spedisci()");
             log.debug("Istanzio lo SpedizioniereClient");
             SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
-            ArrayList<SpedizioniereAttachment> attachments = new ArrayList<SpedizioniereAttachment>();
+            ArrayList<SpedizioniereAttachment> attachments = new ArrayList<>();
             log.debug("Richiesta mongoUri");
             String mongoUri = ApplicationParams.getMongoRepositoryUri();
             MongoWrapper mongo;
@@ -507,7 +507,7 @@ public class Spedizioniere implements Job{
                         log.debug("Utente da notificare presente");
                         gestisciErrore(res);
                     }else{
-                        log.debug("Utente da notificare mpm presente");
+                        log.debug("Utente da notificare non presente");
                     }
                 }
             }
@@ -539,7 +539,7 @@ public class Spedizioniere implements Job{
             catch(Exception e){
                 log.debug("Eccezione nell'ottenimento del nome dell'applicazione: " + e);
             }
-            String urlCommand = "http://gdml:9081/Procton/Procton.htm?CMD=GestioneErroreSpedizioni;" + res.getString("id_oggetto_origine");
+            String urlCommand = "http://gdml:9081/Procton/Procton.htm?CMD=gestione_errore_spedizioni;" + res.getString("id_oggetto_origine");
             UpdateBabelParams updateBabelParams = new UpdateBabelParams(res.getString("id_applicazione"), tokenApp, null, "false", "false", "insert");
             
             updateBabelParams.addAttivita(res.getString("id_oggetto_origine") + "_" + res.getString("utenti_da_notificare"), res.getString("id_oggetto_origine"), res.getString("utenti_da_notificare"), "3", 
