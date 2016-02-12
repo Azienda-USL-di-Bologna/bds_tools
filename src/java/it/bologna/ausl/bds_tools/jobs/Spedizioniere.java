@@ -66,7 +66,7 @@ public class Spedizioniere implements Job{
     private String password;
     private int expired;
     private MetodiSincronizzati metodiSincronizzati;
-    private final String gestioneErroreSpedizioni = "?CMD=gestione_errore_spedizioni;";
+    private final String erroreSpedizioneMail = "?CMD=errore_spedizione_mail;";
 
    
     
@@ -499,12 +499,12 @@ public class Spedizioniere implements Job{
             ) {
                 ps.setInt(1, threadsTotal);
                 ps.setInt(2, threadSerial);
-                ps.setString(2, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
-                ps.setInt(3, expired);
-                ps.setString(2, StatiSpedizione.ERRORE.toString());
-                ps.setString(2, StatiSpedizione.ERRORE_SPEDIZIONE.toString());
-                ps.setString(2, StatiSpedizione.ERRORE_CONTRLLO_CONSEGNA.toString());
-                ps.setBoolean(4, false);
+                ps.setString(3, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
+                ps.setInt(4, expired);
+                ps.setString(5, StatiSpedizione.ERRORE.toString());
+                ps.setString(6, StatiSpedizione.ERRORE_SPEDIZIONE.toString());
+                ps.setString(7, StatiSpedizione.ERRORE_CONTRLLO_CONSEGNA.toString());
+                ps.setBoolean(8, false);
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 while (res.next()) {
@@ -544,7 +544,27 @@ public class Spedizioniere implements Job{
             catch(Exception e){
                 log.debug("Eccezione nell'ottenimento del nome dell'applicazione: " + e);
             }
-            String urlCommand = ApplicationParams.getSpedizioniereApplicazioni() + gestioneErroreSpedizioni + res.getString("id_oggetto_origine");
+            String queryUrl =   "SELECT url " +
+                                "FROM " + ApplicationParams.getSpedizioniereApplicazioni() + " " + 
+                                "WHERE  id_applicazione_spedizioniere = ?";
+            String url = null;
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(queryUrl)
+            ) {
+                ps.setString(1, res.getString("id_applicazione"));
+                log.debug("QueryURL: " + ps);
+                ResultSet r = ps.executeQuery();
+                while (r.next()) {
+                    url = r.getString("url");
+                    log.debug("URL: " + url);
+                }
+            }
+            catch(Exception e){
+                log.debug("Eccezione nell'ottenimento dell'url: " + e);
+            }
+            
+            String urlCommand = url + erroreSpedizioneMail; //+ res.getString("id_oggetto_origine");
             UpdateBabelParams updateBabelParams = new UpdateBabelParams(res.getString("id_applicazione"), tokenApp, null, "false", "false", "insert");
             
             updateBabelParams.addAttivita(res.getString("id_oggetto_origine") + "_" + res.getString("utenti_da_notificare"), res.getString("id_oggetto_origine"), res.getString("utenti_da_notificare"), "3", 
