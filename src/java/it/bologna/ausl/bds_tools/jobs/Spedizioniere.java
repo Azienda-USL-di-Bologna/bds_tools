@@ -143,14 +143,14 @@ public class Spedizioniere implements Job{
             log.debug("pool inizializzato");
             for(int i = 0; i < maxThread; i++){
                 pool.execute(new SpedizioniereThread(i, maxThread));
-                pool.shutdown();
-                boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
-                if (timedOut){
-                    throw new SpedizioniereException("timeout");
-                }
-                else {
-                    System.out.println("nothing to do");
-                }
+            }
+            pool.shutdown();
+            boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
+            if (timedOut){
+                throw new SpedizioniereException("timeout");
+            }
+            else {
+                System.out.println("nothing to do");
             }
         }
         catch (Throwable t) {
