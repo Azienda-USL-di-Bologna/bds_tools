@@ -58,7 +58,8 @@ public class ApplicationParams {
     private static String getIndeUrlServiceUri;
     private static String spedizioniereApplicazioni;
     private static String fileSupportatiTable;
-    private static String schedulatoreConf;  
+    private static String schedulatoreConf;
+    private static String bdmRestBaseUri;
 
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
 
@@ -110,6 +111,7 @@ public class ApplicationParams {
             
             schedulatoreConf= ConfigParams.getParam("schedulatoreConfJson");
                    
+            bdmRestBaseUri = ConfigParams.getParam("BdmRestBaseUri");
         }
         catch (Exception ex) {
            log.error("errore nell'inizializzazione: ", ex);
@@ -277,6 +279,14 @@ public class ApplicationParams {
 
     public static String getGetIndeUrlServiceUri() {
         return getIndeUrlServiceUri;
+    }
+
+    public static String getBdmRestBaseUri() {
+        return bdmRestBaseUri;
+    }
+
+    public static void setBdmRestBaseUri(String bdmRestBaseUri) {
+        ApplicationParams.bdmRestBaseUri = bdmRestBaseUri;
     }
 
     public static String getSpedizioniereApplicazioni() {

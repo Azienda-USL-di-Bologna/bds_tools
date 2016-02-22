@@ -1,5 +1,10 @@
 package it.bologna.ausl.bds_tools.jobs;
 
+import com.mchange.v2.c3p0.impl.C3P0Defaults;
+import it.bologna.ausl.bdm.exception.BdmExeption;
+import it.bologna.ausl.bdm.exception.StorageException;
+import it.bologna.ausl.bdmclient.BdmClient;
+import it.bologna.ausl.bdmclient.BdmClientImplementation;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
@@ -38,6 +43,7 @@ import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
@@ -141,9 +147,11 @@ public class Spedizioniere implements Job{
             log.debug("Inizializzo il pool...");
             pool = Executors.newFixedThreadPool(maxThread);
             log.debug("pool inizializzato");
-            for(int i = 0; i < maxThread; i++){
+            
+            for(int i = 0; i <= maxThread; i++){ // Incremento MaxThread per aggiungere il thread dello stepOn
                 pool.execute(new SpedizioniereThread(i, maxThread));
             }
+            
             pool.shutdown();
             boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
             if (timedOut){
@@ -221,40 +229,51 @@ public class Spedizioniere implements Job{
 
         @Override
         public void run() {
-//            try {
-//                log.debug("==============Lancio Spedizione====================");
-//                spedizione();
-//                log.debug("==============Fine Spedizione====================");
-//            }
-//            catch (Exception ex) {
-//                log.error(ex);
-//            }
-//            try {
-//                log.debug("=============Lancio ControlloSpedizione============");
-//                controlloSpedizione();
-//                log.debug("=============Fine ControlloSpedizione============");
-//            }
-//            catch (Exception ex) {
-//                log.error(ex);
-//            }
-//            try {
-//                log.debug("=============Lancio ControlloConsegna==============");
-//                if(metodiSincronizzati.check()){
-//                    controlloConsegna();
+            if(threadSerial == maxThread){
+                try {
+                    stepOn();
+                } catch (SQLException ex) {
+                   log.error(ex);
+                } catch (NamingException ex) {
+                    log.error(ex);
+                }
+            }else{
+//                try {
+//                    log.debug("==============Lancio Spedizione====================");
+//                    spedizione();
+//                    log.debug("==============Fine Spedizione====================");
 //                }
-//                log.debug("=============Fine ControlloConsegna==============");
-//            }
-//            catch (Exception ex) {
-//                log.error(ex);
-//            }
-            try {
-                log.debug("=============Lancio GestioneErrore==============");
-                gestioneErrore();
-                log.debug("=============Fine GestioneErrore================");
+//                catch (Exception ex) {
+//                    log.error(ex);
+//                }
+//                try {
+//                    log.debug("=============Lancio ControlloSpedizione============");
+//                    controlloSpedizione();
+//                    log.debug("=============Fine ControlloSpedizione============");
+//                }
+//                catch (Exception ex) {
+//                    log.error(ex);
+//                }
+//                try {
+//                    log.debug("=============Lancio ControlloConsegna==============");
+//                    if(metodiSincronizzati.check()){
+//                        controlloConsegna();
+//                    }
+//                    log.debug("=============Fine ControlloConsegna==============");
+//                }
+//                catch (Exception ex) {
+//                    log.error(ex);
+//                }
+                try {
+                    log.debug("=============Lancio GestioneErrore==============");
+                    gestioneErrore();
+                    log.debug("=============Fine GestioneErrore================");
+                }
+                catch (Exception ex) {
+                    log.error(ex);
+                }
             }
-            catch (Exception ex) {
-                log.error(ex);
-            }  
+  
         }
         
         
@@ -816,6 +835,83 @@ public class Spedizioniere implements Job{
             } catch (SQLException | IOException ex) {
                 log.debug(ex);
                 throw new SpedizioniereException("Errore nel reperimento dello stato o delle ricevute dal Pecgw", ex);
+            }
+        }
+        
+        private void stepOn() throws SQLException, NamingException{
+            log.debug("Dentro StepOn");
+            String query =  "SELECT id_oggetto_origine " +
+                            "FROM ( " + 
+                                "SELECT id_oggetto_origine " +
+                                "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                            ") AS a " +
+                            "GROUP BY id_oggetto_origine";
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(query)
+            ) {
+                log.debug("Query: " + ps);
+                ResultSet res = ps.executeQuery();
+                while (res.next()) {
+                    verificaStepOn(res.getString("id_oggetto_origine"));
+                }
+            }
+        }
+        
+        private void verificaStepOn(String idOggettoOrigine) throws SQLException, NamingException{
+            log.debug("Dentro VerificaStepOn");
+            String queryVerifica =  "SELECT id_oggetto_origine " +
+                                    "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                    "WHERE id_oggetto_origine = ? AND stato != ?::bds_tools.stati_spedizione";
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(queryVerifica)
+            ) {
+                ps.setString(1, idOggettoOrigine);
+                ps.setObject(2, StatiSpedizione.SPEDITO);
+                log.debug("Query: " + ps);
+                ResultSet res = ps.executeQuery();
+                if(!res.next()){
+                    log.debug("Tutte le mail del documento sono in stato spedito");
+                    estraiMail(idOggettoOrigine);
+                }else{
+                    log.debug("Almeno una mail del documento non è in stato spedito");
+                }
+            }  
+        }
+        
+        private void estraiMail(String idOggettoOrigine){
+            log.debug("Dentro EstraMail");
+            String query =  "SELECT process_id " +
+                            "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                            "WHERE id_oggetto_origine = ?";
+            try (
+                Connection conn = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = conn.prepareStatement(query)
+            ) {
+                ps.setString(1, idOggettoOrigine);
+                log.debug("Query: " + ps);
+                ResultSet res = ps.executeQuery();
+                while (res.next()) {
+                    doStepOn(idOggettoOrigine, res.getString("process_id"));
+                }
+            } catch (SQLException ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (NamingException ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        private void doStepOn(String idOggettoOrigine, String processId){
+            log.debug("Dentro do Step");
+            try {
+                BdmClientImplementation bdmClient = new BdmClientImplementation(ApplicationParams.getBdmRestBaseUri());
+                bdmClient.getCurrentStep(processId);
+                bdmClient.stepOn(processId, null);
+            } catch (StorageException ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (BdmExeption ex) {
+                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
