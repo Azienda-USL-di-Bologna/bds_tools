@@ -3,6 +3,7 @@ package it.bologna.ausl.bds_tools.jobs;
 import com.mchange.v2.c3p0.impl.C3P0Defaults;
 import it.bologna.ausl.bdm.exception.BdmExeption;
 import it.bologna.ausl.bdm.exception.StorageException;
+import it.bologna.ausl.bdm.workflows.processes.ProtocolloInUscitaProcess;
 import it.bologna.ausl.bdmclient.BdmClient;
 import it.bologna.ausl.bdmclient.BdmClientImplementation;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
@@ -84,7 +85,8 @@ public class Spedizioniere implements Job{
             ERRORE_SPEDIZIONE("errore_spedizione"),
             SPEDITO("spedito"),
             CONSEGNATO("consegnato"),
-            ERRORE_CONTRLLO_CONSEGNA("errore_controllo_consegna");
+            ERRORE_CONTRLLO_CONSEGNA("errore_controllo_consegna"),
+            ANNULLATO("annullato");
             
             private final String key;
 
@@ -97,6 +99,35 @@ public class Spedizioniere implements Job{
                 return key == null
                         ? null
                         : Spedizioniere.StatiSpedizione.valueOf(key.toUpperCase());
+            }
+
+            public String getKey() {    
+                return key;
+            }
+            
+            @Override
+            public String toString() {    
+                return getKey();
+            }
+    }
+    
+    public enum AvanzamentoProcesso {
+            DA_aVANZARE("da_avanzare"),
+            AVANZATO("avanzato"),
+            ERRORE_AVANZAMENTO("errore_avanzamento"),
+            NON_AVANZARE("non_avanzare");
+            
+            private final String key;
+
+            AvanzamentoProcesso(String key) {
+                this.key = key;
+                //Executors.newFixedThreadPool(i);
+            }
+
+            public static Spedizioniere.AvanzamentoProcesso fromString(String key) {
+                return key == null
+                        ? null
+                        : Spedizioniere.AvanzamentoProcesso.valueOf(key.toUpperCase());
             }
 
             public String getKey() {    
@@ -862,13 +893,14 @@ public class Spedizioniere implements Job{
             log.debug("Dentro VerificaStepOn");
             String queryVerifica =  "SELECT id_oggetto_origine " +
                                     "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                    "WHERE id_oggetto_origine = ? AND stato != ?::bds_tools.stati_spedizione";
+                                    "WHERE id_oggetto_origine = ? AND (stato != ?::bds_tools.stati_spedizione AND stato != ?::bds_tools.stati_spedizione)";
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(queryVerifica)
             ) {
                 ps.setString(1, idOggettoOrigine);
                 ps.setObject(2, StatiSpedizione.SPEDITO);
+                ps.setObject(2, StatiSpedizione.ANNULLATO);
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 if(!res.next()){
@@ -893,7 +925,7 @@ public class Spedizioniere implements Job{
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 while (res.next()) {
-                    doStepOn(idOggettoOrigine, res.getString("process_id"));
+                    doStepOn(res.getString("process_id"));
                 }
             } catch (SQLException ex) {
                 java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
@@ -902,12 +934,29 @@ public class Spedizioniere implements Job{
             }
         }
         
-        private void doStepOn(String idOggettoOrigine, String processId){
+        private void doStepOn(String processId){
             log.debug("Dentro do Step");
             try {
                 BdmClientImplementation bdmClient = new BdmClientImplementation(ApplicationParams.getBdmRestBaseUri());
-                bdmClient.getCurrentStep(processId);
-                bdmClient.stepOn(processId, null);
+                if (bdmClient.getCurrentStep(processId).getStepType().equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI)) {
+                    bdmClient.stepOn(processId, null);
+                    String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                    "SET stato_avanzamento_processo = ?::bds_tools.type_avanzamento_processo " +
+                                    "WHERE process_id = ?";
+                    try (
+                        Connection conn = UtilityFunctions.getDBConnection();
+                        PreparedStatement ps = conn.prepareStatement(query)
+                    ) {
+                        ps.setObject(1, AvanzamentoProcesso.AVANZATO);
+                        ps.setString(2, processId);
+                        log.debug("Query: " + ps);
+                        ps.executeUpdate();
+                    } catch (SQLException ex) {
+                        java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (NamingException ex) {
+                        java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
             } catch (StorageException ex) {
                 java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
             } catch (BdmExeption ex) {
