@@ -179,7 +179,7 @@ public class Spedizioniere implements Job{
             pool = Executors.newFixedThreadPool(maxThread);
             log.debug("pool inizializzato");
             
-            for(int i = 0; i <= maxThread; i++){ // Incremento MaxThread per aggiungere il thread dello stepOn
+            for(int i = 0; i <= maxThread; i++){ // <= Anzichè < e basta per il thread dello stepOn (Ultimo thread)
                 pool.execute(new SpedizioniereThread(i, maxThread));
             }
             
@@ -928,9 +928,9 @@ public class Spedizioniere implements Job{
                     doStepOn(res.getString("process_id"));
                 }
             } catch (SQLException ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                log.debug("Errore caricamento mail relative a un documento: " + ex);
             } catch (NamingException ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                log.debug("Errore caricamento mail relative a un documento: " + ex);
             }
         }
         
@@ -952,15 +952,15 @@ public class Spedizioniere implements Job{
                         log.debug("Query: " + ps);
                         ps.executeUpdate();
                     } catch (SQLException ex) {
-                        java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                        log.debug("Errore nel settare lo stato sul db ad avanzato: " + ex);
                     } catch (NamingException ex) {
-                        java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                        log.debug("Errore nel settare lo stato sul db ad avanzato: " + ex);
                     }
                 }
             } catch (StorageException ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                log.debug("Errore nell'instanziare il bdmclient: " + ex);
             } catch (BdmExeption ex) {
-                java.util.logging.Logger.getLogger(Spedizioniere.class.getName()).log(Level.SEVERE, null, ex);
+                log.debug("Errore nell'instanziare il bdmclient: " + ex);
             }
         }
     }
