@@ -617,10 +617,15 @@ public class Spedizioniere implements Job{
             String urlCommand = url + erroreSpedizioneMail; //+ res.getString("id_oggetto_origine");
             UpdateBabelParams updateBabelParams = new UpdateBabelParams(res.getString("id_applicazione"), tokenApp, null, "false", "false", "insert");
             
-            updateBabelParams.addAttivita(res.getString("id_oggetto_origine") + "_" + res.getString("utenti_da_notificare"), res.getString("id_oggetto_origine"), res.getString("utenti_da_notificare"), "3", 
+            String[] utentiDaNotificare = null;
+            utentiDaNotificare = res.getString("utenti_da_notificare").split(";");
+            
+            for (String utente : utentiDaNotificare) {
+                updateBabelParams.addAttivita(res.getString("id_oggetto_origine") + "_" + utente, res.getString("id_oggetto_origine"), utente, "3", 
                 res.getString("stato"), res.getString("id_oggetto"), null, nomeApp, null, "Apri", urlCommand, null, null, null, null, null, null, null, null, 
                 null, null, null, null, res.getString("id_oggetto_origine"), res.getString("tipo_oggetto_origine"), res.getString("id_oggetto_origine"), res.getString("tipo_oggetto_origine"), "group_" + res.getString("id_oggetto_origine"), null);
-            
+            }
+
             String retQueue = "notifica_errore" + "_" + ApplicationParams.getAppId() + "_updateBabelRetQueue_" + ApplicationParams.getServerId();
             log.debug("Creazione Worker..");
             WorkerData wd = new WorkerData(ApplicationParams.getAppId(), "1", retQueue);
