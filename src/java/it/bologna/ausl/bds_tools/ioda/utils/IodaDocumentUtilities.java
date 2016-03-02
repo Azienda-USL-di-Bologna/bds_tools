@@ -543,7 +543,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "uuid_mongo_firmato, dimensione_firmato, " +
                 "principale, tipo_sottodocumento, tipo_firma, " +
                 "mimetype_file_originale, mimetype_file_firmato, " +
-                "codice_sottodocumento)" +
+                "codice_sottodocumento, " +
+                "da_spedire_pecgw, spedisci_originale_pecgw)" +
                 "VALUES (" +
                 "?, ?, ?, ?, " +
                 "?, ?, ?, " +
@@ -614,7 +615,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
         ps.setInt(index++, sd.isPrincipale() == null || !sd.isPrincipale() ? 0: -1);
         ps.setString(index++, sd.getTipo());
-        
+
         if (sd.getTipoFirma() != null)
             ps.setString(index++, sd.getTipoFirma().getKey());
         else
@@ -623,19 +624,22 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         if (sd.getUuidMongoOriginale() != null && sd.getMimeTypeFileOriginale() == null)
             throw new IodaDocumentException("il mimeType del file originale è nullo");
         ps.setString(index++, sd.getMimeTypeFileOriginale());
-        
+
         if (sd.getUuidMongoFirmato() != null && sd.getMimeTypeFileFirmato() == null)
             throw new IodaDocumentException("il mimeType del file firmato è nullo");
         ps.setString(index++, sd.getMimeTypeFileFirmato());
-        
+
         ps.setString(index++, sd.getCodiceSottoDocumento());
+
+        ps.setInt(index++, sd.isDaSpedirePecgw() ? -1 : 0);
+        ps.setInt(index++, sd.isSpedisciOriginalePecgw() ? -1 : 0);
 
         // aggiungo in una lista i sottodocumenti potenzialmente convertibili in pdf (cioè quelli per cui, non mi è stato passato l'uuid del file in pdf), il controllo
         // per verifivcare se la conversione è supportata verrà fatto successivamente
         if (sd.getUuidMongoPdf() == null || sd.getUuidMongoPdf().equals("")) {
             toConvert.add(sd);
         }
-        
+
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
         int result = ps.executeUpdate();
