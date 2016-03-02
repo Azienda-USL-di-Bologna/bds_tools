@@ -9,8 +9,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -157,7 +155,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
 
         // compongo la query
         dbConn.setAutoCommit(false);
-        String sqlText = "select " + updateNumberFunctionName + "(?, ?)";
+        String sqlText = "select numero, anno from " + updateNumberFunctionName + "(?, ?)";
         PreparedStatement ps = dbConn.prepareStatement(sqlText);
         ps.setString(1, idDocumento);
         ps.setString(2, nomesequenza);
@@ -170,6 +168,14 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 throw new SQLException("errore nella numerazione");
             else {
                 res = result.getString(1);
+                
+                try {
+                    res = res + "/" + result.getString(2);
+                }
+                catch (Exception ex) {
+                    log.error("errore nella lettura dell'anno del protocollo", ex);
+                }
+                
                 if (res == null || res.equals(""))
                     throw new SQLException("errore nella numerazione");
                 dbConn.commit();

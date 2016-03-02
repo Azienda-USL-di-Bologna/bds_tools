@@ -67,15 +67,14 @@ public class Spedizioniere implements Job{
     private static final Logger log = LogManager.getLogger(Spedizioniere.class);
     private ExecutorService pool;
     private int maxThread;
-    private boolean testMode;
     private int timeOutHours;
     private String spedizioniereUrl;
     private String username;
     private String password;
     private int expired;
     private MetodiSincronizzati metodiSincronizzati;
-    private final String erroreSpedizioneMail = "?CMD=errore_spedizione_mail;";
-
+    private static final String ERRORE_SPEDIZIONE_MAIL = "?CMD=errore_spedizione_mail;";
+    private static final String SPEDIZIONIERE_ACTIVE = "isSpedizioniereActive";
    
     
     public enum StatiSpedizione {
@@ -173,30 +172,37 @@ public class Spedizioniere implements Job{
     public void execute(JobExecutionContext context) throws JobExecutionException {
     
         log.info("Job Spedizioniere started");
-        try {
-            metodiSincronizzati = new MetodiSincronizzati();
-            log.debug("MaxThread su execute: " + maxThread);
-            log.debug("Inizializzo il pool...");
-            pool = Executors.newFixedThreadPool(maxThread);
-            log.debug("pool inizializzato");
-            
-            for(int i = 0; i <= maxThread; i++){ // <= Anzichè < e basta per il thread dello stepOn (Ultimo thread)
-                pool.execute(new SpedizioniereThread(i, maxThread));
+        
+        if (canStartProcess()){
+            try {
+                metodiSincronizzati = new MetodiSincronizzati();
+                log.debug("MaxThread su execute: " + maxThread);
+                log.debug("Inizializzo il pool...");
+                pool = Executors.newFixedThreadPool(maxThread);
+                log.debug("pool inizializzato");
+
+                for(int i = 0; i <= maxThread; i++){ // <= Anzichè < e basta per il thread dello stepOn (Ultimo thread)
+                    pool.execute(new SpedizioniereThread(i, maxThread));
+                }
+
+                pool.shutdown();
+                boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
+                if (timedOut){
+                    throw new SpedizioniereException("timeout");
+                }
+                else {
+                    System.out.println("nothing to do");
+                }
             }
-            
-            pool.shutdown();
-            boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
-            if (timedOut){
-                throw new SpedizioniereException("timeout");
+            catch (Throwable t) {
+                log.fatal("Spedizioniere: Errore ...", t);
             }
-            else {
-                System.out.println("nothing to do");
+            finally {
+                log.info("Job Spedizioniere finished");
             }
         }
-        catch (Throwable t) {
-            log.fatal("Spedizioniere: Errore ...", t);
-        }
-        finally {
+        else{
+            log.info("Spedizioniere is not running");
             log.info("Job Spedizioniere finished");
         }
         
@@ -249,14 +255,6 @@ public class Spedizioniere implements Job{
     public void setExpired(int expired) {
         this.expired = expired;
     }
-
-    public boolean getTestMode() {
-        return testMode;
-    }
-
-    public void setTestMode(boolean testMode) {
-        this.testMode = testMode;
-    }
     
     private class SpedizioniereThread implements Runnable {
         private final int threadSerial;
@@ -278,14 +276,14 @@ public class Spedizioniere implements Job{
                     log.error(ex);
                 }
             }else{
-                try {
-                    log.debug("==============Lancio Spedizione====================");
-                    spedizione();
-                    log.debug("==============Fine Spedizione====================");
-                }
-                catch (Exception ex) {
-                    log.error(ex);
-                }
+//                try {
+//                    log.debug("==============Lancio Spedizione====================");
+//                    spedizione();
+//                    log.debug("==============Fine Spedizione====================");
+//                }
+//                catch (Exception ex) {
+//                    log.error(ex);
+//                }
 //                try {
 //                    log.debug("=============Lancio ControlloSpedizione============");
 //                    controlloSpedizione();
@@ -304,14 +302,14 @@ public class Spedizioniere implements Job{
 //                catch (Exception ex) {
 //                    log.error(ex);
 //                }
-//                try {
-//                    log.debug("=============Lancio GestioneErrore==============");
-//                    gestioneErrore();
-//                    log.debug("=============Fine GestioneErrore================");
-//                }
-//                catch (Exception ex) {
-//                    log.error(ex);
-//                }
+                try {
+                    log.debug("=============Lancio GestioneErrore==============");
+                    gestioneErrore();
+                    log.debug("=============Fine GestioneErrore================");
+                }
+                catch (Exception ex) {
+                    log.error(ex);
+                }
             }
   
         }
@@ -321,7 +319,7 @@ public class Spedizioniere implements Job{
             String query =  "SELECT " +
                             "id, id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine, id_oggetto, " +
                             "stato, id_applicazione, verifica_timestamp, oggetto_da_spedire_json, " +
-                            "utenti_da_notificare, notifica_inviata, numero_errori, da_ritentare, descrizione_oggetto, spedisci_gddoc " +
+                            "utenti_da_notificare, notifica_inviata, numero_errori, da_ritentare " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                             "WHERE id%? = ? AND (stato = ?::bds_tools.stati_spedizione OR (stato = ?::bds_tools.stati_spedizione AND numero_errori >=?)) AND da_ritentare = ? for update";         
             try (
@@ -343,7 +341,7 @@ public class Spedizioniere implements Job{
                 ps.setString(4, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
                 ps.setInt(5, expired);
                 //ps.setString(4, "errore_presa_in_carico");
-                ps.setInt(6, -1);
+                ps.setBoolean(6, true);
                 
                 log.debug("PrepareStatment: " + ps);
                 ResultSet res = ps.executeQuery();
@@ -359,7 +357,8 @@ public class Spedizioniere implements Job{
                         log.error(ex);
                     }
                 }
-            } catch(Exception ex) {
+            }
+            catch(Exception ex) {
                 log.debug("ECC_2: " + ex.getMessage());
                 throw new SpedizioniereException("Errore nel reperimento dei documenti da spedire", ex);
             }
@@ -374,7 +373,6 @@ public class Spedizioniere implements Job{
             String mongoUri = ApplicationParams.getMongoRepositoryUri();
             MongoWrapper mongo;
             
-            
             try {
                 // sarebbe id_destinatario del documento
                 String externalId = res.getString("id_oggetto");
@@ -387,63 +385,12 @@ public class Spedizioniere implements Job{
                 Mail mail = Mail.parse(oggettoDaSpedire);
                 log.debug("Generate Random externalId");
                 int rand = (int)(Math.random()*1000);
-                log.debug("Create new SpedizioniereMessage");
-                log.debug("TestMode: " + testMode);
-                log.debug("Expired: " + expired);
-                log.debug("MaxThread: " + maxThread);
-                log.debug("MaxThread: " + ApplicationParams.getMongoRepositoryUri());
-                
-                String mittente = null;
-                String destinatario = null;
-                if (testMode) {
-                    log.debug("Test mode attiva!");
-                    // Contatti di test
-                    String queryContattiDiTest =    "SELECT indirizzo " +
-                                                    "FROM " + ApplicationParams.getIndirizziMailTestTableName() + ";";
-                    try (
-                        Connection connContattiDiTest = UtilityFunctions.getDBConnection();
-                        PreparedStatement psContattiDiTest = connContattiDiTest.prepareStatement(queryContattiDiTest);
-                    ){
-                        ResultSet resContattiDiTest = psContattiDiTest.executeQuery();
-                        log.debug("Query: " + psContattiDiTest);
-                        Boolean mittentePresente = false;
-                        Boolean destinatarioPresente = false;
-                        log.debug("Mail Originale : " + mail.getTo());
-                        while (resContattiDiTest.next()) {
-                            log.debug("Mail: " + resContattiDiTest.getString("indirizzo"));
-                            if (resContattiDiTest.getString("indirizzo").equals(mail.getTo())) {
-                                log.debug("Mail Originale uguale a quella di test (Destinatario)");
-                                destinatarioPresente = true;
-                            }
-                            if (resContattiDiTest.getString("indirizzo").equals(mail.getFrom())) {
-                                log.debug("Mail Originale uguale a quella di test (Mittente)");
-                                mittentePresente = true;
-                            }
-                        }
-                        if (!destinatarioPresente) {  
-                            resContattiDiTest.next();
-                            destinatario = resContattiDiTest.getString("indirizzo");
-                            log.debug("Destinatario non presente, gli metto: " + destinatario);
-                        }
-                        if (!mittentePresente) {
-                            mittente = "middleware.pec@pec.ausl.bologna.it";
-                            log.debug("Mittente non presente, gli metto: " + mittente);
-                        }
-                        
-                    }catch (Exception ex) {
-                        log.debug("Errore nel caricamento dei contatti di test: " + ex);
-                    }
-                }
-
-                SpedizioniereMessage message = new SpedizioniereMessage(mittente, destinatario, mail.getCc(), mail.getSubject(), mail.getMessage(), externalId + "_" + rand);
+                log.debug("Create new SpedizioniereMessage)");
+                SpedizioniereMessage message = new SpedizioniereMessage(mail.getFrom(), mail.getTo(), mail.getCc(), mail.getSubject(), mail.getMessage(), externalId + "_" + rand);
                 log.debug("new MongoWrapper con URI");
                 mongo = new MongoWrapper(mongoUri);
                 
-                
-                // Allegati nel JSON
                 for (Attachment attachment : mail.getAttachments()) {
-                    log.debug("Ciclo gli Attachments");
-                    
                     // scaricare da mongo l'inputstream
                     InputStream is = mongo.get(attachment.getUuid());
                     /*
@@ -461,104 +408,6 @@ public class Spedizioniere implements Job{
                    SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), tmpFile);
                    attachments.add(att);
                 }
-                
-                if (res.getInt(res.getString("spedisci_gddoc")) != 0) {
-                    //Allegati dai sotto documenti
-                    String queryGddoc = "SELECT id_gddoc, id_documento_origine, tipo_gddoc, applicazione " +
-                                        "FROM " + ApplicationParams.getGdDocsTableName() + " " +
-                                        "WHERE guid_gddoc = ?";
-                    try (
-                        Connection connForGddoc = UtilityFunctions.getDBConnection();
-                        PreparedStatement psForGddoc = connForGddoc.prepareStatement(queryGddoc)
-                    ) {
-                        psForGddoc.setString(1, res.getString("id_oggetto_origine"));;
-                        ResultSet resOfGddoc = psForGddoc.executeQuery();
-                        resOfGddoc.next();
-                        String idDocumentoOrigine = null;
-
-                        String queryApplicazione =  "SELECT prefix " + 
-                                                    "FROM " + ApplicationParams.getAuthenticationTable() + " " +
-                                                    "WHERE id_applicazione = ?";
-                        try (
-                            Connection connForApplicazione = UtilityFunctions.getDBConnection();
-                            PreparedStatement psForApplicazione = connForApplicazione.prepareStatement(queryApplicazione)
-                        ) {
-                            psForApplicazione.setString(1, resOfGddoc.getString("applicazione"));;
-                            ResultSet resOfApplicazione = psForApplicazione.executeQuery();
-                            resOfApplicazione.next();
-                            idDocumentoOrigine = resOfGddoc.getString("id_documento_origine").substring(resOfApplicazione.getString("prefix").length() -1);
-                        }catch(Exception ex){
-                            log.debug("eccezione nel caricamento del prefix dell'applicazione: " + ex);
-                        }
-
-                        if(resOfGddoc.getString("tipo_gddoc").equals("r")){ // Se il gddoc è un record allora carico i suoi sottoDocumenti
-                            String querySottoDocumenti =    "SELECT id_sottodocumento, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_firmato, uuid_mongo_originale, convertibile_pdf, mimetype_file_firmato, mimetype_file_originale, da_spedire_pecgw, spedisci_originale_pecgw " + 
-                                                            "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
-                                                            "WHERE id_gddoc = ?";
-                            try (
-                                Connection connForSottoDocumenti = UtilityFunctions.getDBConnection();
-                                PreparedStatement psForSottoDocumenti = connForSottoDocumenti.prepareStatement(querySottoDocumenti)
-                            ) {
-                                psForSottoDocumenti.setString(1, idDocumentoOrigine);;
-                                ResultSet resOfSottoDocumenti = psForSottoDocumenti.executeQuery();
-
-                                while (resOfSottoDocumenti.next()) {
-                                    if (resOfSottoDocumenti.getInt("da_spedire_pecgw") != 0) {
-                                        InputStream is = null;
-                                        String mimeType = null;
-                                        Boolean spedisciOriginale = true;
-                                        
-                                        if (resOfSottoDocumenti.getString("uuid_mongo_firmato") != null) { // FIRMATO
-                                            is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_firmato"));
-                                            mimeType = resOfSottoDocumenti.getString("mimetype_file_firmato");
-                                        } else if(resOfSottoDocumenti.getInt("convertibile_pdf") != 0){
-                                            if(resOfSottoDocumenti.getString("uuid_mongo_pdf") != null){
-                                                is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_pdf"));
-                                                mimeType = "application/pdf"; // Da rivedere**********!
-                                            }else{
-                                                throw new SpedizioniereException("Il sotto documento è convertibile ma uuid_mongo_pdf non è presente");
-                                            }
-                                        }else{
-                                            is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
-                                            mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
-                                            spedisciOriginale = false;
-                                        }
-                                        
-                                        if (resOfSottoDocumenti.getInt("spedisci_originale_pecgw") != 0) {
-                                            if(spedisciOriginale){
-                                                is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
-                                                mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
-                                            }
-                                        }
-
-                                        File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
-                                        tmpFile.deleteOnExit();
-                                        OutputStream outputStream = new FileOutputStream(tmpFile);
-                                        IOUtils.copy(is, outputStream);
-                                        outputStream.close();
-                                        SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento"), mimeType, tmpFile);
-                                        attachments.add(att);
-                                    } 
-                                }
-                            }catch(Exception ex){
-                                try {
-                                    setMessaggioErrore("Errore nel caricamento degli allegati", res.getLong("id"));
-                                } catch (SQLException e) {
-                                    log.debug("Errore update messaggio_errore: " + e);
-                                }
-                                log.debug("eccezione nel caricamento dei sotto documenti: " + ex);
-                            }
-                        }
-                    }catch(Exception ex){
-                        try {
-                            setMessaggioErrore("Errore nel caricamento degli allegati", res.getLong("id"));
-                        } catch (SQLException e) {
-                            log.debug("Errore update messaggio_errore: " + e);
-                        }
-                        log.debug("eccezione nel caricamento del gddoc: " + ex);
-                    }
-                }
-                
                 message.setAttachments(attachments);
 
                 // Utilizziamo un altro Try Catch per evitare di fare il rollback su tutta la funzione
@@ -581,14 +430,10 @@ public class Spedizioniere implements Job{
                         ps.executeUpdate();
                     }
                     catch(Exception ex){
-                        log.debug("eccezione nell'update di presa_in_carico: " + ex);
+                        log.debug("eccezione nell'update di presa_in_carico: " + ex.getMessage());
                     }
-                } catch(IllegalArgumentException ex){
-                    try {
-                        setMessaggioErrore("Errore nell'invio della mail", res.getLong("id"));
-                    } catch (SQLException e) {
-                        log.debug("Errore update messaggio_errore: " + e);
-                    }
+                }
+                catch(IllegalArgumentException ex){
                     // errori della famiglia 400
                     log.debug("Eccezione nell'ottenimento del messageId dal percgw: " + ex);
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -604,15 +449,12 @@ public class Spedizioniere implements Job{
                         ps.setString(4, idOggetto);
                         ps.setString(5, tipoOggetto);
                         ps.executeUpdate();
-                    } catch(Exception e){
-                        log.debug("eccezione nell'update su eccezione della famiglia 400: " + e);
                     }
-                } catch(Exception ex){
-                    try {
-                        setMessaggioErrore("Errore nell'invio della mail", res.getLong("id"));
-                    } catch (SQLException e) {
-                        log.debug("Errore update messaggio_errore: " + e);
+                    catch(Exception e){
+                        log.debug("eccezione nell'update su eccezione della famiglia 400: " + e.getMessage());
                     }
+                }
+                catch(Exception ex){
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                                                 "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ? and numero_errori=? " +
                                                 "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
@@ -628,16 +470,13 @@ public class Spedizioniere implements Job{
                         log.debug("ERRORE PRESA IN CARICO");
                         log.debug("Query: " + ps);
                         ps.executeUpdate();
-                    } catch(Exception e){
-                        log.debug("eccezione nell'update su eccezione della funzione spedisci(): " + e);
+                    }
+                    catch(Exception e){
+                        log.debug("eccezione nell'update su eccezione della funzione spedisci(): " + e.getMessage());
                     }
                 }
-            } catch(Exception ex) {
-                try {
-                    setMessaggioErrore("Errore nella costruzione della mail", res.getLong("id"));
-                } catch (SQLException e) {
-                    log.debug("Errore update messaggio_errore: " + e);
-                }
+            }
+            catch(Exception ex) {
                 throw new SpedizioniereException("Errore nella costruzione dell'oggetto mail", ex);
             }
         }
@@ -658,7 +497,7 @@ public class Spedizioniere implements Job{
                 ps.setInt(2, threadSerial);
                 ps.setString(3, StatiSpedizione.PRESA_IN_CARICO.toString());
                 ps.setString(4, StatiSpedizione.ERRORE_SPEDIZIONE.toString());
-                ps.setInt(5, -1);
+                ps.setBoolean(5, true);
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 while(res.next()){
@@ -703,7 +542,7 @@ public class Spedizioniere implements Job{
         
         private void gestioneErrore(){ 
             log.debug("Dentro gestioneErrore()");
-            String query =  "SELECT id, id_oggetto_origine, tipo_oggetto_origine, id_oggetto, stato, id_applicazione, utenti_da_notificare, messaggio_errore " +
+            String query =  "SELECT id, id_oggetto_origine, tipo_oggetto_origine, id_oggetto, stato, id_applicazione, utenti_da_notificare " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                             "WHERE id%? = ? AND ((stato = ?::bds_tools.stati_spedizione " +
                             "AND numero_errori >=?) " +
@@ -722,7 +561,7 @@ public class Spedizioniere implements Job{
                 ps.setString(5, StatiSpedizione.ERRORE.toString());
                 ps.setString(6, StatiSpedizione.ERRORE_SPEDIZIONE.toString());
                 ps.setString(7, StatiSpedizione.ERRORE_CONTRLLO_CONSEGNA.toString());
-                ps.setInt(8, 0);
+                ps.setBoolean(8, false);
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 while (res.next()) {
@@ -782,7 +621,7 @@ public class Spedizioniere implements Job{
                 log.debug("Eccezione nell'ottenimento dell'url: " + e);
             }
             
-            String urlCommand = url + erroreSpedizioneMail + ";" + res.getString("messaggio_errore"); //+ res.getString("id_oggetto_origine");
+            String urlCommand = url + ERRORE_SPEDIZIONE_MAIL; //+ res.getString("id_oggetto_origine");
             UpdateBabelParams updateBabelParams = new UpdateBabelParams(res.getString("id_applicazione"), tokenApp, null, "false", "false", "insert");
             
             String[] utentiDaNotificare = null;
@@ -800,8 +639,8 @@ public class Spedizioniere implements Job{
             log.debug("Worker creato");
             wd.addNewJob("1", null, updateBabelParams);
 
-//            RedisClient rd = new RedisClient("gdml", null);
-//            rd.put(wd.getStringForRedis(), "chefingdml");
+//          RedisClient rd = new RedisClient("gdml", null);
+//          rd.put(wd.getStringForRedis(), "chefingdml");
             RedisClient rd = new RedisClient(ApplicationParams.getRedisHost(), null);
             log.debug("Add Worker to redis..");
             rd.put(wd.getStringForRedis(), ApplicationParams.getRedisInQueue());
@@ -819,7 +658,7 @@ public class Spedizioniere implements Job{
                     Connection conn = UtilityFunctions.getDBConnection();
                     PreparedStatement ps = conn.prepareStatement(q)
                 ) {
-                    ps.setInt(1, -1);
+                    ps.setBoolean(1, true);
                     ps.setInt(2, res.getInt("id"));
                     log.debug("Query: " + ps);
                     ps.executeUpdate();
@@ -874,7 +713,7 @@ public class Spedizioniere implements Job{
                                     Connection conn = UtilityFunctions.getDBConnection();
                                     PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb)
                                 ) {
-                                    ps.setInt(1, 0);
+                                    ps.setBoolean(1, false);
                                     ps.setString(2, res.getString("id_oggetto_origine"));
                                     ps.setString(3, res.getString("tipo_oggetto_origine"));
                                     log.debug("Query: " + ps);
@@ -1037,11 +876,6 @@ public class Spedizioniere implements Job{
                     }
                 }
             } catch (SQLException | IOException ex) {
-                try {
-                    setMessaggioErrore("Errore nel reperire le ricevute", res.getLong("id"));
-                } catch (SQLException e) {
-                    log.debug("Errore update messaggio_errore: " + e);
-                }
                 log.debug(ex);
                 throw new SpedizioniereException("Errore nel reperimento dello stato o delle ricevute dal Pecgw", ex);
             }
@@ -1078,7 +912,7 @@ public class Spedizioniere implements Job{
             ) {
                 ps.setString(1, idOggettoOrigine);
                 ps.setObject(2, StatiSpedizione.SPEDITO);
-                ps.setObject(3, StatiSpedizione.ANNULLATO);
+                ps.setObject(2, StatiSpedizione.ANNULLATO);
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 if(!res.next()){
@@ -1143,23 +977,6 @@ public class Spedizioniere implements Job{
         }
     }
     
-    private void setMessaggioErrore(String messaggio, Long id){
-        String queryMessaggioErrore =   "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                        "SET messaggio_errore = ? " +
-                                        "WHERE id = ?";
-        try (
-            Connection connMessaggioErrore = UtilityFunctions.getDBConnection();
-            PreparedStatement psMessaggioErrore = connMessaggioErrore.prepareStatement(queryMessaggioErrore)
-        ) {
-            psMessaggioErrore.setString(2, messaggio);
-            psMessaggioErrore.setLong(2, id);
-            psMessaggioErrore.executeUpdate();
-
-        } catch (SQLException | NamingException e) {
-            log.debug(messaggio + " :" + e);
-        }
-    }
-    
     private Boolean canSend(ResultSet res){
         log.debug("canSend started");
         String query =  "SELECT attivo " +
@@ -1212,6 +1029,28 @@ public class Spedizioniere implements Job{
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
         Date parsedDate = dateFormat.parse(data);
         return (new java.sql.Timestamp(parsedDate.getTime()));
+    }
+    
+    private boolean canStartProcess(){
+        log.debug("check if Spedizioniere process can start...");
+        String query =  "SELECT val_parametro " +
+                        "FROM " +  ApplicationParams.getParametriPubbliciTableName() + " " +
+                        "WHERE  nome_parametro = ? ";              
+        try (
+                Connection dbConnection = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = dbConnection.prepareStatement(query);
+            )  {
+                ps.setString(1, SPEDIZIONIERE_ACTIVE);
+                ResultSet r = ps.executeQuery();
+            if (r.next()) {
+                log.debug("spedizioniere_attivo == " + r.getInt("val_parametro"));
+                return r.getInt("val_parametro") != 0 ;
+            }
+        } catch (SQLException | NamingException ex) {
+            log.debug("ECCEZIONE: " + ex);
+            return false;
+        }
+       return false;
     }
  
     public class MetodiSincronizzati {
