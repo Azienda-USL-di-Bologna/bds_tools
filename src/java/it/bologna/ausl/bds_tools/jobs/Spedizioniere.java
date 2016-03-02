@@ -443,12 +443,16 @@ public class Spedizioniere implements Job{
                     }
                 }
                 
+                log.debug("Il mittente è: " + mittente);
+                log.debug("Il destinatario è: " + destinatario);
+                
                 SpedizioniereMessage message = new SpedizioniereMessage(mittente, destinatario, mail.getCc(), mail.getSubject(), mail.getMessage(), externalId + "_" + rand);
                 log.debug("new MongoWrapper con URI");
                 mongo = new MongoWrapper(mongoUri);
                 
+                log.debug("Inizio ciclo degli Attachments");
                 for (Attachment attachment : mail.getAttachments()) {
-                    log.debug("Ciclo gli Attachments");
+                    log.debug("L'Uuid dell'attachment è: " + attachment.getUuid());
                     // scaricare da mongo l'inputstream
                     InputStream is = mongo.get(attachment.getUuid());
                     /*
