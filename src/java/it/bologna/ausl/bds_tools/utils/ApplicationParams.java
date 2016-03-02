@@ -41,6 +41,7 @@ public class ApplicationParams {
     private static String utentiTableName;
     private static String serviziTableName;
     private static String spedizioniPecTableName;
+    private static String indirizziMailTestTableName;
     private static String updateNumberFunctionNameTemplate;
     private static String aggiornamentiParerTableName;
     private static String parametriPubbliciTableName;
@@ -81,6 +82,7 @@ public class ApplicationParams {
         gdDocsTableName = context.getInitParameter("GdDocsTableName");
         sottoDocumentiTableName = context.getInitParameter("SottoDocumentiTableName");
         spedizioniPecTableName = context.getInitParameter("SpedizioniPecTableName");
+        indirizziMailTestTableName = context.getInitParameter("IndirizziMailTestTableName");
         updateNumberFunctionNameTemplate = context.getInitParameter("UpdateNumberFunctionNameTemplate");
         aggiornamentiParerTableName = context.getInitParameter("AggiornamentiParerTableName");
         spedizioniereApplicazioni = context.getInitParameter("SpedizioniereApplicazioni");
@@ -315,6 +317,14 @@ public class ApplicationParams {
 
     public static void setServiziTableName(String serviziTableName) {
         ApplicationParams.serviziTableName = serviziTableName;
+    }
+
+    public static String getIndirizziMailTestTableName() {
+        return indirizziMailTestTableName;
+    }
+
+    public static void setIndirizziMailTestTableName(String indirizziMailTestTableName) {
+        ApplicationParams.indirizziMailTestTableName = indirizziMailTestTableName;
     }
 
     /**

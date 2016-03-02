@@ -191,6 +191,10 @@
         <param-value>bds_tools.spedizioni_pec</param-value>
     </context-param>
     <context-param>
+        <param-name>IndirizziMailTestTableName</param-name>
+        <param-value>bds_tools.indirizzi_mail_test</param-value>
+    </context-param>
+    <context-param>
         <param-name>FascicoliTableName</param-name>
         <param-value>gd.fascicoligd</param-value>
     </context-param>
