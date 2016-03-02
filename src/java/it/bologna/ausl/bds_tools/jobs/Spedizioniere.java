@@ -73,8 +73,8 @@ public class Spedizioniere implements Job{
     private String password;
     private int expired;
     private MetodiSincronizzati metodiSincronizzati;
-    private final String erroreSpedizioneMail = "?CMD=errore_spedizione_mail;";
-
+    private static final String ERRORE_SPEDIZIONE_MAIL = "?CMD=errore_spedizione_mail;";
+    private static final String SPEDIZIONIERE_ACTIVE = "isSpedizioniereActive";
    
     
     public enum StatiSpedizione {
@@ -172,30 +172,37 @@ public class Spedizioniere implements Job{
     public void execute(JobExecutionContext context) throws JobExecutionException {
     
         log.info("Job Spedizioniere started");
-        try {
-            metodiSincronizzati = new MetodiSincronizzati();
-            log.debug("MaxThread su execute: " + maxThread);
-            log.debug("Inizializzo il pool...");
-            pool = Executors.newFixedThreadPool(maxThread);
-            log.debug("pool inizializzato");
-            
-            for(int i = 0; i <= maxThread; i++){ // <= Anzichè < e basta per il thread dello stepOn (Ultimo thread)
-                pool.execute(new SpedizioniereThread(i, maxThread));
+        
+        if (canStartProcess()){
+            try {
+                metodiSincronizzati = new MetodiSincronizzati();
+                log.debug("MaxThread su execute: " + maxThread);
+                log.debug("Inizializzo il pool...");
+                pool = Executors.newFixedThreadPool(maxThread);
+                log.debug("pool inizializzato");
+
+                for(int i = 0; i <= maxThread; i++){ // <= Anzichè < e basta per il thread dello stepOn (Ultimo thread)
+                    pool.execute(new SpedizioniereThread(i, maxThread));
+                }
+
+                pool.shutdown();
+                boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
+                if (timedOut){
+                    throw new SpedizioniereException("timeout");
+                }
+                else {
+                    System.out.println("nothing to do");
+                }
             }
-            
-            pool.shutdown();
-            boolean timedOut = !pool.awaitTermination(timeOutHours, TimeUnit.HOURS);
-            if (timedOut){
-                throw new SpedizioniereException("timeout");
+            catch (Throwable t) {
+                log.fatal("Spedizioniere: Errore ...", t);
             }
-            else {
-                System.out.println("nothing to do");
+            finally {
+                log.info("Job Spedizioniere finished");
             }
         }
-        catch (Throwable t) {
-            log.fatal("Spedizioniere: Errore ...", t);
-        }
-        finally {
+        else{
+            log.info("Spedizioniere is not running");
             log.info("Job Spedizioniere finished");
         }
         
@@ -614,7 +621,7 @@ public class Spedizioniere implements Job{
                 log.debug("Eccezione nell'ottenimento dell'url: " + e);
             }
             
-            String urlCommand = url + erroreSpedizioneMail; //+ res.getString("id_oggetto_origine");
+            String urlCommand = url + ERRORE_SPEDIZIONE_MAIL; //+ res.getString("id_oggetto_origine");
             UpdateBabelParams updateBabelParams = new UpdateBabelParams(res.getString("id_applicazione"), tokenApp, null, "false", "false", "insert");
             
             String[] utentiDaNotificare = null;
@@ -632,8 +639,8 @@ public class Spedizioniere implements Job{
             log.debug("Worker creato");
             wd.addNewJob("1", null, updateBabelParams);
 
-//            RedisClient rd = new RedisClient("gdml", null);
-//            rd.put(wd.getStringForRedis(), "chefingdml");
+//          RedisClient rd = new RedisClient("gdml", null);
+//          rd.put(wd.getStringForRedis(), "chefingdml");
             RedisClient rd = new RedisClient(ApplicationParams.getRedisHost(), null);
             log.debug("Add Worker to redis..");
             rd.put(wd.getStringForRedis(), ApplicationParams.getRedisInQueue());
@@ -1022,6 +1029,28 @@ public class Spedizioniere implements Job{
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
         Date parsedDate = dateFormat.parse(data);
         return (new java.sql.Timestamp(parsedDate.getTime()));
+    }
+    
+    private boolean canStartProcess(){
+        log.debug("check if Spedizioniere process can start...");
+        String query =  "SELECT val_parametro " +
+                        "FROM " +  ApplicationParams.getParametriPubbliciTableName() + " " +
+                        "WHERE  nome_parametro = ? ";              
+        try (
+                Connection dbConnection = UtilityFunctions.getDBConnection();
+                PreparedStatement ps = dbConnection.prepareStatement(query);
+            )  {
+                ps.setString(1, SPEDIZIONIERE_ACTIVE);
+                ResultSet r = ps.executeQuery();
+            if (r.next()) {
+                log.debug("spedizioniere_attivo == " + r.getInt("val_parametro"));
+                return r.getInt("val_parametro") != 0 ;
+            }
+        } catch (SQLException | NamingException ex) {
+            log.debug("ECCEZIONE: " + ex);
+            return false;
+        }
+       return false;
     }
  
     public class MetodiSincronizzati {
