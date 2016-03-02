@@ -155,7 +155,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
 
         // compongo la query
         dbConn.setAutoCommit(false);
-        String sqlText = "select numero, anno from " + updateNumberFunctionName + "(?, ?)";
+        String sqlText = "select * from " + updateNumberFunctionName + "(?, ?)";
         PreparedStatement ps = dbConn.prepareStatement(sqlText);
         ps.setString(1, idDocumento);
         ps.setString(2, nomesequenza);

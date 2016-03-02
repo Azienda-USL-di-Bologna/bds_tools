@@ -552,7 +552,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "?, ?, " +
                 "?, ?, ?, " +
                 "?, ?, " +
-                "?)";
+                "?, " +
+                "?, ?)";
         ps = dbConn.prepareStatement(sqlText);
         int index = 1;
 
