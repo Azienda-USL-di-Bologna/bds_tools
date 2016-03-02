@@ -170,7 +170,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 res = result.getString(1);
                 
                 try {
-                    res = res + "/" + result.getString(2);
+                    res = res + "/" + String.valueOf(result.getInt(2));
                 }
                 catch (Exception ex) {
                     log.error("errore nella lettura dell'anno del protocollo", ex);
