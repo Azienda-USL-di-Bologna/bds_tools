@@ -293,24 +293,24 @@ public class Spedizioniere implements Job{
                 catch (Exception ex) {
                     log.error(ex);
                 }
-//                try {
-//                    log.debug("=============Lancio ControlloSpedizione============");
-//                    controlloSpedizione();
-//                    log.debug("=============Fine ControlloSpedizione============");
-//                }
-//                catch (Exception ex) {
-//                    log.error(ex);
-//                }
-//                try {
-//                    log.debug("=============Lancio ControlloConsegna==============");
-//                    if(metodiSincronizzati.check()){
-//                        controlloConsegna();
-//                    }
-//                    log.debug("=============Fine ControlloConsegna==============");
-//                }
-//                catch (Exception ex) {
-//                    log.error(ex);
-//                }
+                try {
+                    log.debug("=============Lancio ControlloSpedizione============");
+                    controlloSpedizione();
+                    log.debug("=============Fine ControlloSpedizione============");
+                }
+                catch (Exception ex) {
+                    log.error(ex);
+                }
+                try {
+                    log.debug("=============Lancio ControlloConsegna==============");
+                    if(metodiSincronizzati.check()){
+                        controlloConsegna();
+                    }
+                    log.debug("=============Fine ControlloConsegna==============");
+                }
+                catch (Exception ex) {
+                    log.error(ex);
+                }
 //                try {
 //                    log.debug("=============Lancio GestioneErrore==============");
 //                    gestioneErrore();
@@ -346,7 +346,7 @@ public class Spedizioniere implements Job{
                 ps.setInt(2, threadSerial);
                 //ps.setString(3, "da_inviare");
                 ps.setString(3, StatiSpedizione.DA_INVIARE.toString());
-                //ps.setObject(3, StatiSpedizione.DA_INVIARE);
+                //ps.setString(3, StatiSpedizione.DA_INVIARE.toString());
                 ps.setString(4, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
                 ps.setInt(5, expired);
                 //ps.setString(4, "errore_presa_in_carico");
@@ -362,13 +362,13 @@ public class Spedizioniere implements Job{
                         }
                     }
                     catch (SpedizioniereException ex) {
-                        log.debug("ECC_1: " + ex.getMessage());
+                        log.debug("ECC_1: " , ex);
                         log.error(ex);
                     }
                 }
             }
             catch(Exception ex) {
-                log.debug("ECC_2: " + ex.getMessage());
+                log.debug("ECC_2: " ,ex);
                 throw new SpedizioniereException("Errore nel reperimento dei documenti da spedire", ex);
             }
         }
@@ -447,7 +447,7 @@ public class Spedizioniere implements Job{
                         }
                         
                     }catch (Exception ex) {
-                        log.debug("Errore nel caricamento dei contatti di test: " + ex);
+                        log.debug("Errore nel caricamento dei contatti di test: ", ex);
                     }
                 }
                 
@@ -506,7 +506,7 @@ public class Spedizioniere implements Job{
                         prefix = resOfApplicazione.getString("prefix");
                         log.debug("Prefix caricato: " + resOfApplicazione.getString("prefix"));
                     }catch(Exception ex){
-                        log.debug("eccezione nel caricamento del prefix dell'applicazione: " + ex);
+                        log.debug("eccezione nel caricamento del prefix dell'applicazione: ", ex);
                     }
                     
                     log.debug("Estrazione gddocs");
@@ -577,7 +577,7 @@ public class Spedizioniere implements Job{
                                 try {
                                     setMessaggioErrore("Errore nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine"), res.getLong("id"));
                                 } catch (SQLException e) {
-                                    log.debug("Errore update messaggio_errore: " + e);
+                                    log.debug("Errore update messaggio_errore: ", e);
                                 }
                                 log.debug("Eccezione nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine") + " : " + ex);
                             }
@@ -586,9 +586,9 @@ public class Spedizioniere implements Job{
                         try {
                             setMessaggioErrore("Errore nel caricamento dei sottodocumenti", res.getLong("id"));
                         } catch (SQLException e) {
-                            log.debug("Errore update messaggio_errore caricamento sottodocumenti: " + e);
+                            log.debug("Errore update messaggio_errore caricamento sottodocumenti: ", e);
                         }
-                        log.debug("Eccezione nel caricamento del gddoc (sottodocumenti): " + ex);
+                        log.debug("Eccezione nel caricamento del gddoc (sottodocumenti): ", ex);
                     }
                 }
                 
@@ -614,7 +614,7 @@ public class Spedizioniere implements Job{
                         ps.executeUpdate();
                     }
                     catch(Exception ex){
-                        log.debug("eccezione nell'update di presa_in_carico: " + ex);
+                        log.debug("eccezione nell'update di presa_in_carico: ", ex);
                     }
                 }
                 catch(IllegalArgumentException ex){
@@ -636,13 +636,13 @@ public class Spedizioniere implements Job{
                         ps.executeUpdate();
                     }
                     catch(Exception e){
-                        log.debug("eccezione nell'update su eccezione della famiglia 400: " + e);
+                        log.debug("eccezione nell'update su eccezione della famiglia 400: ", e);
                     }
                 } catch(Exception ex){
                     try {
                         setMessaggioErrore("Errore nell'invio della mail", res.getLong("id"));
                     } catch (SQLException e) {
-                        log.debug("Errore update messaggio_errore: " + e);
+                        log.debug("Errore update messaggio_errore: ", e);
                     }
                     
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -662,7 +662,7 @@ public class Spedizioniere implements Job{
                         ps.executeUpdate();
                     }
                     catch(Exception e){
-                        log.debug("eccezione nell'update su eccezione della funzione spedisci(): " + e);
+                        log.debug("eccezione nell'update su eccezione della funzione spedisci(): ", e);
                     }
                 }
             }
@@ -670,7 +670,7 @@ public class Spedizioniere implements Job{
                 try {
                     setMessaggioErrore("Errore nella costruzione della mail", res.getLong("id"));
                 } catch (SQLException e) {
-                    log.debug("Errore update messaggio_errore: " + e);
+                    log.debug("Errore update messaggio_errore: ", e);
                 }
                 throw new SpedizioniereException("Errore nella costruzione dell'oggetto mail", ex);
             }
@@ -700,10 +700,11 @@ public class Spedizioniere implements Job{
                         log.debug("Richiamo controllaricevuta()");
                         controllaRicevuta(res, true);
                     } catch (Exception e) {
+                        log.debug(e);
                     }
                 }
             } catch (SQLException | NamingException ex) {
-                log.debug(ex.getMessage());
+                log.debug(ex);
                 throw new SpedizioniereException("Errore nel controllo spedizione", ex);
             }
         }
@@ -769,7 +770,7 @@ public class Spedizioniere implements Job{
                 }
             }
             catch(Exception ex){
-                log.debug("Eccezione Select gestioneErrore()" + ex);     
+                log.debug("Eccezione Select gestioneErrore()", ex);     
             }
         }
         
@@ -794,7 +795,7 @@ public class Spedizioniere implements Job{
                 }
             }
             catch(Exception e){
-                log.debug("Eccezione nell'ottenimento del nome dell'applicazione: " + e);
+                log.debug("Eccezione nell'ottenimento del nome dell'applicazione: ",e);
             }
             String queryUrl =   "SELECT url " +
                                 "FROM " + ApplicationParams.getSpedizioniereApplicazioni() + " " + 
@@ -813,7 +814,7 @@ public class Spedizioniere implements Job{
                 }
             }
             catch(Exception e){
-                log.debug("Eccezione nell'ottenimento dell'url: " + e);
+                log.debug("Eccezione nell'ottenimento dell'url: ", e);
             }
             
             String urlCommand = url + ERRORE_SPEDIZIONE_MAIL; //+ res.getString("id_oggetto_origine");
@@ -859,7 +860,7 @@ public class Spedizioniere implements Job{
                     ps.executeUpdate();
                 }
                 catch(Exception e){
-                    log.debug("Eccezione nella modifica del campo notifica_inviata: " + e);
+                    log.debug("Eccezione nella modifica del campo notifica_inviata: ", e);
                 }
             }
             else {
@@ -915,7 +916,7 @@ public class Spedizioniere implements Job{
                                     ps.executeUpdate();
                                 }
                                 catch(Exception e){
-                                    log.debug("eccezione nell'update su eccezione della funzione controllaRicevuta(): " + e);
+                                    log.debug("eccezione nell'update su eccezione della funzione controllaRicevuta(): ", e);
                                 }
                             }else{
                                 log.debug("Ricevuta senza errore");
@@ -979,7 +980,7 @@ public class Spedizioniere implements Job{
                             log.debug("Query: " + ps);
                             ps.executeUpdate();
                         } catch (Exception ex) {
-                            log.debug("eccezione aggiornamento stato SPEDITO o CONSEGNATO nella funzione controllaRicevuta()" + ex);
+                            log.debug("eccezione aggiornamento stato SPEDITO o CONSEGNATO nella funzione controllaRicevuta()", ex);
                         }
                     }else{ // NEL CASO SIA UNA MAIL NORMALE E NON UNA PEC DOPO TOT GIORNI DEVE ESSERE MESSA A CONFIMED E SETTARE IL TIMESTAMP
                         log.debug("SONO NELLO STATO CONTROLLO CONSEGNA OPPURE NON HO RICEVUTE");
@@ -1067,14 +1068,14 @@ public class Spedizioniere implements Job{
                         log.debug("Query: " + ps);
                         ps.executeUpdate();
                     } catch (NamingException ex) {
-                        log.debug("eccezione aggiornamento stato ERRORE nella funzione controllaRicevuta()" + ex);
+                        log.debug("eccezione aggiornamento stato ERRORE nella funzione controllaRicevuta()", ex);
                     }
                 }
             } catch (SQLException | IOException ex) {
                 try {
                     setMessaggioErrore("Errore nel reperire le ricevute", res.getLong("id"));
                 } catch (SQLException e) {
-                    log.debug("Errore update messaggio_errore: " + e);
+                    log.debug("Errore update messaggio_errore: ", e);
                 }
                 log.debug(ex);
                 throw new SpedizioniereException("Errore nel reperimento dello stato o delle ricevute dal Pecgw", ex);
@@ -1111,8 +1112,8 @@ public class Spedizioniere implements Job{
                 PreparedStatement ps = conn.prepareStatement(queryVerifica)
             ) {
                 ps.setString(1, idOggettoOrigine);
-                ps.setObject(2, StatiSpedizione.SPEDITO);
-                ps.setObject(3, StatiSpedizione.ANNULLATO);
+                ps.setString(2, StatiSpedizione.SPEDITO.toString());
+                ps.setString(3, StatiSpedizione.ANNULLATO.toString());
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 if(!res.next()){
@@ -1140,9 +1141,9 @@ public class Spedizioniere implements Job{
                     doStepOn(res.getString("process_id"));
                 }
             } catch (SQLException ex) {
-                log.debug("Errore caricamento mail relative a un documento: " + ex);
+                log.debug("Errore caricamento mail relative a un documento: ", ex);
             } catch (NamingException ex) {
-                log.debug("Errore caricamento mail relative a un documento: " + ex);
+                log.debug("Errore caricamento mail relative a un documento: ", ex);
             }
         }
         
@@ -1159,20 +1160,20 @@ public class Spedizioniere implements Job{
                         Connection conn = UtilityFunctions.getDBConnection();
                         PreparedStatement ps = conn.prepareStatement(query)
                     ) {
-                        ps.setObject(1, AvanzamentoProcesso.AVANZATO);
+                        ps.setString(1, AvanzamentoProcesso.AVANZATO.toString());
                         ps.setString(2, processId);
                         log.debug("Query: " + ps);
                         ps.executeUpdate();
                     } catch (SQLException ex) {
-                        log.debug("Errore nel settare lo stato sul db ad avanzato: " + ex);
+                        log.debug("Errore nel settare lo stato sul db ad avanzato: ", ex);
                     } catch (NamingException ex) {
-                        log.debug("Errore nel settare lo stato sul db ad avanzato: " + ex);
+                        log.debug("Errore nel settare lo stato sul db ad avanzato: ", ex);
                     }
                 }
             } catch (StorageException ex) {
-                log.debug("Errore nell'instanziare il bdmclient: " + ex);
+                log.debug("Errore nell'instanziare il bdmclient: ", ex);
             } catch (BdmExeption ex) {
-                log.debug("Errore nell'instanziare il bdmclient: " + ex);
+                log.debug("Errore nell'instanziare il bdmclient: ", ex);
             }
         }
     }
@@ -1190,7 +1191,7 @@ public class Spedizioniere implements Job{
             psMessaggioErrore.executeUpdate();
 
         } catch (SQLException | NamingException e) {
-            log.debug("Errore nell'update del messaggio di errore: " + e);
+            log.debug("Errore nell'update del messaggio di errore: ", e);
         }
     }
     
@@ -1213,7 +1214,7 @@ public class Spedizioniere implements Job{
                 return r.getInt("attivo") == 1 ? true : false ;
             }
         } catch (SQLException | NamingException ex) {
-            log.debug("ECCEZIONE: " + ex.getMessage());
+            log.debug("ECCEZIONE: ", ex);
             return false;
         }
        return false;
@@ -1264,7 +1265,7 @@ public class Spedizioniere implements Job{
                 return r.getInt("val_parametro") != 0 ;
             }
         } catch (SQLException | NamingException ex) {
-            log.debug("ECCEZIONE: " + ex);
+            log.debug("ECCEZIONE: ", ex);
             return false;
         }
        return false;
@@ -1311,7 +1312,7 @@ public class Spedizioniere implements Job{
                     }
                 }
                 catch(Exception ex){
-                    log.debug("eccezione nella select param servizio: " + ex);
+                    log.debug("eccezione nella select param servizio: ", ex);
                 }
 
                 if(dataInizio != null){
