@@ -679,7 +679,7 @@ public class Spedizioniere implements Job{
         private void controlloSpedizione() throws SpedizioniereException{
             log.debug("ControlloSpedizione avviato!");
             String query =  "SELECT " +
-                            "id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine " +
+                            "id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine, id, descrizione_oggetto " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                             "WHERE id%? = ? " + 
                             "AND (stato =?::bds_tools.stati_spedizione OR stato =?::bds_tools.stati_spedizione) " +
@@ -930,12 +930,12 @@ public class Spedizioniere implements Job{
 
                                     // QUERY CHE SCRIVE SUL DB LA RICEVUTA 
                                     String insertRicevuta = "INSERT INTO " + ApplicationParams.getRicevutePecTableName() +
-                                                            "(tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data_inserimento) " +
-                                                            "VALUES (?::bds_tools.tipi_ricevuta, ?, ?, ?, now())";
+                                                            "(tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data_inserimento, descrizione, id_spedizione_pec_globale) " +
+                                                            "VALUES (?::bds_tools.tipi_ricevuta, ?, ?, ?, now(), ?, ?)";
                                     
                                     // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
                                     if (!idRicevuta.next()) {
-                                        log.debug("idRicevuta == null");
+                                        log.debug("idRicevuta != null");
                                         try (
                                             Connection settaUuid = UtilityFunctions.getDBConnection();
                                             PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
@@ -948,6 +948,8 @@ public class Spedizioniere implements Job{
                                             prepared.setString(2, spedizioniereRecepit.getUuid());
                                             prepared.setString(3, res.getString("id_oggetto_origine"));
                                             prepared.setString(4, res.getString("tipo_oggetto_origine"));
+                                            prepared.setString(5, res.getString("descrizione_oggetto"));
+                                            prepared.setString(6, res.getString("id"));
                                             log.debug("Query idRicevuta(INSERT): " + prepared);
                                             prepared.executeUpdate();
                                         } catch (NamingException ex) {
