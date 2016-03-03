@@ -130,12 +130,18 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
 
                         // inserimento GdDoc con fascicolazione e sottodocumenti
                         iodaUtilities.updateGdDoc(dbConn, ps);
-                        String numero = null;
+                        String numero, numeroAndAnno = null;
                         if(gdDoc.getNumerazioneAutomatica()){
                             if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
                                 gdDoc.setCodiceRegistro(ApplicationParams.getDefaultSequenceName());
                             }
-                            numero = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), gdDoc.getGuid(), gdDoc.getCodiceRegistro());
+                            numeroAndAnno = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), gdDoc.getGuid(), gdDoc.getCodiceRegistro());
+                        }
+                        
+                        numero = numeroAndAnno;
+                        // TODO:da sistemare
+                        if (numeroAndAnno.contains("/")) {
+                            numero = numeroAndAnno.split("/")[0];
                         }
                         
                         dbConn.commit();

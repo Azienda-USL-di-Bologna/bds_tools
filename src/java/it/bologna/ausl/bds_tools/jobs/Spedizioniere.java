@@ -1155,7 +1155,7 @@ public class Spedizioniere implements Job{
             log.debug("Dentro do Step");
             try {
                 BdmClientInterface bdmClient = new RemoteBdmClientImplementation(ApplicationParams.getBdmRestBaseUri());
-                if (bdmClient.getCurrentStep(processId).getStepType().equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI)) {
+                if (bdmClient.getCurrentStep(processId).getStepType().equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI.name())) {
                     bdmClient.stepOn(processId, null);
                     String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                                     "SET stato_avanzamento_processo = ?::bds_tools.type_avanzamento_processo " +

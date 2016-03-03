@@ -123,12 +123,19 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                 GdDoc gdDoc = iodaUtilities.getGdDoc();
                 
                 String guid = iodaUtilities.insertGdDoc(dbConn, ps);
+                
                 String numero = null;
                 if(gdDoc.getNumerazioneAutomatica()){
                     if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
                         gdDoc.setCodiceRegistro(ApplicationParams.getDefaultSequenceName());
                     }
-                    numero = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), guid, gdDoc.getCodiceRegistro());
+                    String numeroAndAnno = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), guid, gdDoc.getCodiceRegistro());
+                    
+                    numero = numeroAndAnno;
+                    // TODO:da sistemare
+                    if (numeroAndAnno.contains("/")) {
+                        numero = numeroAndAnno.split("/")[0];
+                    }
                 }
                 
                 dbConn.commit();
