@@ -491,42 +491,39 @@ public class Spedizioniere implements Job{
                 
                 
                 if (res.getInt("spedisci_gddoc") != 0) {
+                    String prefix = null;
+                    String queryApplicazione =  "SELECT prefix " + 
+                                                "FROM " + ApplicationParams.getAuthenticationTable() + " " +
+                                                "WHERE id_applicazione = ?";
+                    try (
+                        Connection connForApplicazione = UtilityFunctions.getDBConnection();
+                        PreparedStatement psForApplicazione = connForApplicazione.prepareStatement(queryApplicazione)
+                    ) {
+                        psForApplicazione.setString(1, res.getString("id_applicazione"));
+                        log.debug("Caricamento prefix: " + psForApplicazione);
+                        ResultSet resOfApplicazione = psForApplicazione.executeQuery();
+                        resOfApplicazione.next();
+                        prefix = resOfApplicazione.getString("prefix");
+                        log.debug("Prefix caricato: " + resOfApplicazione.getString("prefix"));
+                    }catch(Exception ex){
+                        log.debug("eccezione nel caricamento del prefix dell'applicazione: " + ex);
+                    }
+                    
                     log.debug("Estrazione gddocs");
                     //Allegati dai sotto documenti
                     String queryGddoc = "SELECT id_gddoc, id_documento_origine, tipo_gddoc, applicazione " +
                                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
-                                        "WHERE guid_gddoc = ?";
+                                        "WHERE id_oggetto_origine = ?";
                     try (
                         Connection connForGddoc = UtilityFunctions.getDBConnection();
                         PreparedStatement psForGddoc = connForGddoc.prepareStatement(queryGddoc)
                     ) {
-                        psForGddoc.setString(1, res.getString("id_oggetto_origine"));
+                        psForGddoc.setString(1, prefix + res.getString("id_oggetto_origine"));
                         log.debug("Query: " + psForGddoc);
                         ResultSet resOfGddoc = psForGddoc.executeQuery();
                         resOfGddoc.next();
                         log.debug("gddoc applicazione in psForGddoc: " + resOfGddoc.getString("applicazione"));
-                        String idDocumentoOrigine = null;
-
-                        String queryApplicazione =  "SELECT prefix " + 
-                                                    "FROM " + ApplicationParams.getAuthenticationTable() + " " +
-                                                    "WHERE id_applicazione = ?";
-                        try (
-                            Connection connForApplicazione = UtilityFunctions.getDBConnection();
-                            PreparedStatement psForApplicazione = connForApplicazione.prepareStatement(queryApplicazione)
-                        ) {
-                            log.debug("gddoc applicazione in psForApplicazione: " + resOfGddoc.getString("applicazione"));
-                            psForApplicazione.setString(1, resOfGddoc.getString("applicazione"));
-                            log.debug("Caricamento prefix: " + psForApplicazione);
-                            ResultSet resOfApplicazione = psForApplicazione.executeQuery();
-                            resOfApplicazione.next();
-                            log.debug("Prefix caricato: " + resOfApplicazione.getString("prefix"));
-                            log.debug("id_documento_origine : " + resOfGddoc.getString("id_documento_origine"));
-                            idDocumentoOrigine = resOfGddoc.getString("id_documento_origine").substring(resOfApplicazione.getString("prefix").length() -1);
-                            log.debug("Sotto stringa estratta: " + idDocumentoOrigine);
-                        }catch(Exception ex){
-                            log.debug("eccezione nel caricamento del prefix dell'applicazione: " + ex);
-                        }
-
+                        
                         if(resOfGddoc.getString("tipo_gddoc").equals("r")){ // Se il gddoc è un record allora carico i suoi sottoDocumenti
                             String querySottoDocumenti =    "SELECT id_sottodocumento, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_firmato, uuid_mongo_originale, convertibile_pdf, mimetype_file_firmato, mimetype_file_originale, da_spedire_pecgw, spedisci_originale_pecgw " + 
                                                             "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
@@ -535,7 +532,7 @@ public class Spedizioniere implements Job{
                                 Connection connForSottoDocumenti = UtilityFunctions.getDBConnection();
                                 PreparedStatement psForSottoDocumenti = connForSottoDocumenti.prepareStatement(querySottoDocumenti)
                             ) {
-                                psForSottoDocumenti.setString(1, idDocumentoOrigine);;
+                                psForSottoDocumenti.setString(1, resOfGddoc.getString("id_gddoc"));;
                                 ResultSet resOfSottoDocumenti = psForSottoDocumenti.executeQuery();
 
                                 while (resOfSottoDocumenti.next()) {
