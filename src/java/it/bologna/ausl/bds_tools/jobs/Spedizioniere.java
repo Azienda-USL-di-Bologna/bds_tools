@@ -6,6 +6,8 @@ import it.bologna.ausl.bdm.exception.StorageException;
 import it.bologna.ausl.bdm.workflows.processes.ProtocolloInUscitaProcess;
 import it.bologna.ausl.bdmclient.BdmClient;
 import it.bologna.ausl.bdmclient.BdmClientImplementation;
+import it.bologna.ausl.bdmclient.BdmClientInterface;
+import it.bologna.ausl.bdmclient.RemoteBdmClientImplementation;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
@@ -1152,7 +1154,7 @@ public class Spedizioniere implements Job{
         private void doStepOn(String processId){
             log.debug("Dentro do Step");
             try {
-                BdmClientImplementation bdmClient = new BdmClientImplementation(ApplicationParams.getBdmRestBaseUri());
+                BdmClientInterface bdmClient = new RemoteBdmClientImplementation(ApplicationParams.getBdmRestBaseUri());
                 if (bdmClient.getCurrentStep(processId).getStepType().equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI)) {
                     bdmClient.stepOn(processId, null);
                     String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
