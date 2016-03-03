@@ -3,6 +3,7 @@ package it.bologna.ausl.bds_tools.jobs;
 import com.mchange.v2.c3p0.impl.C3P0Defaults;
 import it.bologna.ausl.bdm.exception.BdmExeption;
 import it.bologna.ausl.bdm.exception.StorageException;
+import it.bologna.ausl.bdm.utilities.Bag;
 import it.bologna.ausl.bdm.workflows.processes.ProtocolloInUscitaProcess;
 import it.bologna.ausl.bdmclient.BdmClient;
 import it.bologna.ausl.bdmclient.BdmClientImplementation;
@@ -1110,14 +1111,14 @@ public class Spedizioniere implements Job{
             log.debug("Dentro VerificaStepOn");
             String queryVerifica =  "SELECT id_oggetto_origine " +
                                     "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                    "WHERE id_oggetto_origine = ? AND (stato = ?::bds_tools.stati_spedizione OR stato = ?::bds_tools.stati_spedizione)";
+                                    "WHERE id_oggetto_origine = ? AND (stato != ?::bds_tools.stati_spedizione AND stato != ?::bds_tools.stati_spedizione)";
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(queryVerifica)
             ) {
                 ps.setString(1, idOggettoOrigine);
                 ps.setString(2, StatiSpedizione.SPEDITO.toString());
-                ps.setString(3, StatiSpedizione.CONSEGNATO.toString());
+                ps.setString(3, StatiSpedizione.ANNULLATO.toString());
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 if(!res.next()){
@@ -1155,8 +1156,12 @@ public class Spedizioniere implements Job{
             log.debug("Dentro do Step");
             try {
                 BdmClientInterface bdmClient = new RemoteBdmClientImplementation(ApplicationParams.getBdmRestBaseUri());
-                if (bdmClient.getCurrentStep(processId).getStepType().equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI.name())) {
-                    bdmClient.stepOn(processId, null);
+                String currentStep = bdmClient.getCurrentStep(processId).getStepType();
+                log.debug("current step: " + currentStep);
+                
+                if (currentStep.equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI.name())) {
+                    log.debug("eseguo lo stepon sul processo: " + processId);
+                    bdmClient.stepOn(processId, new Bag());
                     String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                                     "SET stato_avanzamento_processo = ?::bds_tools.type_avanzamento_processo " +
                                     "WHERE process_id = ?";
