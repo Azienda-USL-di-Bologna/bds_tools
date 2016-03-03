@@ -376,6 +376,8 @@ public class Spedizioniere implements Job{
         private void spedisci(ResultSet res) throws SpedizioniereException {
             log.debug("Dentro Spedisci()");
             log.debug("Istanzio lo SpedizioniereClient");
+            log.debug("Username: " + getUsername());
+            log.debug("Password: " + getPassword());
             SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
             ArrayList<SpedizioniereAttachment> attachments = new ArrayList<>();
             log.debug("Richiesta mongoUri");
@@ -383,9 +385,12 @@ public class Spedizioniere implements Job{
             MongoWrapper mongo;
             
             try {
+                log.debug("ID record: " + res.getLong("id"));
                 // sarebbe id_destinatario del documento
                 String externalId = res.getString("id_oggetto");
+                log.debug("Caricamento oggetto_da_spedire_json...");
                 String oggettoDaSpedire = res.getString("oggetto_da_spedire_json");
+                log.debug("oggetto_da_spedire_json caricato: " + oggettoDaSpedire);
                 String idOggetto = res.getString("id_oggetto_origine");
                 String tipoOggetto =  res.getString("tipo_oggetto_origine");
                 int numErrori = res.getInt("numero_errori");
@@ -403,6 +408,8 @@ public class Spedizioniere implements Job{
                 
                 String mittente = null;
                 String destinatario = null;
+                
+                // TEST MODE
                 if (testMode) {
                     log.debug("Test mode attiva!");
                     // Contatti di test
@@ -418,19 +425,20 @@ public class Spedizioniere implements Job{
                         Boolean destinatarioPresente = false;
                         log.debug("Mail Originale : " + mail.getTo());
                         while (resContattiDiTest.next()) {
-                            log.debug("Mail: " + resContattiDiTest.getString("indirizzo"));
                             if (resContattiDiTest.getString("indirizzo").equals(mail.getTo())) {
                                 log.debug("Mail Originale uguale a quella di test (Destinatario)");
                                 destinatarioPresente = true;
+                                destinatario = mail.getTo();
                             }
                             if (resContattiDiTest.getString("indirizzo").equals(mail.getFrom())) {
                                 log.debug("Mail Originale uguale a quella di test (Mittente)");
                                 mittentePresente = true;
+                                mittente = mail.getFrom();
                             }
                         }
-                        if (!destinatarioPresente) {  
-                            resContattiDiTest.next();
-                            destinatario = resContattiDiTest.getString("indirizzo");
+                        log.debug("Fuori dal While Contatti");
+                        if (!destinatarioPresente) {
+                            destinatario = "babel.care@ausl.bologna.it";
                             log.debug("Destinatario non presente, gli metto: " + destinatario);
                         }
                         if (!mittentePresente) {
@@ -450,28 +458,40 @@ public class Spedizioniere implements Job{
                 log.debug("new MongoWrapper con URI");
                 mongo = new MongoWrapper(mongoUri);
                 
-                log.debug("Inizio ciclo degli Attachments");
-                for (Attachment attachment : mail.getAttachments()) {
-                    log.debug("L'Uuid dell'attachment è: " + attachment.getUuid());
-                    // scaricare da mongo l'inputstream
-                    InputStream is = mongo.get(attachment.getUuid());
-                    /*
-                    File ilFile = new File("c:/tmp/fileTemporaneo.txt");
-                    ilFile.deleteOnExit();
-                    OutputStream outputStream = new FileOutputStream(ilFile);
-                    IOUtils.copy(is, outputStream);
-                    outputStream.close();
-                    */
-                    File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
-                    tmpFile.deleteOnExit();
-                    OutputStream outputStream = new FileOutputStream(tmpFile);
-                    IOUtils.copy(is, outputStream);
-                    outputStream.close();
-                   SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), tmpFile);
-                   attachments.add(att);
+                if (mail.getAttachments() != null) {
+                    log.debug("Inizio ciclo degli Allegati");
+                    for (Attachment attachment : mail.getAttachments()) {
+                        log.debug("L'Uuid dell'attachment è: " + attachment.getUuid());
+                        // scaricare da mongo l'inputstream
+                        InputStream is = mongo.get(attachment.getUuid());
+                        /*
+                        File ilFile = new File("c:/tmp/fileTemporaneo.txt");
+                        ilFile.deleteOnExit();
+                        OutputStream outputStream = new FileOutputStream(ilFile);
+                        IOUtils.copy(is, outputStream);
+                        outputStream.close();
+                        */
+                        File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
+                        tmpFile.deleteOnExit();
+                        OutputStream outputStream = new FileOutputStream(tmpFile);
+                        IOUtils.copy(is, outputStream);
+                        outputStream.close();
+                        log.debug("Nome allegato: " + attachment.getName());
+                        log.debug("Mimetype allegato: " + attachment.getMimetype());
+                        log.debug("Creazione dell'attachment...");
+                       SpedizioniereAttachment att = new SpedizioniereAttachment(attachment.getName(), attachment.getMimetype(), tmpFile);
+                       log.debug("Attachment creato");
+                       attachments.add(att);
+                       log.debug("Attachment aggiunto all'arrayList");
+                    }
+                    log.debug("Fine ciclo degli Allegati");
+                }else{
+                    log.debug("Mail.getAttachments è uguale a null");
                 }
                 
-                if (res.getInt(res.getString("spedisci_gddoc")) != 0) {
+                
+                if (res.getInt("spedisci_gddoc") != 0) {
+                    log.debug("Estrazione gddocs");
                     //Allegati dai sotto documenti
                     String queryGddoc = "SELECT id_gddoc, id_documento_origine, tipo_gddoc, applicazione " +
                                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
@@ -480,9 +500,11 @@ public class Spedizioniere implements Job{
                         Connection connForGddoc = UtilityFunctions.getDBConnection();
                         PreparedStatement psForGddoc = connForGddoc.prepareStatement(queryGddoc)
                     ) {
-                        psForGddoc.setString(1, res.getString("id_oggetto_origine"));;
+                        psForGddoc.setString(1, res.getString("id_oggetto_origine"));
+                        log.debug("Query: " + psForGddoc);
                         ResultSet resOfGddoc = psForGddoc.executeQuery();
                         resOfGddoc.next();
+                        log.debug("gddoc applicazione in psForGddoc: " + resOfGddoc.getString("applicazione"));
                         String idDocumentoOrigine = null;
 
                         String queryApplicazione =  "SELECT prefix " + 
@@ -492,10 +514,15 @@ public class Spedizioniere implements Job{
                             Connection connForApplicazione = UtilityFunctions.getDBConnection();
                             PreparedStatement psForApplicazione = connForApplicazione.prepareStatement(queryApplicazione)
                         ) {
-                            psForApplicazione.setString(1, resOfGddoc.getString("applicazione"));;
+                            log.debug("gddoc applicazione in psForApplicazione: " + resOfGddoc.getString("applicazione"));
+                            psForApplicazione.setString(1, resOfGddoc.getString("applicazione"));
+                            log.debug("Caricamento prefix: " + psForApplicazione);
                             ResultSet resOfApplicazione = psForApplicazione.executeQuery();
                             resOfApplicazione.next();
+                            log.debug("Prefix caricato: " + resOfApplicazione.getString("prefix"));
+                            log.debug("id_documento_origine : " + resOfGddoc.getString("id_documento_origine"));
                             idDocumentoOrigine = resOfGddoc.getString("id_documento_origine").substring(resOfApplicazione.getString("prefix").length() -1);
+                            log.debug("Sotto stringa estratta: " + idDocumentoOrigine);
                         }catch(Exception ex){
                             log.debug("eccezione nel caricamento del prefix dell'applicazione: " + ex);
                         }
@@ -551,20 +578,20 @@ public class Spedizioniere implements Job{
                                 }
                             }catch(Exception ex){
                                 try {
-                                    setMessaggioErrore("Errore nel caricamento degli allegati", res.getLong("id"));
+                                    setMessaggioErrore("Errore nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine"), res.getLong("id"));
                                 } catch (SQLException e) {
                                     log.debug("Errore update messaggio_errore: " + e);
                                 }
-                                log.debug("eccezione nel caricamento dei sotto documenti: " + ex);
+                                log.debug("Eccezione nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine") + " : " + ex);
                             }
                         }
                     }catch(Exception ex){
                         try {
-                            setMessaggioErrore("Errore nel caricamento degli allegati", res.getLong("id"));
+                            setMessaggioErrore("Errore nel caricamento dei sottodocumenti", res.getLong("id"));
                         } catch (SQLException e) {
-                            log.debug("Errore update messaggio_errore: " + e);
+                            log.debug("Errore update messaggio_errore caricamento sottodocumenti: " + e);
                         }
-                        log.debug("eccezione nel caricamento del gddoc: " + ex);
+                        log.debug("Eccezione nel caricamento del gddoc (sottodocumenti): " + ex);
                     }
                 }
                 
@@ -597,17 +624,18 @@ public class Spedizioniere implements Job{
                     // errori della famiglia 400
                     log.debug("Eccezione nell'ottenimento del messageId dal percgw: " + ex);
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                                "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ? and numero_errori=? " +
-                                                "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
+                                                "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ?, numero_errori=? " +
+                                                "WHERE id_oggetto_origine=? AND tipo_oggetto_origine=?";
                     try (
                         Connection conn = UtilityFunctions.getDBConnection();
                         PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb);
                     ) {
                         ps.setString(1, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
-                        ps.setBoolean(2, false);
+                        ps.setInt(2, 0);
                         ps.setInt(3, numErrori++);
                         ps.setString(4, idOggetto);
                         ps.setString(5, tipoOggetto);
+                        log.debug("Query: " + ps);
                         ps.executeUpdate();
                     }
                     catch(Exception e){
@@ -628,7 +656,7 @@ public class Spedizioniere implements Job{
                         PreparedStatement ps = conn.prepareStatement(setStatoErroreInDb)
                     ) {
                         ps.setString(1, StatiSpedizione.ERRORE_PRESA_INCARICO.toString());
-                        ps.setBoolean(2, true);
+                        ps.setInt(2, -1);
                         ps.setInt(3, numErrori++);
                         ps.setString(4, idOggetto);
                         ps.setString(5, tipoOggetto);
@@ -1160,12 +1188,12 @@ public class Spedizioniere implements Job{
             Connection connMessaggioErrore = UtilityFunctions.getDBConnection();
             PreparedStatement psMessaggioErrore = connMessaggioErrore.prepareStatement(queryMessaggioErrore)
         ) {
-            psMessaggioErrore.setString(2, messaggio);
+            psMessaggioErrore.setString(1, messaggio);
             psMessaggioErrore.setLong(2, id);
             psMessaggioErrore.executeUpdate();
 
         } catch (SQLException | NamingException e) {
-            log.debug(messaggio + " :" + e);
+            log.debug("Errore nell'update del messaggio di errore: " + e);
         }
     }
     
