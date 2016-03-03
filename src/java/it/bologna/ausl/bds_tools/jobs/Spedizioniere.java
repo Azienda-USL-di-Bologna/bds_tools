@@ -1110,14 +1110,14 @@ public class Spedizioniere implements Job{
             log.debug("Dentro VerificaStepOn");
             String queryVerifica =  "SELECT id_oggetto_origine " +
                                     "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                    "WHERE id_oggetto_origine = ? AND (stato != ?::bds_tools.stati_spedizione AND stato != ?::bds_tools.stati_spedizione)";
+                                    "WHERE id_oggetto_origine = ? AND (stato = ?::bds_tools.stati_spedizione OR stato = ?::bds_tools.stati_spedizione)";
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(queryVerifica)
             ) {
                 ps.setString(1, idOggettoOrigine);
                 ps.setString(2, StatiSpedizione.SPEDITO.toString());
-                ps.setString(3, StatiSpedizione.ANNULLATO.toString());
+                ps.setString(3, StatiSpedizione.CONSEGNATO.toString());
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 if(!res.next()){

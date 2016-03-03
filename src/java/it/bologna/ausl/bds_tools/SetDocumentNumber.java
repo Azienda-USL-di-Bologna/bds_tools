@@ -173,7 +173,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                     res = res + "/" + String.valueOf(result.getInt(2));
                 }
                 catch (Exception ex) {
-                    log.error("errore nella lettura dell'anno del protocollo", ex);
+                    log.warn("errore nella lettura dell'anno del protocollo, forse non c'è");
                 }
                 
                 if (res == null || res.equals(""))
