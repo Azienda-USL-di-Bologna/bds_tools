@@ -949,7 +949,7 @@ public class Spedizioniere implements Job{
                                             prepared.setString(3, res.getString("id_oggetto_origine"));
                                             prepared.setString(4, res.getString("tipo_oggetto_origine"));
                                             prepared.setString(5, res.getString("descrizione_oggetto"));
-                                            prepared.setString(6, res.getString("id"));
+                                            prepared.setLong(6, res.getLong("id"));
                                             log.debug("Query idRicevuta(INSERT): " + prepared);
                                             prepared.executeUpdate();
                                         } catch (NamingException ex) {
