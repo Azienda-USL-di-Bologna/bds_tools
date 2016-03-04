@@ -133,7 +133,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                     
                     numero = numeroAndAnno;
                     // TODO:da sistemare
-                    if (numeroAndAnno.contains("/")) {
+                    if (numero != null && numeroAndAnno.contains("/")) {
                         numero = numeroAndAnno.split("/")[0];
                     }
                 }

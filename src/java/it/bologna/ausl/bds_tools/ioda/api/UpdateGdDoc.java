@@ -140,7 +140,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                         
                         numero = numeroAndAnno;
                         // TODO:da sistemare
-                        if (numeroAndAnno.contains("/")) {
+                        if (numero != null && numeroAndAnno.contains("/")) {
                             numero = numeroAndAnno.split("/")[0];
                         }
                         
