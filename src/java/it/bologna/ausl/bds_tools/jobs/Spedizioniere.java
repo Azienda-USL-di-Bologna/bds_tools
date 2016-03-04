@@ -494,6 +494,7 @@ public class Spedizioniere implements Job{
                 
                 
                 if (res.getInt("spedisci_gddoc") != 0) {
+                    log.debug("Dentro spedisci gddoc");
                     String prefix = null;
                     String queryApplicazione =  "SELECT prefix " + 
                                                 "FROM " + ApplicationParams.getAuthenticationTable() + " " +
@@ -528,6 +529,7 @@ public class Spedizioniere implements Job{
                         log.debug("gddoc applicazione in psForGddoc: " + resOfGddoc.getString("applicazione"));
                         
                         if(resOfGddoc.getString("tipo_gddoc").equals("r")){ // Se il gddoc è un record allora carico i suoi sottoDocumenti
+                            log.debug("Il gddoc è di tipo r");
                             String querySottoDocumenti =    "SELECT id_sottodocumento, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_firmato, uuid_mongo_originale, convertibile_pdf, mimetype_file_firmato, mimetype_file_originale, da_spedire_pecgw, spedisci_originale_pecgw " + 
                                                             "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
                                                             "WHERE id_gddoc = ?";
@@ -539,22 +541,26 @@ public class Spedizioniere implements Job{
                                 ResultSet resOfSottoDocumenti = psForSottoDocumenti.executeQuery();
 
                                 while (resOfSottoDocumenti.next()) {
+                                    log.debug("Sottodocumento: " + resOfSottoDocumenti.getString("id_sottodocumento"));
                                     if (resOfSottoDocumenti.getInt("da_spedire_pecgw") != 0) {
                                         InputStream is = null;
                                         String mimeType = null;
                                         Boolean spedisciOriginale = true;
                                         
                                         if (resOfSottoDocumenti.getString("uuid_mongo_firmato") != null) { // FIRMATO
+                                            log.debug("Sottodocumento firmato");
                                             is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_firmato"));
                                             mimeType = resOfSottoDocumenti.getString("mimetype_file_firmato");
                                         } else if(resOfSottoDocumenti.getInt("convertibile_pdf") != 0){
                                             if(resOfSottoDocumenti.getString("uuid_mongo_pdf") != null){
+                                                log.debug("Sottodocumento convertibile quindi pdf");
                                                 is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_pdf"));
                                                 mimeType = "application/pdf"; // Da rivedere**********!
                                             }else{
                                                 throw new SpedizioniereException("Il sotto documento è convertibile ma uuid_mongo_pdf non è presente");
                                             }
                                         }else{
+                                            log.debug("Sottodocumento originale else");
                                             is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
                                             mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
                                             spedisciOriginale = false;
@@ -562,17 +568,21 @@ public class Spedizioniere implements Job{
                                         
                                         if (resOfSottoDocumenti.getInt("spedisci_originale_pecgw") != 0) {
                                             if(spedisciOriginale){
+                                                log.debug("Sottodocumento originale");
                                                 is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
                                                 mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
                                             }
                                         }
-
+                                        
+                                        log.debug("Creazione tmpFile");
                                         File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
                                         tmpFile.deleteOnExit();
                                         OutputStream outputStream = new FileOutputStream(tmpFile);
                                         IOUtils.copy(is, outputStream);
                                         outputStream.close();
+                                        log.debug("Creazione attachment");
                                         SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento"), mimeType, tmpFile);
+                                        log.debug("Aggiunta attachment");
                                         attachments.add(att);
                                     } 
                                 }
