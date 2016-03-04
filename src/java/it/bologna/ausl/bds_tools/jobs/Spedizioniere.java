@@ -594,6 +594,8 @@ public class Spedizioniere implements Job{
                                 }
                                 log.debug("Eccezione nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine") + " : " + ex);
                             }
+                        }else{
+                            throw new SpedizioniereException("Eccezione: Il gddoc non è ancora un record");
                         }
                     }catch(Exception ex){
                         try {
