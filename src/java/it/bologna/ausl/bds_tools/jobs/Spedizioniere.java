@@ -12,6 +12,7 @@ import it.bologna.ausl.bdmclient.RemoteBdmClientImplementation;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
+import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.masterchefclient.UpdateBabelParams;
 import it.bologna.ausl.masterchefclient.WorkerData;
@@ -495,34 +496,18 @@ public class Spedizioniere implements Job{
                 
                 if (res.getInt("spedisci_gddoc") != 0) {
                     log.debug("Dentro spedisci gddoc");
-                    String prefix = null;
-                    String queryApplicazione =  "SELECT prefix " + 
-                                                "FROM " + ApplicationParams.getAuthenticationTable() + " " +
-                                                "WHERE id_applicazione = ?";
-                    try (
-                        Connection connForApplicazione = UtilityFunctions.getDBConnection();
-                        PreparedStatement psForApplicazione = connForApplicazione.prepareStatement(queryApplicazione)
-                    ) {
-                        psForApplicazione.setString(1, res.getString("id_applicazione"));
-                        log.debug("Caricamento prefix: " + psForApplicazione);
-                        ResultSet resOfApplicazione = psForApplicazione.executeQuery();
-                        resOfApplicazione.next();
-                        prefix = resOfApplicazione.getString("prefix");
-                        log.debug("Prefix caricato: " + resOfApplicazione.getString("prefix"));
-                    }catch(Exception ex){
-                        log.debug("eccezione nel caricamento del prefix dell'applicazione: ", ex);
-                    }
-                    
                     log.debug("Estrazione gddocs");
                     //Allegati dai sotto documenti
-                    String queryGddoc = "SELECT id_gddoc, id_documento_origine, tipo_gddoc, applicazione " +
-                                        "FROM " + ApplicationParams.getGdDocsTableName() + " " +
-                                        "WHERE id_oggetto_origine = ?";
+                    String queryGddoc = "SELECT d.id_gddoc, d.id_documento_origine, d.tipo_gddoc, d.applicazione " +
+                                        "FROM " + ApplicationParams.getGdDocsTableName() + " d JOIN " + 
+                                                  ApplicationParams.getAuthenticationTable() + " a ON d.applicazione = a.id_applicazione " +
+                                        "WHERE id_oggetto_origine = a.prefix || ? AND a.id_applicazione = ?";
                     try (
                         Connection connForGddoc = UtilityFunctions.getDBConnection();
                         PreparedStatement psForGddoc = connForGddoc.prepareStatement(queryGddoc)
                     ) {
-                        psForGddoc.setString(1, prefix + res.getString("id_oggetto_origine"));
+                        psForGddoc.setString(1, res.getString("id_oggetto_origine"));
+                        psForGddoc.setString(2, res.getString("id_applicazione"));
                         log.debug("Query: " + psForGddoc);
                         ResultSet resOfGddoc = psForGddoc.executeQuery();
                         resOfGddoc.next();
@@ -546,7 +531,7 @@ public class Spedizioniere implements Job{
                                         InputStream is = null;
                                         String mimeType = null;
                                         Boolean spedisciOriginale = true;
-                                        
+
                                         if (resOfSottoDocumenti.getString("uuid_mongo_firmato") != null) { // FIRMATO
                                             log.debug("Sottodocumento firmato");
                                             is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_firmato"));
@@ -565,7 +550,7 @@ public class Spedizioniere implements Job{
                                             mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
                                             spedisciOriginale = false;
                                         }
-                                        
+
                                         if (resOfSottoDocumenti.getInt("spedisci_originale_pecgw") != 0) {
                                             if(spedisciOriginale){
                                                 log.debug("Sottodocumento originale");
@@ -573,15 +558,19 @@ public class Spedizioniere implements Job{
                                                 mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
                                             }
                                         }
-                                        
+
                                         log.debug("Creazione tmpFile");
                                         File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
                                         tmpFile.deleteOnExit();
                                         try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
                                             IOUtils.copy(is, outputStream);
                                         }
+                                        log.debug("mimeType: " + mimeType);
+                                        log.debug("calcolo estensione...");
+                                        String ext = SupportedFile.getSupportedFile(ApplicationParams.getSupportedFileList(), mimeType).getExtension().toLowerCase();
+                                        log.debug("estensione: " + ext);
                                         log.debug("Creazione attachment");
-                                        SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento"), mimeType, tmpFile);
+                                        SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento") + "." + ext, mimeType, tmpFile);
                                         log.debug("Aggiunta attachment");
                                         attachments.add(att);
                                     } 
@@ -606,7 +595,7 @@ public class Spedizioniere implements Job{
                         log.debug("Eccezione nel caricamento del gddoc (sottodocumenti): ", ex);
                     }
                 }
-                
+
                 message.setAttachments(attachments);
 
                 // Utilizziamo un altro Try Catch per evitare di fare il rollback su tutta la funzione
