@@ -115,23 +115,23 @@ public class Spedizioniere implements Job{
             }
     }
     
-    public enum AvanzamentoProcesso {
-            DA_aVANZARE("da_avanzare"),
+    public enum StatiAvanzamentoProcesso {
+            DA_AVANZARE("da_avanzare"),
             AVANZATO("avanzato"),
             ERRORE_AVANZAMENTO("errore_avanzamento"),
             NON_AVANZARE("non_avanzare");
             
             private final String key;
 
-            AvanzamentoProcesso(String key) {
+            StatiAvanzamentoProcesso(String key) {
                 this.key = key;
                 //Executors.newFixedThreadPool(i);
             }
 
-            public static Spedizioniere.AvanzamentoProcesso fromString(String key) {
+            public static Spedizioniere.StatiAvanzamentoProcesso fromString(String key) {
                 return key == null
                         ? null
-                        : Spedizioniere.AvanzamentoProcesso.valueOf(key.toUpperCase());
+                        : Spedizioniere.StatiAvanzamentoProcesso.valueOf(key.toUpperCase());
             }
 
             public String getKey() {    
@@ -314,14 +314,14 @@ public class Spedizioniere implements Job{
                 catch (Exception ex) {
                     log.error(ex);
                 }
-//                try {
-//                    log.debug("=============Lancio GestioneErrore==============");
-//                    gestioneErrore();
-//                    log.debug("=============Fine GestioneErrore================");
-//                }
-//                catch (Exception ex) {
-//                    log.error(ex);
-//                }
+                try {
+                    log.debug("=============Lancio GestioneErrore==============");
+                    gestioneErrore();
+                    log.debug("=============Fine GestioneErrore================");
+                }
+                catch (Exception ex) {
+                    log.error(ex);
+                }
             }
   
         }
@@ -1101,16 +1101,16 @@ public class Spedizioniere implements Job{
         
         private void stepOn() throws SQLException, NamingException{
             log.debug("Dentro StepOn");
+            
             String query =  "SELECT id_oggetto_origine " +
-                            "FROM ( " + 
-                                "SELECT id_oggetto_origine " +
-                                "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                            ") AS a " +
+                            "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                            "WHERE  stato_avanzamento_processo = ?::bds_tools.type_avanzamento_processo " +
                             "GROUP BY id_oggetto_origine";
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(query)
             ) {
+                ps.setString(1, StatiAvanzamentoProcesso.DA_AVANZARE.toString());
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
                 while (res.next()) {
@@ -1121,48 +1121,59 @@ public class Spedizioniere implements Job{
         
         private void verificaStepOn(String idOggettoOrigine) throws SQLException, NamingException{
             log.debug("Dentro VerificaStepOn");
-            String queryVerifica =  "SELECT id_oggetto_origine " +
-                                    "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                    "WHERE id_oggetto_origine = ? AND (stato != ?::bds_tools.stati_spedizione AND stato != ?::bds_tools.stati_spedizione)";
+            
+            String queryVerifica = "SELECT DISTINCT(spg.process_id) " + 
+                                   "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " spg " +
+                                   "WHERE id_oggetto_origine = ? " + 
+                                   "AND stato_avanzamento_processo != ?::bds_tools.type_avanzamento_processo " +
+                                   "AND not exists(SELECT 1 " +
+                                                   "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                                   "WHERE id_oggetto_origine = spg.id_oggetto_origine "+
+                                                   "AND stato not in (?::bds_tools.stati_spedizione, ?::bds_tools.stati_spedizione, ?::bds_tools.stati_spedizione))";
+            
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(queryVerifica)
             ) {
                 ps.setString(1, idOggettoOrigine);
-                ps.setString(2, StatiSpedizione.SPEDITO.toString());
-                ps.setString(3, StatiSpedizione.ANNULLATO.toString());
+                ps.setString(2, StatiAvanzamentoProcesso.AVANZATO.toString());
+                ps.setString(3, StatiSpedizione.SPEDITO.toString());
+                ps.setString(4, StatiSpedizione.CONSEGNATO.toString());
+                ps.setString(5, StatiSpedizione.ANNULLATO.toString());
                 log.debug("Query: " + ps);
                 ResultSet res = ps.executeQuery();
-                if(!res.next()){
-                    log.debug("Tutte le mail del documento sono in stato spedito");
-                    estraiMail(idOggettoOrigine);
+                if(res.next()){
+                    log.debug("Stepon consentito per l'oggetto: " + idOggettoOrigine);
+                    String processId = res.getString(1);
+                    doStepOn(processId);
+                    //estraiMail(idOggettoOrigine);
                 }else{
-                    log.debug("Almeno una mail del documento non è in stato spedito");
+                    log.debug("Stepon non possibile o già effettuato per l'oggetto: " + idOggettoOrigine);
                 }
             }  
         }
         
-        private void estraiMail(String idOggettoOrigine){
-            log.debug("Dentro EstraMail");
-            String query =  "SELECT process_id " +
-                            "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                            "WHERE id_oggetto_origine = ?";
-            try (
-                Connection conn = UtilityFunctions.getDBConnection();
-                PreparedStatement ps = conn.prepareStatement(query)
-            ) {
-                ps.setString(1, idOggettoOrigine);
-                log.debug("Query: " + ps);
-                ResultSet res = ps.executeQuery();
-                while (res.next()) {
-                    doStepOn(res.getString("process_id"));
-                }
-            } catch (SQLException ex) {
-                log.debug("Errore caricamento mail relative a un documento: ", ex);
-            } catch (NamingException ex) {
-                log.debug("Errore caricamento mail relative a un documento: ", ex);
-            }
-        }
+//        private void estraiMail(String idOggettoOrigine){
+//            log.debug("Dentro EstraMail");
+//            String query =  "SELECT process_id " +
+//                            "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+//                            "WHERE id_oggetto_origine = ?";
+//            try (
+//                Connection conn = UtilityFunctions.getDBConnection();
+//                PreparedStatement ps = conn.prepareStatement(query)
+//            ) {
+//                ps.setString(1, idOggettoOrigine);
+//                log.debug("Query: " + ps);
+//                ResultSet res = ps.executeQuery();
+//                while (res.next()) {
+//                    doStepOn(res.getString("process_id"));
+//                }
+//            } catch (SQLException ex) {
+//                log.debug("Errore caricamento mail relative a un documento: ", ex);
+//            } catch (NamingException ex) {
+//                log.debug("Errore caricamento mail relative a un documento: ", ex);
+//            }
+//        }
         
         private void doStepOn(String processId){
             log.debug("Dentro do Step");
@@ -1181,20 +1192,16 @@ public class Spedizioniere implements Job{
                         Connection conn = UtilityFunctions.getDBConnection();
                         PreparedStatement ps = conn.prepareStatement(query)
                     ) {
-                        ps.setString(1, AvanzamentoProcesso.AVANZATO.toString());
+                        ps.setString(1, StatiAvanzamentoProcesso.AVANZATO.toString());
                         ps.setString(2, processId);
                         log.debug("Query: " + ps);
                         ps.executeUpdate();
-                    } catch (SQLException ex) {
-                        log.debug("Errore nel settare lo stato sul db ad avanzato: ", ex);
-                    } catch (NamingException ex) {
-                        log.debug("Errore nel settare lo stato sul db ad avanzato: ", ex);
+                    } catch (Exception ex) {
+                        log.error("Errore nel settare lo stato sul db ad avanzato: ", ex);
                     }
                 }
-            } catch (StorageException ex) {
-                log.debug("Errore nell'instanziare il bdmclient: ", ex);
-            } catch (BdmExeption ex) {
-                log.debug("Errore nell'instanziare il bdmclient: ", ex);
+            } catch (Exception ex) {
+                log.error("Errore nell'instanziare il bdmclient: ", ex);
             }
         }
     }
