@@ -476,9 +476,9 @@ public class Spedizioniere implements Job{
                         */
                         File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
                         tmpFile.deleteOnExit();
-                        OutputStream outputStream = new FileOutputStream(tmpFile);
-                        IOUtils.copy(is, outputStream);
-                        outputStream.close();
+                        try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
+                            IOUtils.copy(is, outputStream);
+                        }
                         log.debug("Nome allegato: " + attachment.getName());
                         log.debug("Mimetype allegato: " + attachment.getMimetype());
                         log.debug("Creazione dell'attachment...");
@@ -577,9 +577,9 @@ public class Spedizioniere implements Job{
                                         log.debug("Creazione tmpFile");
                                         File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
                                         tmpFile.deleteOnExit();
-                                        OutputStream outputStream = new FileOutputStream(tmpFile);
-                                        IOUtils.copy(is, outputStream);
-                                        outputStream.close();
+                                        try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
+                                            IOUtils.copy(is, outputStream);
+                                        }
                                         log.debug("Creazione attachment");
                                         SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento"), mimeType, tmpFile);
                                         log.debug("Aggiunta attachment");
