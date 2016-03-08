@@ -1019,11 +1019,13 @@ public class Spedizioniere implements Job{
                         }
                     } 
                 } else if (spStatus.getStatus() == SpedizioniereStatus.Status.ERROR) { // NEL CASO DI STATO DI ERRORE
+                    log.debug("Dentro ERROR");
                     String ricevutaFromDb = "SELECT id " +
                                             "FROM " + ApplicationParams.getRicevutePecTableName() + " " +
                                             "WHERE uuid=?";
                     
                     for (SpedizioniereRecepit spedizioniereRecepit : ricevuteMsg) { // PER OGNI RICEVUTA CONTROLLO SE è PRESENTE NEL DB
+                        log.debug("Dentro FOR dell' ERROR");
                         try (
                             Connection dbConnection = UtilityFunctions.getDBConnection();
                             PreparedStatement ps = dbConnection.prepareStatement(ricevutaFromDb)
@@ -1037,13 +1039,16 @@ public class Spedizioniere implements Job{
                                                     "VALUES (?::bds_tools.tipi_ricevuta, ?, ?, ?, ?, now())";
                             // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
                             if (idRicevuta == null) {
+                                log.debug("Dentro idRicevuta == null");
                                 try (
                                     Connection settaUuid = UtilityFunctions.getDBConnection();
                                     PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
                                 ) {
                                     if(spStatus.getStatus() == Status.ACCEPTED){
+                                        log.debug(" IF Status accepted");
                                         prepared.setString(1, TipiRicevuta.RICEVUTA_ACCETTAZIONE.toString());
                                     }else{
+                                        log.debug("else");
                                         prepared.setString(1, TipiRicevuta.RICEVUTA_CONSEGNA.toString());
                                     }
                                     prepared.setString(2, spedizioniereRecepit.getUuid());
@@ -1060,7 +1065,7 @@ public class Spedizioniere implements Job{
                             throw new SpedizioniereException("Errore nel reperimento delle ricevute", e);
                         }
                     }
-                    
+                    log.debug("Verra eseguito update");
                     String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                                     "SET stato=?::bds_tools.stati_spedizione, verifica_timestamp= now() " +
                                     "WHERE id_oggetto_origine=? and tipo_oggetto_origine=?";
