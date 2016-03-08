@@ -273,30 +273,45 @@
     </context-param>
     <context-param>
         <param-name>GdDocToPublishExtractionQuery</param-name>
-        <param-value> SELECT g.id_gddoc, id_utente_modifica, nome_gddoc,
-            id_documento_origine, categoria_origine, tipo_gddoc,
-            g.data_ultima_modifica, stato_gd_doc, g.in_uso_da, data_gddoc,
-            g.stato_mestieri, guid_gddoc, g.codice_registro as codice_registro_gd,
-            data_registrazione, numero_registrazione, id_utente_registrazione,
-            anno_registrazione, firmato, id_oggetto_origine, tipo_oggetto_origine,
-            forzato_da_utente, id_utente_forzatura, g.oggetto as oggetto_gddoc,
-            codice, r.desc_pubb_albo as descrizione_albo, mt.contenuto as contenuto_trasparenza,
-            mt.oggetto as oggetto_trasparenza, mt.spesa_prevista as spesa_prevista,
-            mt.estremi_documento as estremi_documento,
-            mt.id_tipo_provvedimento as tipo_provvedimento_trasparenza,
-            nome_struttura_firmatario as articolazione, giorni_pubblicazione,
-            prefix,
-            coalesce(sdOmissis.nome_sottodocumento,sd.nome_sottodocumento) as nome_sottodocumento, 
-            coalesce(sdOmissis.codice_sottodocumento,sd.codice_sottodocumento) as codice_sottodocumento,
-            pubblicato
-            FROM gd.gddocs g
+        <param-value> 
+            SELECT g.id_gddoc, 
+                id_utente_modifica, 
+                nome_gddoc,
+                id_documento_origine, 
+                categoria_origine, 
+                tipo_gddoc,
+                g.data_ultima_modifica, 
+                stato_gd_doc, 
+                g.in_uso_da, 
+                data_gddoc,
+                g.stato_mestieri, 
+                guid_gddoc, 
+                g.codice_registro as codice_registro_gd,
+                data_registrazione, 
+                numero_registrazione, 
+                id_utente_registrazione,
+                anno_registrazione, 
+                firmato, 
+                id_oggetto_origine, 
+                tipo_oggetto_origine,
+                forzato_da_utente, 
+                id_utente_forzatura, 
+                g.oggetto as oggetto_gddoc,
+                codice, 
+                r.desc_pubb_albo as descrizione_albo, 
+                nome_struttura_firmatario as articolazione, 
+                giorni_pubblicazione,
+                prefix,
+                coalesce(sdOmissis.nome_sottodocumento,sd.nome_sottodocumento) as nome_sottodocumento, 
+                coalesce(sdOmissis.codice_sottodocumento,sd.codice_sottodocumento) as codice_sottodocumento,
+                pubblicato
+        FROM gd.gddocs g
             left join gd.sotto_documenti sdOmissis on sdOmissis.nome_sottodocumento='StampaUnicaOmissis' and g.id_gddoc=sdOmissis.id_gddoc and sdOmissis.tipo_sottodocumento = 'stampa_unica'
             left join gd.sotto_documenti sd on sd.nome_sottodocumento='StampaUnica' and g.id_gddoc=sd.id_gddoc and sd.tipo_sottodocumento = 'stampa_unica',
             bds_tools.registri r,
-            bds_tools.metadati_trasparenza mt,
             bds_tools.balbo_applicazioni ba,
             bds_tools.authorized_applications a
-            where g.codice_registro = r.codice_registro
+        WHERE g.codice_registro = r.codice_registro
             and r.pubblicazione_automatica = -1
             and g.numero_registrazione is not null
             and g.numero_registrazione != ''
@@ -306,7 +321,6 @@
             and a.id_applicazione = g.applicazione
             and ba.id_applicazione_balbo = a.id_applicazione
             and ba.attivo != 0
-            and mt.guid_oggetto = REPLACE(id_oggetto_origine, prefix, '')
             and g.id_oggetto_origine = id_oggetto_origine
         </param-value>
     </context-param>

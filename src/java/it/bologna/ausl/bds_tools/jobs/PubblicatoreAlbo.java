@@ -87,11 +87,11 @@ public class PubblicatoreAlbo implements Job {
                 String oggetto = res.getString("oggetto_gddoc");
                 String codice = res.getString("codice");
                 String descrizioneRegistro = res.getString("descrizione_albo");
-                String contenutoTrasparenza = res.getString("contenuto_trasparenza");
-                String oggettoTrasparenza = res.getString("oggetto_trasparenza");
-                String spesaPrevista = res.getString("spesa_prevista");
-                String estremiDocumento = res.getString("estremi_documento");
-                String tipoProvvedimento = res.getString("tipo_provvedimento_trasparenza");
+//                String contenutoTrasparenza = res.getString("contenuto_trasparenza");
+//                String oggettoTrasparenza = res.getString("oggetto_trasparenza");
+//                String spesaPrevista = res.getString("spesa_prevista");
+//                String estremiDocumento = res.getString("estremi_documento");
+//                String tipoProvvedimento = res.getString("tipo_provvedimento_trasparenza");
                 String articolazione = res.getString("articolazione");
                 Integer giorniPubblicazione = res.getInt("giorni_pubblicazione");
                 String nomeSottoDocumento = res.getString("nome_sottodocumento");
@@ -107,12 +107,15 @@ public class PubblicatoreAlbo implements Job {
                 PubblicazioneTrasparenza datiTrasparenza = null;
 
                 log.debug("controllo tipo provvedimento");
-                if ((tipoProvvedimento != null) && (!tipoProvvedimento.equalsIgnoreCase(TIPO_PROVVEDIMENTO_NON_RILEVANTE))) {
-                    datiTrasparenza = new PubblicazioneTrasparenza(oggettoTrasparenza, spesaPrevista, estremiDocumento);
-                } else {
-                    log.debug("setto tipoProvvedimento a vuoto");
-                    tipoProvvedimento = "";
-                }
+//                if ((tipoProvvedimento != null) && (!tipoProvvedimento.equalsIgnoreCase(TIPO_PROVVEDIMENTO_NON_RILEVANTE))) {
+//                    datiTrasparenza = new PubblicazioneTrasparenza(oggettoTrasparenza, spesaPrevista, estremiDocumento);
+//                } else {
+//                    log.debug("setto tipoProvvedimento a vuoto");
+//                    tipoProvvedimento = "";
+//                }
+
+                log.debug("setto tipoProvvedimento a vuoto");
+                String tipoProvvedimento = "";
 
                 log.debug("setto Pubblicazione...");
                 Pubblicazione pubblicazione = new Pubblicazione(annoRegistrazione,
