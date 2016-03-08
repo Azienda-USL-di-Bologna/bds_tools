@@ -95,7 +95,7 @@ public class ApplicationParams {
         readAuthenticationTable(context);
 
         try {
-            initilizeSupporetdFiles(context, fileSupportatiTable);
+            initilizeSupporetdFiles(fileSupportatiTable);
 
             ConfigParams.initConfigParams();
             serverId = ConfigParams.getParam("serverIdentifier");
@@ -128,7 +128,7 @@ public class ApplicationParams {
             throw new ServletException(message);
         }
     }
-    private static void initilizeSupporetdFiles(ServletContext context, String fileSupportatiTable) throws SQLException, NamingException {
+    private static void initilizeSupporetdFiles(String fileSupportatiTable) throws SQLException, NamingException {
         
         
         String sqlText = "SELECT * FROM " +  fileSupportatiTable;
