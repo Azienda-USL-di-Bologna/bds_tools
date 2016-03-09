@@ -389,8 +389,8 @@ public class Spedizioniere implements Job{
                 if (testMode) {
                     log.debug("Test mode attiva!");
                     // Contatti di test
-                    String queryContattiDiTest =    "SELECT indirizzo " +
-                                                    "FROM " + ApplicationParams.getIndirizziMailTestTableName() + ";";
+                    String queryContattiDiTest = "SELECT indirizzo " +
+                                                 "FROM " + ApplicationParams.getIndirizziMailTestTableName() + ";";
                     try (
                         Connection connContattiDiTest = UtilityFunctions.getDBConnection();
                         PreparedStatement psContattiDiTest = connContattiDiTest.prepareStatement(queryContattiDiTest);
@@ -414,11 +414,12 @@ public class Spedizioniere implements Job{
                         }
                         log.debug("Fuori dal While Contatti");
                         if (!destinatarioPresente) {
-                            destinatario = "babel.care@ausl.bologna.it";
+                            destinatario = ApplicationParams.getSystemPecMail();
+//                            destinatario = "babel.care@ausl.bologna.it";
                             log.debug("Destinatario non presente, gli metto: " + destinatario);
                         }
                         if (!mittentePresente) {
-                            mittente = "middleware.pec@pec.ausl.bologna.it";
+                            mittente = ApplicationParams.getSystemPecMail();
                             log.debug("Mittente non presente, gli metto: " + mittente);
                         }
                         

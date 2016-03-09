@@ -61,6 +61,7 @@ public class ApplicationParams {
     private static String fileSupportatiTable;
     private static String schedulatoreConf;
     private static String bdmRestBaseUri;
+    private static String systemPecMail;
 
     public static void initApplicationParams(ServletContext context) throws SQLException, NamingException, ServletException {
 
@@ -106,14 +107,11 @@ public class ApplicationParams {
 
             // balbo service URI in parametri pubblici
             balboServiceURI = ConfigParams.getParam("balboServiceURI");
-            // numero massimo di threads dello spedizioniere
-            
-            
+
             getIndeUrlServiceUri = ConfigParams.getParam("getIndeUrlServiceUri");
-            
             schedulatoreConf= ConfigParams.getParam("schedulatoreConfJson");
-                   
             bdmRestBaseUri = ConfigParams.getParam("BdmRestBaseUri");
+            systemPecMail = ConfigParams.getParam("SystemPecMail");
         }
         catch (Exception ex) {
            log.error("errore nell'inizializzazione: ", ex);
@@ -289,6 +287,14 @@ public class ApplicationParams {
 
     public static void setBdmRestBaseUri(String bdmRestBaseUri) {
         ApplicationParams.bdmRestBaseUri = bdmRestBaseUri;
+    }
+
+    public static String getSystemPecMail() {
+        return systemPecMail;
+    }
+
+    public static void setSystemPecMail(String systemPecMail) {
+        ApplicationParams.systemPecMail = systemPecMail;
     }
 
     public static String getSpedizioniereApplicazioni() {
