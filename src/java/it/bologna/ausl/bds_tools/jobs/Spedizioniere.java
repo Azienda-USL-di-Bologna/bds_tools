@@ -1240,7 +1240,7 @@ public class Spedizioniere implements Job{
                 ResultSet r = ps.executeQuery();
             if (r.next()) {
                 log.debug("attivo == " + r.getInt("attivo"));
-                return r.getInt("attivo") == 1 ? true : false ;
+                return r.getInt("attivo") == 0 ? false : true ;
             }
         } catch (SQLException | NamingException ex) {
             log.debug("ECCEZIONE: ", ex);
