@@ -10,6 +10,7 @@ import it.bologna.ausl.bdmclient.BdmClientImplementation;
 import it.bologna.ausl.bdmclient.BdmClientInterface;
 import it.bologna.ausl.bdmclient.RemoteBdmClientImplementation;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
+import it.bologna.ausl.bds_tools.exceptions.DocumentNotReadyException;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
@@ -382,8 +383,8 @@ public class Spedizioniere implements Job{
                 log.debug("MaxThread: " + maxThread);
                 log.debug("MaxThread: " + ApplicationParams.getMongoRepositoryUri());
                 
-                String mittente = null;
-                String destinatario = null;
+                String mittente = mail.getFrom();
+                String destinatario = mail.getTo();
                 
                 // TEST MODE
                 if (testMode) {
@@ -399,17 +400,17 @@ public class Spedizioniere implements Job{
                         log.debug("Query: " + psContattiDiTest);
                         Boolean mittentePresente = false;
                         Boolean destinatarioPresente = false;
-                        log.debug("Mail Originale : " + mail.getTo());
+                        log.debug("Mail Originale : " + destinatario);
                         while (resContattiDiTest.next()) {
-                            if (resContattiDiTest.getString("indirizzo").equals(mail.getTo())) {
+                            if (resContattiDiTest.getString("indirizzo").equals(destinatario)) {
                                 log.debug("Mail Originale uguale a quella di test (Destinatario)");
                                 destinatarioPresente = true;
-                                destinatario = mail.getTo();
+//                                destinatario = mail.getTo();
                             }
-                            if (resContattiDiTest.getString("indirizzo").equals(mail.getFrom())) {
+                            if (resContattiDiTest.getString("indirizzo").equals(mittente)) {
                                 log.debug("Mail Originale uguale a quella di test (Mittente)");
                                 mittentePresente = true;
-                                mittente = mail.getFrom();
+//                                mittente = mail.getFrom();
                             }
                         }
                         log.debug("Fuori dal While Contatti");
@@ -548,7 +549,8 @@ public class Spedizioniere implements Job{
                                         attachments.add(att);
                                     } 
                                 }
-                            }catch(Exception ex){
+                            }
+                            catch(Exception ex) {
                                 try {
                                     setMessaggioErrore("Errore nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine"), res.getLong("id"));
                                 } catch (SQLException e) {
@@ -556,16 +558,24 @@ public class Spedizioniere implements Job{
                                 }
                                 log.debug("Eccezione nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine") + " : " + ex);
                             }
-                        }else{
-                            throw new SpedizioniereException("Eccezione: Il gddoc non è ancora un record");
                         }
-                    }catch(Exception ex){
+                        else {
+                            throw new DocumentNotReadyException("Il gddoc non è ancora un record");
+                        }
+                    }
+                    catch(DocumentNotReadyException ex) {
+                        log.info("il documento non è stato preso in carico perché non è ancora un record", ex);
+                        return;
+                    }
+                    catch(Exception ex){
+                        log.debug("Eccezione nel caricamento del gddoc (sottodocumenti): ", ex);
                         try {
                             setMessaggioErrore("Errore nel caricamento dei sottodocumenti", res.getLong("id"));
-                        } catch (SQLException e) {
+                        }
+                        catch (SQLException e) {
                             log.debug("Errore update messaggio_errore caricamento sottodocumenti: ", e);
                         }
-                        log.debug("Eccezione nel caricamento del gddoc (sottodocumenti): ", ex);
+                        throw ex;
                     }
                 }
 
