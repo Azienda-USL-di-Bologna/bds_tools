@@ -205,12 +205,13 @@ public class IodaFascicolazioniUtilities {
                 "AND g.tipo_oggetto_origine = ? " +
                 "AND g.id_gddoc = fg.id_gddoc " +
                 "AND f.id_fascicolo = fg.id_fascicolo " +
-                "AND fg.id_fascicolo = ? ";
+                "AND fg.data_eliminazione IS NULL";
+//                "AND fg.id_fascicolo = ? ";
         
         ps = dbConn.prepareStatement(sqlText);
         ps.setString(1, sd.getIdOggettoOrigine());
         ps.setString(2, sd.getTipoOggettoOrigine());
-        ps.setString(3, idFascicolo);
+//        ps.setString(3, idFascicolo);
         log.debug("eseguo la query: " + ps.toString() + " ...");
         ResultSet res = ps.executeQuery();
         
