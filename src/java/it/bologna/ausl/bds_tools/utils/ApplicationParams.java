@@ -45,6 +45,9 @@ public class ApplicationParams {
     private static String updateNumberFunctionNameTemplate;
     private static String aggiornamentiParerTableName;
     private static String parametriPubbliciTableName;
+//    private static String pubblicazioniAlboTableName;
+//    private static String pubblicazioniAlboQueryInsertPubblicazione;
+//    private static String pubblicazioniAlboQueryUpdatePubblicazione;
 
     private static boolean schedulatoreActive = false;
 
@@ -90,7 +93,10 @@ public class ApplicationParams {
         fileSupportatiTable = context.getInitParameter("FileSupportatiTableName");
         parametriPubbliciTableName = context.getInitParameter("ParametersTableName");
         serviziTableName = context.getInitParameter("ServiziTableName");
-
+//        pubblicazioniAlboTableName = context.getInitParameter("PubblicazioniAlboTableName");
+//        pubblicazioniAlboQueryInsertPubblicazione = context.getInitParameter("PubblicazioniAlboQueryInsertPubblicazione");
+//        pubblicazioniAlboQueryUpdatePubblicazione = context.getInitParameter("PubblicazioniAlboQueryUpdatePubblicazione");
+        
         schedulatoreActive = Boolean.parseBoolean(context.getInitParameter("schedulatore.active"));
 
         readAuthenticationTable(context);
@@ -244,6 +250,18 @@ public class ApplicationParams {
     public static String getAggiornamentiParerTableName() {
         return aggiornamentiParerTableName;
     }
+
+//    public static String getPubblicazioniAlboTableName() {
+//        return pubblicazioniAlboTableName;
+//    }
+//
+//    public static String getPubblicazioniAlboQueryInsertPubblicazione() {
+//        return pubblicazioniAlboQueryInsertPubblicazione;
+//    }
+//
+//    public static String getPubblicazioniAlboQueryUpdatePubblicazione() {
+//        return pubblicazioniAlboQueryUpdatePubblicazione;
+//    }
 
     public static boolean isSchedulatoreActive() {
         return schedulatoreActive;

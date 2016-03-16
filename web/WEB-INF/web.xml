@@ -304,7 +304,8 @@
                 prefix,
                 coalesce(sdOmissis.nome_sottodocumento,sd.nome_sottodocumento) as nome_sottodocumento, 
                 coalesce(sdOmissis.codice_sottodocumento,sd.codice_sottodocumento) as codice_sottodocumento,
-                pubblicato
+                pubblicato,
+                a.id_applicazione as id_applicazione
         FROM gd.gddocs g
             left join gd.sotto_documenti sdOmissis on sdOmissis.nome_sottodocumento='StampaUnicaOmissis' and g.id_gddoc=sdOmissis.id_gddoc and sdOmissis.tipo_sottodocumento = 'stampa_unica'
             left join gd.sotto_documenti sd on sd.nome_sottodocumento='StampaUnica' and g.id_gddoc=sd.id_gddoc and sd.tipo_sottodocumento = 'stampa_unica',
@@ -332,7 +333,31 @@
             WHERE id_gddoc = ?
         </param-value>
     </context-param>
-    
+
+ 
+<!-- NOT_USED
+    <context-param>
+        <param-name>PubblicazioniAlboTableName</param-name>
+        <param-value>bds_tools.pubblicazioni_albo</param-value>
+    </context-param>
+    <context-param>
+        <param-name>PubblicazioniAlboQueryUpdatePubblicazione</param-name>
+        <param-value>
+            UPDATE bds_tools.pubblicazioni_albo
+            SET data_pubblicazione = ?
+            WHERE id_pubblicazione = ?
+        </param-value>
+    </context-param>
+    <context-param>
+        <param-name>PubblicazioniAlboQueryInsertPubblicazione</param-name>
+        <param-value>
+            INSERT INTO bds_tools.pubblicazioni_albo(
+            id_pubblicazione, applicazione, data_inizio, data_fine, 
+            uuid_relata, guid_oggetto, sistema, data_pubblicazione)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        </param-value>
+    </context-param>
+-->
 <!-- da rimuovere -->
     <context-param>
         <param-name>mongogdml</param-name>

@@ -15,10 +15,15 @@ import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Date;
+import java.util.Optional;
+import java.util.logging.Level;
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.quartz.Job;
@@ -43,17 +48,22 @@ public class PubblicatoreAlbo implements Job {
         log.debug("Pubblicatore Albo Started");
 
         Connection dbConn = null;
-
+        PreparedStatement ps = null;
         try {
             dbConn = UtilityFunctions.getDBConnection();
             log.debug("connesisone db ottenuta");
+            
+            dbConn.setAutoCommit(false);
+            log.debug("inizio transazione, autoCommit settato a: " + dbConn.getAutoCommit());
 
             String query = ApplicationParams.getGdDocToPublishExtractionQuery();
             log.debug("query caricata");
 
-            PreparedStatement ps = dbConn.prepareStatement(query);
-            log.debug("preparedStatement settata");
+            log.debug("preparedStatement per select...");
+            ps = dbConn.prepareStatement(query);
+            log.debug("preparedStatement per select settata");
 
+            log.debug("sto per eseguire select. Query: " + ps.toString());
             ResultSet res = ps.executeQuery();
             log.debug("query eseguita");
 
@@ -96,7 +106,11 @@ public class PubblicatoreAlbo implements Job {
                 Integer giorniPubblicazione = res.getInt("giorni_pubblicazione");
                 String nomeSottoDocumento = res.getString("nome_sottodocumento");
                 String codiceSottoDocumento = res.getString("codice_sottodocumento");
+                String idApplicazione = res.getString("id_applicazione");
 
+                ps.close();
+                log.debug("prepared statement per select chiuso");
+                
                 LocalDateTime dataAlLocalDate = dataOdierna.plusDays(giorniPubblicazione);
                 ZonedDateTime timeZoneAl = dataAlLocalDate.atZone(ZoneId.systemDefault());
                 Date dataAl = Date.from(timeZoneAl.toInstant());
@@ -142,26 +156,74 @@ public class PubblicatoreAlbo implements Job {
                 log.debug("allegato inserito");
 
                 log.debug("sto per pubblicare...");
-                balboClient.pubblica(pubblicazione);
-                log.debug("pubblicato");
+                pubblicazione = balboClient.pubblica(pubblicazione);
+                log.debug("pubblicato: " + pubblicazione.toString());
 
-                log.debug("preparo query di update...");
+                log.debug("preparo query di updateGdDoc...");
                 String queryUpdatePubblicato = ApplicationParams.getGdDocUpdatePubblicato();
                 // queryUpdatePubblicato = queryUpdatePubblicato.replace("?", "'" + idGdDoc + "'");
-                log.debug("preparo statement...");
+                log.debug("preparedStatement per updateGdDoc...");
                 ps = dbConn.prepareStatement(queryUpdatePubblicato);
-                log.debug("statement eseguito");
+                log.debug("preparedStatement per updateGdDoc settato");
 
                 ps.setString(1, idGdDoc);
-                log.debug("sto per eseguire update...");
+                log.debug("sto per eseguire update. Query: " + ps.toString());
                 ps.executeUpdate();
                 log.debug("eseguito update");
+
+                ps.close();
+                log.debug("prepared statement per updateGdDoc chiuso");
+
+
+//                log.debug("preparo query di insert PubblicazioneAlbo...");
+//                String queryInsertPubblicazioneAlbo = ApplicationParams.getPubblicazioniAlboQueryInsertPubblicazione();
+//                log.debug("preparedStatement per insert PubblicazioneAlbo...");
+//                ps = dbConn.prepareStatement(queryInsertPubblicazioneAlbo);
+//                log.debug("preparedStatement per insert PubblicazioneAlbo settato");
+//
+//                log.debug("recupero relata...");
+//                AllegatoPubblicazione relata = pubblicazione.getAllegatiPubblicazione().stream().filter(a -> a.isRelata()).findFirst().get();
+//                log.debug("relata recuperata: " + relata.toString());
+//                
+//                ps.setString(1, String.valueOf(pubblicazione.getId()));
+//                ps.setString(2, idApplicazione);
+//                ps.setTimestamp(3, new Timestamp(pubblicazione.getDatiAlbo().getPubblicazioneDal().getTime()));
+//                ps.setTimestamp(4, new Timestamp(pubblicazione.getDatiAlbo().getPubblicazioneAl().getTime()));
+//                ps.setString(5, relata.getUuid());
+//                ps.setString(6, guidGddoc);
+//                ps.setInt(7, -1);
+//                ps.setTimestamp(8, new Timestamp(pubblicazione.getDataPubblicazione().getTime()));
+//                log.debug("sto per eseguire insert PubblicazioneAlbo. Query: " + ps.toString());
+//                ps.executeUpdate();
+//                log.debug("eseguito insert PubblicazioneAlbo");
+//                ps.close();
+//                log.debug("prepared statement per insert PubblicazioneAlbo chiuso");
+             
+                dbConn.commit();
             }
 
-        } catch (Throwable t) {
+        }
+        catch (Throwable t) {
             log.fatal("Errore nel pubblicatore albo", t);
+            try {
+                if (dbConn != null) {
+                    log.info("rollback...");
+                    dbConn.rollback();
+                }
+            }
+            catch (Exception ex) {
+                log.error("errore nel rollback", ex);
+            }
             throw new JobExecutionException(t);
-        } finally {
+        }
+        finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (Exception ex) {
+                    log.error(ex);
+                }
+            }
             if (dbConn != null) {
                 try {
                     dbConn.close();
