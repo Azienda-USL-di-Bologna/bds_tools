@@ -45,7 +45,7 @@ public class ApplicationParams {
     private static String updateNumberFunctionNameTemplate;
     private static String aggiornamentiParerTableName;
     private static String parametriPubbliciTableName;
-//    private static String pubblicazioniAlboTableName;
+    private static String pubblicazioniAlboTableName;
 //    private static String pubblicazioniAlboQueryInsertPubblicazione;
 //    private static String pubblicazioniAlboQueryUpdatePubblicazione;
 
@@ -93,7 +93,7 @@ public class ApplicationParams {
         fileSupportatiTable = context.getInitParameter("FileSupportatiTableName");
         parametriPubbliciTableName = context.getInitParameter("ParametersTableName");
         serviziTableName = context.getInitParameter("ServiziTableName");
-//        pubblicazioniAlboTableName = context.getInitParameter("PubblicazioniAlboTableName");
+        pubblicazioniAlboTableName = context.getInitParameter("PubblicazioniAlboTableName");
 //        pubblicazioniAlboQueryInsertPubblicazione = context.getInitParameter("PubblicazioniAlboQueryInsertPubblicazione");
 //        pubblicazioniAlboQueryUpdatePubblicazione = context.getInitParameter("PubblicazioniAlboQueryUpdatePubblicazione");
         
@@ -251,9 +251,9 @@ public class ApplicationParams {
         return aggiornamentiParerTableName;
     }
 
-//    public static String getPubblicazioniAlboTableName() {
-//        return pubblicazioniAlboTableName;
-//    }
+    public static String getPubblicazioniAlboTableName() {
+        return pubblicazioniAlboTableName;
+    }
 //
 //    public static String getPubblicazioniAlboQueryInsertPubblicazione() {
 //        return pubblicazioniAlboQueryInsertPubblicazione;

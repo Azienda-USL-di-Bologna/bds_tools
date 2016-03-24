@@ -88,6 +88,10 @@
         <servlet-name>GetFascicoliSpeciali</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicoliSpeciali</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>GetGdDoc</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetGdDoc</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Init</servlet-name>
         <url-pattern>/Init</url-pattern>
@@ -223,6 +227,10 @@
         <param-value>procton.titoli</param-value>
     </context-param>
     <context-param>
+        <param-name>PubblicazioniAlboTableName</param-name>
+        <param-value>gd.pubblicazioni_albo</param-value>
+    </context-param>
+    <context-param>
         <param-name>SpedizioniPecGlobaleTableName</param-name>
         <param-value>bds_tools.spedizioni_pec_globale</param-value>
     </context-param>
@@ -254,7 +262,6 @@
         <param-name>DefaultSequenceName</param-name>
         <param-value>gddocs</param-value>
     </context-param>
-
     <context-param>
         <param-name>appid</param-name>
         <param-value>bds_tools</param-value>
@@ -262,7 +269,7 @@
     <context-param>
         <param-name>apptoken</param-name>
         <param-value>bds_tools</param-value>
-    </context-param> 
+    </context-param>
     <context-param>
         <param-name>ResourceLockedMaxRetryTimes</param-name>
         <param-value>5</param-value>
@@ -333,13 +340,7 @@
             WHERE id_gddoc = ?
         </param-value>
     </context-param>
-
- 
-<!-- NOT_USED
-    <context-param>
-        <param-name>PubblicazioniAlboTableName</param-name>
-        <param-value>bds_tools.pubblicazioni_albo</param-value>
-    </context-param>
+    <!-- NOT_USED
     <context-param>
         <param-name>PubblicazioniAlboQueryUpdatePubblicazione</param-name>
         <param-value>
@@ -358,7 +359,7 @@
         </param-value>
     </context-param>
 -->
-<!-- da rimuovere -->
+    <!-- da rimuovere -->
     <context-param>
         <param-name>mongogdml</param-name>
         <param-value>mongodb://argo:siamofreschi@procton3,procton4/doc?safe=true&amp;replicaSet=rs0</param-value>
@@ -439,8 +440,7 @@
         <param-name>getindeidurlprototipo</param-name>
         <param-value>http://localhost:8080/Indeutilities/GetIndeId</param-value>
     </context-param>
-<!-- fine da rimuovere -->
-
+    <!-- fine da rimuovere -->
     <servlet-mapping>
         <servlet-name>DeleteGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/delete</url-pattern>
@@ -468,6 +468,10 @@
     <servlet-mapping>
         <servlet-name>GetFascicoliSpeciali</servlet-name>
         <url-pattern>/ioda/api/fascicolo/getFascicoliSpeciali</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GetGdDoc</servlet-name>
+        <url-pattern>/GetGdDoc</url-pattern>
     </servlet-mapping>
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
