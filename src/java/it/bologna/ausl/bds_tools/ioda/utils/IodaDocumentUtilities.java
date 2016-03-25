@@ -12,7 +12,7 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Pubblicazione;
+import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento.TipoFirma;
@@ -162,7 +162,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
-    public void insertPubblicazione(Connection dbConn, Pubblicazione pubblicazione) throws SQLException {
+    public void insertPubblicazione(Connection dbConn, PubblicazioneIoda pubblicazione) throws SQLException {
         String sqlText = 
                 "INSERT INTO " + ApplicationParams.getPubblicazioniAlboTableName() + "(" +
                 "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc) " +
@@ -349,7 +349,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         return fascicolazioniUtilities.getFascicolazioni(dbConn);
     }
     
-    private static List<Pubblicazione> caricaPubblicazioni(Connection dbConn, String idGdDoc) throws SQLException {
+    private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc) throws SQLException {
         String sqlText = 
                 "SELECT  numero_pubblicazione integer,\n" +
                         "anno_pubblicazione integer,\n" +
@@ -358,14 +358,14 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
                         "WHERE id_gddoc = ?";
 
-        List<Pubblicazione> pubblicazioni = new ArrayList<>();
+        List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             ps.setString(1, idGdDoc);
 
             log.debug("eseguo la query: " + ps.toString() + "...");
             ResultSet res = ps.executeQuery();
             while (res.next()) {
-                Pubblicazione p = new Pubblicazione();
+                PubblicazioneIoda p = new PubblicazioneIoda();
                 p.setAnnoPubblicazione(res.getInt("anno_pubblicazione"));
                 p.setDataAl(new DateTime(res.getDate("data_al").getTime()));
                 p.setDataDal(new DateTime(res.getDate("data_dal").getTime()));
@@ -684,9 +684,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
         
         // inserimento Pubblicazioni
-        List<Pubblicazione> pubblicazioni = gdDoc.getPubblicazioni();
+        List<PubblicazioneIoda> pubblicazioni = gdDoc.getPubblicazioni();
         if (pubblicazioni != null && !pubblicazioni.isEmpty()) {
-            for (Pubblicazione pubblicazione : pubblicazioni) {
+            for (PubblicazioneIoda pubblicazione : pubblicazioni) {
                 if (pubblicazione.getTipoOperazione() == Document.DocumentOperationType.INSERT)
                     insertPubblicazione(dbConn, pubblicazione);
                 else if (pubblicazione.getTipoOperazione() == Document.DocumentOperationType.UPDATE)
@@ -1091,5 +1091,100 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         return SetDocumentNumber.setNumber(dbConn, context, guid, r.getSequenzaAssociata());
     }
     
-    
+     public static ArrayList<GdDoc> getGdDocsDaPubblicare(Connection dbConn)
+    {          
+        ArrayList<GdDoc> listaGddocs = new ArrayList<>();
+        
+        String sqlText = "SELECT  g.id_gddoc, " +
+                        "g.applicazione, " +
+                        "g.codice_registro, " +
+                        "g.data_gddoc, " +
+                        "g.data_registrazione, " +
+                        "g.id_oggetto_origine, " +
+                        "g.nome_struttura_firmatario, " +
+                        "g.numero_registrazione, " +
+                        "g.oggetto, " +
+                        "g.tipo_oggetto_origine, " +
+                        "g.stato_gd_doc, " + 
+                        "json_agg(row_to_json(p.*)) AS pubblicazioni "+
+                        " FROM " + ApplicationParams.getGdDocsTableName() + " g " +
+                        " JOIN " + ApplicationParams.getPubblicazioniAlboTableName() + " p on g.id_gddoc = p.id_gddoc  " +
+                        " WHERE p.numero_pubblicazione IS NULL " +
+                        " AND p.anno_pubblicazione IS NULL " +
+                        " GROUP BY g.id_gddoc, g.applicazione, g.codice, g.codice_registro, g.data_gddoc, g.data_registrazione, g.data_ultima_modifica," +
+                        " g.id_oggetto_origine, g.nome_gddoc, g.nome_struttura_firmatario, g.numero_registrazione, g.oggetto, g.tipo_gddoc, g.tipo_oggetto_origine," +
+                        " g.stato_gd_doc" +
+                        " ORDER BY g.id_gddoc ";      
+        
+        PreparedStatement ps = null;
+                
+        try{
+            ps = dbConn.prepareStatement(sqlText);
+            String query = ps.toString();
+            
+            ResultSet result = ps.executeQuery();
+            
+            log.debug("eseguo la query: " + query + " ...");
+            
+            //Inizio a ciclare sugli elementi trovati....
+            while(result.next()){
+                
+                GdDoc gdDocToCreate = new GdDoc();
+                gdDocToCreate.setId(result.getString("id_gddoc"));
+                gdDocToCreate.setApplicazione(result.getString("applicazione"));
+                gdDocToCreate.setCodiceRegistro(result.getString("codice_registro"));
+                gdDocToCreate.setData(new DateTime(result.getTimestamp("data_gddoc").getTime()));
+                gdDocToCreate.setDataRegistrazione(new DateTime(result.getTimestamp("data_registrazione").getTime()));
+                gdDocToCreate.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                gdDocToCreate.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
+                gdDocToCreate.setNumeroRegistrazione(result.getString("numero_registrazione"));
+                gdDocToCreate.setOggetto(result.getString("oggetto"));
+               // gdDocToCreate.setRecord(result.getString("tipo_gddoc") == null || result.getString("tipo_gddoc").equalsIgnoreCase("r"));
+                gdDocToCreate.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
+                gdDocToCreate.setVisibile(result.getInt("stato_gd_doc") != 0); 
+                
+                //Questo campo è un array di elementi Json
+                String elencoPubblicazioniString  = result.getString("pubblicazioni");
+                JSONArray jsonArray = (JSONArray) JSONValue.parse(elencoPubblicazioniString);
+                
+                ArrayList<PubblicazioneIoda> pubblicazioniList = new ArrayList<>();
+                
+                for (int i = 0; i < jsonArray.size(); i++) {
+                   
+                    JSONObject pubblicazioneJson = (JSONObject) jsonArray.get(i);
+                    
+                    PubblicazioneIoda pubblicazione = new PubblicazioneIoda();    
+                    pubblicazione.setId((Long) pubblicazioneJson.get("id"));
+                    pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_dal")));
+                    pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_al")));
+                    //Aggiungo la pubblicazione appena creata
+                    pubblicazioniList.add(pubblicazione);
+                }
+                
+                //Setto le pubblicazioni al gddoc
+                gdDocToCreate.setPubblicazioni(pubblicazioniList);
+
+                //Aggiungo il GDDOC alla lista dei Gddoc
+                listaGddocs.add(gdDocToCreate);
+                
+            } //END WHiLE
+                
+        }
+        catch(Exception ex){
+            
+        }
+        finally{
+            if(ps != null)
+            {
+                try {
+                    ps.close();
+                }
+                catch (SQLException ex) {
+                }
+            }
+        }
+      
+        
+        return listaGddocs;
+    }
 }
