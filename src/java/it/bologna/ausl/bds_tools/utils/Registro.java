@@ -81,32 +81,33 @@ public class Registro {
      * torna un oggetto Registro che rappresenta il registro identificato dal codice registor passato
      * @param codiceRegistro il codice registro del registro
      * @param dbConn
-     * @param ps
      * @return un oggetto Registro che rappresenta il registro identificato dal codice registor passato
      * @throws SQLException 
      */
-    public static Registro getRegistro(String codiceRegistro, Connection dbConn, PreparedStatement ps) throws SQLException {
+    public static Registro getRegistro(String codiceRegistro, Connection dbConn) throws SQLException {
         String sqlText =
                         "SELECT codice_registro, descrizione, principale, tipo_documento, desc_pubb_albo, sequenza_associata " +
                         "FROM " + ApplicationParams.getRegistriTableName() + " " +
                         "WHERE codice_registro = ?";
-        ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, codiceRegistro);
-        
-        ResultSet res = ps.executeQuery();
-        
-        if (res.next()) {
-            Registro r = new Registro(
-                    res.getString("codice_registro"),
-                    res.getString("descrizione"),
-                    res.getString("principale"),
-                    res.getString("tipo_documento"),
-                    res.getString("desc_pubb_albo"),
-                    res.getString("sequenza_associata"));
-            return r;
+        Registro r;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, codiceRegistro);
+
+            ResultSet res = ps.executeQuery();
+
+            if (res.next()) {
+                 r = new Registro(
+                        res.getString("codice_registro"),
+                        res.getString("descrizione"),
+                        res.getString("principale"),
+                        res.getString("tipo_documento"),
+                        res.getString("desc_pubb_albo"),
+                        res.getString("sequenza_associata"));
+            }
+            else {
+                throw new SQLException("Registro non trovato");
+            }
         }
-        else {
-            throw new SQLException("Registro non trovato");
-        }
+        return r;
     }
 }
