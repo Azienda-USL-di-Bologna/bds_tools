@@ -471,7 +471,7 @@
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>GetGdDoc</servlet-name>
-        <url-pattern>/GetGdDoc</url-pattern>
+        <url-pattern>/ioda/api/document/</url-pattern>
     </servlet-mapping>
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>

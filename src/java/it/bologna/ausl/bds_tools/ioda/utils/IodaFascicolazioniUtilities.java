@@ -15,8 +15,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -24,7 +26,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 public class IodaFascicolazioniUtilities {
     
-    private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(IodaFascicolazioniUtilities.class);
+    private static final Logger log = LogManager.getLogger(IodaFascicolazioniUtilities.class);
     
     private String gdDocTable;
     private String fascicoliTable;
@@ -35,7 +37,7 @@ public class IodaFascicolazioniUtilities {
     private SimpleDocument sd;
     HttpServletRequest request;
     
-    private IodaFascicolazioniUtilities(SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+    public IodaFascicolazioniUtilities(SimpleDocument sd, String prefixIds) {
         this.gdDocTable = ApplicationParams.getGdDocsTableName();
         this.fascicoliTable = ApplicationParams.getFascicoliTableName();
         this.titoliTable = ApplicationParams.getTitoliTableName();
@@ -46,58 +48,68 @@ public class IodaFascicolazioniUtilities {
         sd.setPrefissoApplicazioneOrigine(this.prefixIds);
         
     }
-    
-    public IodaFascicolazioniUtilities(HttpServletRequest request, SimpleDocument sd, String prefixIds) throws UnknownHostException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
-        this(sd, prefixIds);
-        this.request = request;
-    }
-    
-    
-    public Fascicolazioni getFascicolazioni(Connection dbConn, PreparedStatement ps) throws SQLException{
+
+    @Deprecated
+    public Fascicolazioni getFascicolazioniOld(Connection dbConn) throws SQLException{
         
         Fascicolazioni fascicolazioni = new Fascicolazioni(sd.getIdOggettoOrigine(), sd.getTipoOggettoOrigine());
         
         // estrazione dei fascicoli del documento
-        ArrayList<String> idFascicoli = this.getIdFascicoli(dbConn, ps);
+        ArrayList<String> idFascicoli = this.getIdFascicoli(dbConn);
         
         // per ogni fascicolo calcolo la sua classificazione
         for (String idFascicolo : idFascicoli) {
-            ClassificazioneFascicolo classificazioneFascicolo = this.getClassificazioneFascicolo(dbConn, ps, idFascicolo);
-            Fascicolazione fascicolazione = getFascicolazione(dbConn, ps, idFascicolo, classificazioneFascicolo);
+            ClassificazioneFascicolo classificazioneFascicolo = this.getClassificazioneFascicolo(dbConn, idFascicolo);
+            Fascicolazione fascicolazione = getFascicolazione(dbConn, idFascicolo, classificazioneFascicolo);
             fascicolazioni.addFascicolazione(fascicolazione);
         }
         return fascicolazioni;
     }
-    
-    
-    private String getTitolo(Connection dbConn, PreparedStatement ps, String codiceGerarchico, String codiceTitolo) throws SQLException{
-        
+
+    public List<Fascicolazione> getFascicolazioni(Connection dbConn) throws SQLException{
+        List<Fascicolazione> fascicolazioni = new ArrayList<>();
+
+        // estrazione dei fascicoli del documento
+        ArrayList<String> idFascicoli = this.getIdFascicoli(dbConn);
+
+        // per ogni fascicolo calcolo la sua classificazione
+        for (String idFascicolo : idFascicoli) {
+            ClassificazioneFascicolo classificazioneFascicolo = this.getClassificazioneFascicolo(dbConn, idFascicolo);
+            Fascicolazione fascicolazione = getFascicolazione(dbConn, idFascicolo, classificazioneFascicolo);
+            fascicolazioni.add(fascicolazione);
+        }
+        return fascicolazioni;
+    }
+
+    private String getTitolo(Connection dbConn, String codiceGerarchico, String codiceTitolo) throws SQLException {
         String sqlText = "SELECT titolo " +
                   "FROM " + getTitoliTable() + " " + 
                   "WHERE codice_gerarchico = ? " +
                   "AND codice_titolo = ? ";
         
-        ps = dbConn.prepareStatement(sqlText);
+        String res = null;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
         
-        if(codiceGerarchico != null && !"".equals(codiceGerarchico)){
-            ps.setString(1, codiceGerarchico);
+            if(codiceGerarchico != null && !"".equals(codiceGerarchico)){
+                ps.setString(1, codiceGerarchico);
+            }
+            else{
+                ps.setString(1, "");
+            }
+
+            ps.setString(2, codiceTitolo);
+
+            log.debug("eseguo la query: " + ps.toString() + " ...");
+            ResultSet queryRes = ps.executeQuery();
+
+            if (!queryRes.next())
+                throw new SQLException("nessun titolo trovato");
+            res = queryRes.getString(1);
         }
-        else{
-            ps.setString(1, "");
-        }
-        
-        ps.setString(2, codiceTitolo);
-        
-        
-        log.debug("eseguo la query: " + ps.toString() + " ...");
-        ResultSet res = ps.executeQuery();
-        
-        if (!res.next())
-            throw new SQLException("nessun titolo trovato");
-        return res.getString(1);
+        return res;
     }
-    
-    private ArrayList<String> getIdFascicoli(Connection dbConn, PreparedStatement ps) throws SQLException {
+
+    private ArrayList<String> getIdFascicoli(Connection dbConn) throws SQLException {
         
         ArrayList<String> res = new ArrayList<>(); 
         
@@ -109,24 +121,22 @@ public class IodaFascicolazioniUtilities {
                     "AND g.id_gddoc = fg.id_gddoc " + 
                     "AND fg.data_eliminazione IS NULL ";
 
-        ps = dbConn.prepareStatement(sqlText);
-        int index = 1;
-        ps.setString(index++, sd.getIdOggettoOrigine());
-        ps.setString(index++, sd.getTipoOggettoOrigine());
-        
-        String query = ps.toString();
-        log.debug("eseguo la query: " + query + " ...");
-        ResultSet results = ps.executeQuery();
-        
-        while (results.next()) {
-            res.add(results.getString(1));
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            ps.setString(index++, sd.getIdOggettoOrigine());
+            ps.setString(index++, sd.getTipoOggettoOrigine());
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet results = ps.executeQuery();
+            while (results.next()) {
+                res.add(results.getString(1));
+            }
         }
         return res;
     }
-     
-    
-    
-    private ClassificazioneFascicolo getClassificazioneFascicolo(Connection dbConn, PreparedStatement ps, String idFascicolo) throws SQLException{
+
+    private ClassificazioneFascicolo getClassificazioneFascicolo(Connection dbConn, String idFascicolo) throws SQLException{
         
         ClassificazioneFascicolo classificazioneFascicolo = null;
         
@@ -136,52 +146,53 @@ public class IodaFascicolazioniUtilities {
                 "WHERE id_fascicolo = ? " +
                 "AND f.id_titolo = t.id_titolo ";          
       
-        ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, idFascicolo);
-        log.debug("eseguo la query: " + ps.toString() + " ...");
-        ResultSet res = ps.executeQuery();
-        
-        String result;
-        
-        if (!res.next())
-            throw new SQLException("titolo non trovato");
-        else{
-            result = res.getString(1) + res.getString(2);
-            
-            classificazioneFascicolo = new ClassificazioneFascicolo();
-            
-            // calcolo la gerarchia e setta il corrispettivo nome
-            String[] parts = result.split("-");
-            int dim = parts.length;
-            
-            while(dim>0){
-                switch(dim){
-                case 3:
-                    String nomeSottoClasse = this.getTitolo(dbConn, ps, parts[0] + "-" + parts[1] + "-", parts[2]);
-                    classificazioneFascicolo.setNomeSottoclasse(nomeSottoClasse);
-                    classificazioneFascicolo.setCodiceSottoclasse(parts[0] + "-" + parts[1] + "-" + parts[2]);
-                    break;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idFascicolo);
+            log.debug("eseguo la query: " + ps.toString() + " ...");
+            ResultSet res = ps.executeQuery();
 
-                case 2:
-                    String nomeClasse = this.getTitolo(dbConn, ps, parts[0] + "-", parts[1]);
-                    classificazioneFascicolo.setNomeClasse(nomeClasse);
-                    classificazioneFascicolo.setCodiceClasse(parts[0] + "-" + parts[1]);
-                    break;
+            String result;
 
-                case 1:
-                    String nomeCategoria = this.getTitolo(dbConn, ps, null, parts[0]);
-                    classificazioneFascicolo.setNomeCategoria(nomeCategoria);
-                    classificazioneFascicolo.setCodiceCategoria(parts[0]);
-                    break;
-                }
-                dim--;
-            }  
+            if (!res.next())
+                throw new SQLException("titolo non trovato");
+            else{
+                result = res.getString(1) + res.getString(2);
+
+                classificazioneFascicolo = new ClassificazioneFascicolo();
+
+                // calcolo la gerarchia e setta il corrispettivo nome
+                String[] parts = result.split("-");
+                int dim = parts.length;
+
+                while(dim>0){
+                    switch(dim){
+                    case 3:
+                        String nomeSottoClasse = this.getTitolo(dbConn, parts[0] + "-" + parts[1] + "-", parts[2]);
+                        classificazioneFascicolo.setNomeSottoclasse(nomeSottoClasse);
+                        classificazioneFascicolo.setCodiceSottoclasse(parts[0] + "-" + parts[1] + "-" + parts[2]);
+                        break;
+
+                    case 2:
+                        String nomeClasse = this.getTitolo(dbConn, parts[0] + "-", parts[1]);
+                        classificazioneFascicolo.setNomeClasse(nomeClasse);
+                        classificazioneFascicolo.setCodiceClasse(parts[0] + "-" + parts[1]);
+                        break;
+
+                    case 1:
+                        String nomeCategoria = this.getTitolo(dbConn, null, parts[0]);
+                        classificazioneFascicolo.setNomeCategoria(nomeCategoria);
+                        classificazioneFascicolo.setCodiceCategoria(parts[0]);
+                        break;
+                    }
+                    dim--;
+                }  
+            }
         }
         return classificazioneFascicolo;
     }
-    
-    
-    private Fascicolazione getFascicolazione(Connection dbConn, PreparedStatement ps, String idFascicolo, ClassificazioneFascicolo classificazione) throws SQLException{
+
+
+    private Fascicolazione getFascicolazione(Connection dbConn, String idFascicolo, ClassificazioneFascicolo classificazione) throws SQLException{
         
         Fascicolazione fascicolazione = null;
         
@@ -209,59 +220,60 @@ public class IodaFascicolazioniUtilities {
                 "AND fg.id_fascicolo = ? " + 
                 "AND fg.data_eliminazione IS NULL ";
         
-        ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, sd.getIdOggettoOrigine());
-        ps.setString(2, sd.getTipoOggettoOrigine());
-        ps.setString(3, idFascicolo);
-        log.debug("eseguo la query: " + ps.toString() + " ...");
-        ResultSet res = ps.executeQuery();
-        
-        if (!res.next())
-            throw new SQLException("fascicolazione non trovata");
-        else{
-            int index = 1;
-            DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
-            String numerazioneGerarchica = res.getString(index++);
-            String nomeFascicolo = res.getString(index++);
-            DateTime dataAssegnazione;
-            String dataStr = res.getString(index++);
-            try{
-                
-                dataAssegnazione = DateTime.parse(dataStr, formatter);
-            } catch(Exception e){
-                formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-                dataAssegnazione = DateTime.parse(dataStr, formatter);
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, sd.getIdOggettoOrigine());
+            ps.setString(2, sd.getTipoOggettoOrigine());
+            ps.setString(3, idFascicolo);
+            log.debug("eseguo la query: " + ps.toString() + " ...");
+            ResultSet res = ps.executeQuery();
+
+            if (!res.next())
+                throw new SQLException("fascicolazione non trovata");
+            else{
+                int index = 1;
+                DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                String numerazioneGerarchica = res.getString(index++);
+                String nomeFascicolo = res.getString(index++);
+                DateTime dataAssegnazione;
+                String dataStr = res.getString(index++);
+                try{
+
+                    dataAssegnazione = DateTime.parse(dataStr, formatter);
+                } catch(Exception e){
+                    formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+                    dataAssegnazione = DateTime.parse(dataStr, formatter);
+                }
+
+                String idUtenteFascicolatore = res.getString(index++);
+
+                // controllo che esista la data di eliminazione
+                String controlloDataEliminazione = res.getString(index++);
+                DateTime dataEliminazione = null;
+                if(controlloDataEliminazione != null && !controlloDataEliminazione.equals(""))
+                    dataEliminazione = DateTime.parse(res.getString(index++), formatter);
+
+
+                // controllo che esista idUtenteEliminatore
+                String idUtenteEliminatore = res.getString(index++);
+                String nomeFascicoloInterfaccia = res.getString(index++);
+                String descrizioneEliminatore = null;
+                boolean eliminato = false;
+                if(idUtenteEliminatore != null && !idUtenteEliminatore.equals("")){
+                    eliminato = true;
+                    descrizioneEliminatore = this.getNomeCognome(dbConn, idUtenteEliminatore);
+                }
+                String descrizioneFascicolatore = this.getNomeCognome(dbConn, idUtenteFascicolatore);         
+
+
+                fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
+
             }
-            
-            String idUtenteFascicolatore = res.getString(index++);
-            
-            // controllo che esista la data di eliminazione
-            String controlloDataEliminazione = res.getString(index++);
-            DateTime dataEliminazione = null;
-            if(controlloDataEliminazione != null && !controlloDataEliminazione.equals(""))
-                dataEliminazione = DateTime.parse(res.getString(index++), formatter);
-            
-            
-            // controllo che esista idUtenteEliminatore
-            String idUtenteEliminatore = res.getString(index++);
-            String nomeFascicoloInterfaccia = res.getString(index++);
-            String descrizioneEliminatore = null;
-            boolean eliminato = false;
-            if(idUtenteEliminatore != null && !idUtenteEliminatore.equals("")){
-                eliminato = true;
-                descrizioneEliminatore = this.getNomeCognome(dbConn, ps, idUtenteEliminatore);
-            }
-            String descrizioneFascicolatore = this.getNomeCognome(dbConn, ps, idUtenteFascicolatore);         
-            
-           
-            fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
-           
         }
         return fascicolazione;
     }
     
     
-    public String getNomeCognome(Connection dbConn, PreparedStatement ps, String idUtente) throws SQLException{
+    public String getNomeCognome(Connection dbConn, String idUtente) throws SQLException{
         
         String result = null;
         
@@ -269,17 +281,17 @@ public class IodaFascicolazioniUtilities {
                 "SELECT nome, cognome " +
                 "FROM " + getUtentiTable() + " " +
                 "WHERE id_utente = ? ";          
-      
-        ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, idUtente);
-        log.debug("eseguo la query: " + ps.toString() + " ...");
-        ResultSet res = ps.executeQuery();
-                
-        if (!res.next())
-            throw new SQLException("utente non trovato");
-        else
-            result = res.getString(1) + " " + res.getString(2);
-        
+
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idUtente);
+            log.debug("eseguo la query: " + ps.toString() + " ...");
+            ResultSet res = ps.executeQuery();
+
+            if (!res.next())
+                throw new SQLException("utente non trovato");
+            else
+                result = res.getString(1) + " " + res.getString(2);
+        }
         return result;
     }
 

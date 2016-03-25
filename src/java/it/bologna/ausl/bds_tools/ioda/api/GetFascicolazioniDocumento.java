@@ -1,9 +1,11 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.mimetypeutility.Detector;
@@ -13,6 +15,8 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.TimeZone;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -41,7 +45,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
         IodaRequestDescriptor iodaReq;
         Connection dbConn = null;
         PreparedStatement ps = null;
-        Fascicolazioni fascicolazioni = null;
+        List<Fascicolazione> fascicolazioni = null;
         
         IodaFascicolazioniUtilities fascicoliUtilities;
         
@@ -99,9 +103,9 @@ public class GetFascicolazioniDocumento extends HttpServlet {
                 //SimpleDocument sd = (SimpleDocument) iodaReq.getDocument();
                 SimpleDocument sd = (SimpleDocument) iodaReq.getObject();
                 
-                fascicoliUtilities = new IodaFascicolazioniUtilities(request, sd, prefix);
+                fascicoliUtilities = new IodaFascicolazioniUtilities(sd, prefix);
                 
-                fascicolazioni = fascicoliUtilities.getFascicolazioni(dbConn, ps);
+                fascicolazioni = fascicoliUtilities.getFascicolazioni(dbConn);
                   
 //              fascicolazioni = new Fascicolazioni("test", "test");
 //              ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");
@@ -124,7 +128,11 @@ public class GetFascicolazioniDocumento extends HttpServlet {
 
         response.setContentType(Detector.MEDIA_TYPE_APPLICATION_JSON.toString());
         try (PrintWriter out = response.getWriter()) {
-            out.print(fascicolazioni.getJSONString());
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new JodaModule());
+            mapper.setTimeZone(TimeZone.getDefault());
+            String valueAsString = mapper.writeValueAsString(fascicolazioni);
+            out.print(valueAsString);
         }
     }
 

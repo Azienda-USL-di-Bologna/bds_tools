@@ -8,10 +8,14 @@ import it.bologna.ausl.bds_tools.utils.Registro;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Pubblicazione;
+import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
+import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento.TipoFirma;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
 import it.bologna.ausl.mimetypeutility.Detector;
@@ -43,6 +47,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tika.mime.MimeTypeException;
+import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -129,55 +134,118 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         return mongoParentPath + "/" + gdDoc.getIdOggettoOrigine() + "_" + gdDoc.getTipoOggettoOrigine();
     }
 
-    public void insertInFascicolo(Connection dbConn, PreparedStatement ps, Fascicolo fascicolo) throws SQLException {
-        String idFascicolo = getIdFascicolo(dbConn, ps, fascicolo);
+    public void insertFascicolazione(Connection dbConn, Fascicolazione fascicolazione) throws SQLException {
+//        String idFascicolo = getIdFascicolo(dbConn, ps, fascicolo);
         
         JSONObject newIds = getNextIndeId();
         String idFascicoloGdDoc = (String) newIds.get(INDE_DOCUMENT_ID_PARAM_NAME);
-        String guidFascicoloGdDoc = (String) newIds.get(INDE_DOCUMENT_GUID_PARAM_NAME);
+//        String guidFascicoloGdDoc = (String) newIds.get(INDE_DOCUMENT_GUID_PARAM_NAME);
         
         String sqlText = 
                 "INSERT INTO " + getFascicoliGdDocTable() + "(" +
                 "id_fascicolo_gddoc, id_gddoc, id_fascicolo, data_assegnazione, id_utente_fascicolatore) " +
-                "VALUES (?, ?, ?, ?, ?)";
-        ps = dbConn.prepareStatement(sqlText);
-        int index = 1;
-        ps.setString(index++, idFascicoloGdDoc);
-        ps.setString(index++, gdDoc.getId());
-        ps.setString(index++, idFascicolo);
-        ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
-        ps.setString(index++, fascicolo.getIdUtenteFascicolatore());
+                "VALUES (?, ?, (select id_fascicolo from gd.fascicoligd where numerazione_gerarchica = ?), ?, ?)";
         
-        String query = ps.toString();
-        log.debug("eseguo la query: " + query + " ...");
-        int result = ps.executeUpdate();
-        if (result <= 0)
-            throw new SQLException("Fascicolo non inserito");
-    }
-    
-    public void deleteFromFascicolo(Connection dbConn, PreparedStatement ps, Fascicolo fascicolo) throws SQLException {
-        String idFascicolo = getIdFascicolo(dbConn, ps, fascicolo);
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            ps.setString(index++, idFascicoloGdDoc);
+            ps.setString(index++, gdDoc.getId());
+            ps.setString(index++, fascicolazione.getCodiceFascicolo());
+            ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
+            ps.setString(index++, fascicolazione.getIdUtenteFascicolatore());
 
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("Fascicolo non inserito");
+        }
+    }
+
+    public void insertPubblicazione(Connection dbConn, Pubblicazione pubblicazione) throws SQLException {
         String sqlText = 
-                "DELETE FROM " + getFascicoliGdDocTable() + " " +
-                "WHERE id_fascicolo = ? AND id_gddoc = (" +
-                    "SELECT id_gddoc " +
-                    "FROM " + getGdDocTable() + " " +
-                    "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?" +
-                ")";
-        ps = dbConn.prepareStatement(sqlText);
-        int index = 1;
-        ps.setString(index++, idFascicolo);
-        ps.setString(index++, gdDoc.getIdOggettoOrigine());
-        ps.setString(index++, gdDoc.getTipoOggettoOrigine());
+                "INSERT INTO " + ApplicationParams.getPubblicazioniAlboTableName() + "(" +
+                "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            ps.setLong(index++, pubblicazione.getNumeroPubblicazione());
+            ps.setInt(index++, pubblicazione.getAnnoPubblicazione());
+            ps.setTimestamp(index++, new Timestamp(pubblicazione.getDataDal().getMillis()));
+            ps.setTimestamp(index++, new Timestamp(pubblicazione.getDataAl().getMillis()));
+            ps.setString(index++, gdDoc.getId());
 
-        String query = ps.toString();
-        log.debug("eseguo la query: " + query + " ...");
-        int result = ps.executeUpdate();
-        if (result <= 0)
-            throw new SQLException("fascicolo " + fascicolo.getCodiceFascicolo() + " non trovato");
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("Fascicolo non inserito");
+        }
     }
     
+    public void deleteFascicolazione(Connection dbConn, Fascicolazione fascicolazione) throws SQLException {
+    String sqlText = 
+                "DELETE FROM " + getFascicoliGdDocTable() + " " + 
+                "WHERE id_fascicolo_gddoc in (" +
+                    "SELECT fg.id_fascicolo_gddoc " +
+                    "FROM " + getFascicoliGdDocTable() + " fg INNER JOIN " +
+                            getFascicoliTable() + " f ON fg.id_fascicolo = f.id_fascicolo INNER JOIN " +
+                            getGdDocTable() + " g ON fg.id_gddoc = g.id_gddoc " +
+                    "WHERE f.numerazione_gerarchica = ? AND g.id_oggetto_origine = ? AND g.tipo_oggetto_origine = ? " +
+                ")";
+
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            ps.setString(index++, fascicolazione.getCodiceFascicolo());
+            ps.setString(index++, gdDoc.getIdOggettoOrigine());
+            ps.setString(index++, gdDoc.getTipoOggettoOrigine());
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("fascicolazione con codice: " + fascicolazione.getCodiceFascicolo() + " non trovata");
+        }
+    }
+
+    public void updateFascicolazione(Connection dbConn, Fascicolazione fascicolazione) throws SQLException {
+    String sqlText = 
+                "UPDATE FROM " + getFascicoliGdDocTable() + " SET " + 
+                "id_utente_fascicolatore = coalesce(?, id_utente_fascicolatore), " +
+                "data_assegnazione = coalesce(?, data_assegnazione), " +
+                "id_utente_eliminazione = coalesce(?, id_utente_eliminazione) " +
+                "WHERE id_fascicolo_gddoc in (" +
+                    "SELECT fg.id_fascicolo_gddoc " +
+                    "FROM " + getFascicoliGdDocTable() + " fg INNER JOIN " +
+                              getFascicoliTable() + " f ON fg.id_fascicolo = f.id_fascicolo INNER JOIN " +
+                              getGdDocTable() + " g ON fg.id_gddoc = g.id_gddoc " +
+                    "WHERE f.numerazione_gerarchica = ? AND g.id_oggetto_origine = ? AND g.tipo_oggetto_origine = ? " +
+                ")";
+
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            ps.setString(index++, fascicolazione.getIdUtenteFascicolatore());
+            if (fascicolazione.getDataEliminazione() != null) {
+                Timestamp dataEliminazione = new Timestamp(fascicolazione.getDataEliminazione().getMillis());
+                ps.setTimestamp(index++, dataEliminazione);
+            }
+            else
+                ps.setNull(index++, Types.TIMESTAMP);
+            ps.setString(index++, fascicolazione.getIdUtenteEliminatore());
+
+            ps.setString(index++, fascicolazione.getCodiceFascicolo());
+            ps.setString(index++, gdDoc.getIdOggettoOrigine());
+            ps.setString(index++, gdDoc.getTipoOggettoOrigine());
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("fascicolazione con codice: " + fascicolazione.getCodiceFascicolo() + " non trovata");
+        }
+    }
+
+    @Deprecated
     private String getIdFascicolo(Connection dbConn, PreparedStatement ps, Fascicolo f) throws SQLException {
         String sqlText =
                     "SELECT id_fascicolo " +
@@ -196,6 +264,168 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         
     }
 
+    /**
+     * torna un oggetto GdDoc rapprestato dall'idOggettoOrigine e tipoOggettoOrigine presente nel SimpleDocument all'interno della IodaRequestDescriptor passata
+     * @param dbConn connessione al db da usare
+     * @param doc un oggetto SimpleDocument che rappresenta il GdDoc da caricare
+     * @param collections una mappa Map<String, Boolean> con indicate le collection da caricare
+     * @param prefix il prefisso dell'applicazione
+     * @return un oggetto GdDoc rapprestato dall'idOggettoOrigine e tipoOggettoOrigine presente nel SimpleDocument all'interno della IodaRequestDescriptor passata
+     * @throws java.sql.SQLException
+     * @throws it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException
+     */
+    public static GdDoc getGdDoc(Connection dbConn, SimpleDocument doc, Map<String, Object> collections, String prefix) throws SQLException, IodaDocumentException {
+
+        String sqlText = 
+                "SELECT  id_gddoc, " +
+                        "applicazione, " +
+                        "codice, " +
+                        "codice_registro, " +
+                        "data_gddoc, " +
+                        "data_registrazione, " +
+                        "data_ultima_modifica, " +
+                        "id_oggetto_origine, " +
+                        "nome_gddoc, " +
+                        "nome_struttura_firmatario, " +
+                        "numero_registrazione, " +
+                        "oggetto, " +
+                        "tipo_gddoc, " +
+                        "tipo_oggetto_origine, " +
+                        "stato_gd_doc " +
+                        "FROM " + ApplicationParams.getGdDocsTableName() + " " +
+                        "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
+
+        GdDoc gdDoc = null;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            ps.setString(index++, doc.getIdOggettoOrigine());
+            ps.setString(index++, doc.getTipoOggettoOrigine());
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+
+            String idGdDoc;  
+            if (result != null && result.next()) {
+                idGdDoc = result.getString("id_gddoc");
+                gdDoc = new GdDoc();
+                gdDoc.setApplicazione(result.getString("applicazione"));
+                gdDoc.setCodice(result.getString("codice"));
+                gdDoc.setCodiceRegistro(result.getString("codice_registro"));
+                gdDoc.setData(new DateTime(result.getTimestamp("data_gddoc").getTime()));
+                gdDoc.setDataRegistrazione(new DateTime(result.getTimestamp("data_registrazione").getTime()));
+                gdDoc.setDataUltimaModifica(new DateTime(result.getTimestamp("data_ultima_modifica").getTime()));
+//                gdDoc.setFascicolazioni(prefix);
+                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                gdDoc.setNome(result.getString("nome_gddoc"));
+                gdDoc.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
+                gdDoc.setNumeroRegistrazione(result.getString("numero_registrazione"));
+                gdDoc.setOggetto(result.getString("oggetto"));
+                gdDoc.setRecord(result.getString("tipo_gddoc") == null || result.getString("tipo_gddoc").equalsIgnoreCase("r"));
+                gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
+                gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
+                if (result.next())
+                    throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
+
+                if ((Boolean)collections.get(GdDoc.GdDocCollection.FASCICOLAZIONI.toString()) == true) {
+                    log.debug("carico: " + GdDoc.GdDocCollection.FASCICOLAZIONI.toString() + "...");
+                    gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix));
+                }
+                if ((Boolean)collections.get(GdDoc.GdDocCollection.PUBBLICAZIONI.toString()) == true) {
+                    log.debug("carico: " + GdDoc.GdDocCollection.PUBBLICAZIONI.toString() + "...");
+                    gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc));
+                }
+                if ((Boolean)collections.get(GdDoc.GdDocCollection.SOTTODOCUMENTI.toString()) == true) {
+                    log.debug("carico: " + GdDoc.GdDocCollection.SOTTODOCUMENTI.toString() + "...");
+                    gdDoc.setSottoDocumenti(caricaSottoDocumenti(dbConn, idGdDoc));
+                }
+            }
+        }
+        return gdDoc;
+    }
+
+    private static List<Fascicolazione> caricaFascicolazioni(Connection dbConn, SimpleDocument doc, String prefix) throws SQLException {
+        IodaFascicolazioniUtilities fascicolazioniUtilities = new IodaFascicolazioniUtilities(doc, prefix);
+        return fascicolazioniUtilities.getFascicolazioni(dbConn);
+    }
+    
+    private static List<Pubblicazione> caricaPubblicazioni(Connection dbConn, String idGdDoc) throws SQLException {
+        String sqlText = 
+                "SELECT  numero_pubblicazione integer,\n" +
+                        "anno_pubblicazione integer,\n" +
+                        "data_dal timestamp without time zone,\n" +
+                        "data_al timestamp without time zone,\n" +
+                        "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
+                        "WHERE id_gddoc = ?";
+
+        List<Pubblicazione> pubblicazioni = new ArrayList<>();
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idGdDoc);
+
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            while (res.next()) {
+                Pubblicazione p = new Pubblicazione();
+                p.setAnnoPubblicazione(res.getInt("anno_pubblicazione"));
+                p.setDataAl(new DateTime(res.getDate("data_al").getTime()));
+                p.setDataDal(new DateTime(res.getDate("data_dal").getTime()));
+                p.setNumeroPubblicazione(res.getLong("numero_pubblicazione"));
+                pubblicazioni.add(p);
+            }
+        }
+        return pubblicazioni;
+    }
+
+    private static List<SottoDocumento> caricaSottoDocumenti(Connection dbConn, String idGdDoc) throws SQLException {
+        String sqlText =        
+                "SELECT  id_sottodocumento, " + 
+                        "codice_sottodocumento, " +
+                        "tipo_sottodocumento, " +
+                        "tipo_firma, " +
+                        "principale, " +
+                        "nome_sottodocumento, " +
+                        "uuid_mongo_pdf, " +
+                        "uuid_mongo_firmato, " +
+                        "uuid_mongo_originale, " +
+                        "mimetype_file_firmato, " +
+                        "mimetype_file_originale, " +
+                        "da_spedire_pecgw, " +
+                        "spedisci_originale_pecgw, " +
+                        "dimensione_pdf, " +
+                        "dimensione_firmato, " +
+                        "dimensione_originale, " +
+                "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
+                "WHERE id_gddoc = ?";
+        List<SottoDocumento> sottoDocumenti = new ArrayList<>();
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idGdDoc);
+            ResultSet res = ps.executeQuery();
+            while (res.next()) {
+                SottoDocumento sd = new SottoDocumento();
+                sd.setCodiceSottoDocumento(res.getString("codice_sottodocumento"));
+                sd.setTipo(res.getString("tipo_sottodocumento"));
+                sd.setTipoFirma(TipoFirma.fromString("tipo_firma"));
+                // sd.setFirmatari(List<String> firmatari); TODO: forse compilare con l'elenco dei firmatari letti dal file firmato (se c'è)
+                sd.setPrincipale(res.getInt("principale") != 0);
+                sd.setNome(res.getString(""));
+                sd.setUuidMongoPdf(res.getString(""));
+                sd.setUuidMongoFirmato(res.getString(""));
+                sd.setUuidMongoOriginale(res.getString(""));
+                sd.setMimeTypeFileFirmato(res.getString(""));
+                sd.setMimeTypeFileOriginale(res.getString(""));
+                sd.setDaSpedirePecgw(res.getInt("da_spedire_pecgw") != 0);
+                sd.setSpedisciOriginalePecgw(res.getInt("spedisci_originale_pecgw") != 0);
+                sd.setDimensioneFilePdf(res.getInt("dimensione_pdf"));
+                sd.setDimensioneFileFirmato(res.getInt("dimensione_firmato"));
+                sd.setDimensioneFileOriginale(res.getInt("dimensione_originale"));
+                
+                sottoDocumenti.add(sd);
+            }
+        }
+        return sottoDocumenti;
+    }   
+
+    
     public String insertGdDoc(Connection dbConn, PreparedStatement ps) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
 
         String sqlText =
@@ -206,8 +436,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "data_registrazione, numero_registrazione, " +
                         "anno_registrazione, oggetto, " +
                         "id_oggetto_origine, tipo_oggetto_origine, " +
-                        "codice, pubblicato, nome_struttura_firmatario, " +
-                        "giorni_pubblicazione, applicazione) " +
+                        "codice, nome_struttura_firmatario, applicazione) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -215,8 +444,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "?, ?, " +
                         "?, ?, " +
                         "?, ?, " +
-                        "?, ?, ?, " +
-                        "?, ?)";
+                        "?, ?, ?)";
         
         
         ps = dbConn.prepareStatement(sqlText);
@@ -287,14 +515,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         // codice
         ps.setString(index++, gdDoc.getCodice());
         
-        // pubblicato
-        ps.setInt(index++, gdDoc.getPubblicato());
-        
         // nomeStrutturaFirmatario
         ps.setString(index++, gdDoc.getNomeStrutturaFirmatario());
-        
-        // giorniPubblicazione
-        ps.setInt(index++, gdDoc.getGiorniPubblicazione());
         
         // applicazione
         ps.setString(index++, gdDoc.getApplicazione());
@@ -305,11 +527,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         if (result <= 0)
             throw new SQLException("Documento non inserito");
 
-        // inseririmento in fascicoli
-        List<Fascicolo> fascicoli = gdDoc.getFascicoli();
-        if (fascicoli != null && !fascicoli.isEmpty()) {
-            for (Fascicolo fascicolo : fascicoli) {
-                insertInFascicolo(dbConn, ps, fascicolo);
+        // inseririmento delle fascicolazioni
+        List<Fascicolazione> fascicolazioni = gdDoc.getFascicolazioni();
+        if (fascicolazioni != null && !fascicolazioni.isEmpty()) {
+            for (Fascicolazione fascicolazione : fascicolazioni) {
+                insertFascicolazione(dbConn, fascicolazione);
             }
         }
         
@@ -317,7 +539,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         List<SottoDocumento> sottoDocumenti = gdDoc.getSottoDocumenti();
         if (sottoDocumenti != null && !sottoDocumenti.isEmpty()) {
             for (SottoDocumento sottoDocumento : sottoDocumenti) {
-                insertSottoDocumento(dbConn, ps, sottoDocumento);
+                insertSottoDocumento(dbConn, sottoDocumento);
             }
         }
         return gdDoc.getGuid();
@@ -337,9 +559,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "numero_registrazione = coalesce(?, numero_registrazione), " +
                 "anno_registrazione = coalesce(?, anno_registrazione), " +
                 "oggetto = coalesce(?, oggetto), " +
-                "pubblicato = coalesce(?, pubblicato), " +
                 "nome_struttura_firmatario = coalesce(?, nome_struttura_firmatario), " +
-                "giorni_pubblicazione = coalesce(?, giorni_pubblicazione), " +
                 "applicazione = coalesce(?, applicazione) " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
@@ -414,16 +634,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 //            ps.setInt(index++, gdDoc.isForzaCollegamento() ? -1 : 0);
 //        else
 //            ps.setNull(index++, Types.INTEGER);
-        
-        
-        // pubblicato
-        ps.setInt(index++, gdDoc.getPubblicato());
-        
+     
         // nome_struttura_firmatario
         ps.setString(index++, gdDoc.getNomeStrutturaFirmatario());
-        
-        // giorni_pubblicazione
-        ps.setInt(index++, gdDoc.getGiorniPubblicazione());
         
         // applicazione
         ps.setString(index++, gdDoc.getApplicazione());
@@ -442,33 +655,48 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         gdDoc.setId(result.getString(1));
         gdDoc.setGuid(result.getString(2));
 
-        // fascicoli
-        List<Fascicolo> fascicoli = gdDoc.getFascicoli();
-        if (fascicoli != null && !fascicoli.isEmpty()) {
-            for (Fascicolo fascicolo : fascicoli) {
-                if (fascicolo.getTipoOperazione() == Document.DocumentOperationType.INSERT)
-                    insertInFascicolo(dbConn, ps, fascicolo);
-                else if (fascicolo.getTipoOperazione() == Document.DocumentOperationType.DELETE)
-                    deleteFromFascicolo(dbConn, ps, fascicolo);
+        // fascicolazioni       
+        List<Fascicolazione> fascicolazioni = gdDoc.getFascicolazioni();
+        if (fascicolazioni != null && !fascicolazioni.isEmpty()) {
+            for (Fascicolazione fascicolazione : fascicolazioni) {
+                if (fascicolazione.getTipoOperazione() == Document.DocumentOperationType.INSERT)
+                    insertFascicolazione(dbConn, fascicolazione);
+                else if (fascicolazione.getTipoOperazione() == Document.DocumentOperationType.DELETE)
+                    updateFascicolazione(dbConn, fascicolazione);
+                else if (fascicolazione.getTipoOperazione() == Document.DocumentOperationType.DELETE)
+                    deleteFascicolazione(dbConn, fascicolazione);
                 else
                     throw new IodaDocumentException("operazione non consentita");
             }
         }
-        
+
         // inserimento SottoDocumenti
         List<SottoDocumento> sottoDocumenti = gdDoc.getSottoDocumenti();
         if (sottoDocumenti != null && !sottoDocumenti.isEmpty()) {
             for (SottoDocumento sottoDocumento : sottoDocumenti) {
                 if (sottoDocumento.getTipoOperazione() == Document.DocumentOperationType.INSERT)
-                    insertSottoDocumento(dbConn, ps, sottoDocumento);
+                    insertSottoDocumento(dbConn, sottoDocumento);
                 else if (sottoDocumento.getTipoOperazione() == Document.DocumentOperationType.DELETE)
-                    deleteSottoDocumento(dbConn, ps, sottoDocumento);
+                    deleteSottoDocumento(dbConn, sottoDocumento);
+                else
+                    throw new IodaDocumentException("operazione non consentita");
+            }
+        }
+        
+        // inserimento Pubblicazioni
+        List<Pubblicazione> pubblicazioni = gdDoc.getPubblicazioni();
+        if (pubblicazioni != null && !pubblicazioni.isEmpty()) {
+            for (Pubblicazione pubblicazione : pubblicazioni) {
+                if (pubblicazione.getTipoOperazione() == Document.DocumentOperationType.INSERT)
+                    insertPubblicazione(dbConn, pubblicazione);
+                else if (pubblicazione.getTipoOperazione() == Document.DocumentOperationType.UPDATE)
+                    throw new IodaDocumentException("operazione non ancora implementata");
                 else
                     throw new IodaDocumentException("operazione non consentita");
             }
         }
     }
-    
+
     public void deleteGdDoc(Connection dbConn, PreparedStatement ps) throws SQLException, IodaDocumentException{
         String sqlText = 
                 "SELECT numero_registrazione " +
@@ -520,7 +748,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 deleteAllMongoFileToDelete();
     }   
     
-    public void insertSottoDocumento(Connection dbConn, PreparedStatement ps, SottoDocumento sd) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
+    public void insertSottoDocumento(Connection dbConn, SottoDocumento sd) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
 
         sd.setPrefissoApplicazioneOrigine(prefixIds);
         JSONObject newIds = getNextIndeId();
@@ -554,101 +782,102 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "?, ?, " +
                 "?, " +
                 "?, ?)";
-        ps = dbConn.prepareStatement(sqlText);
-        int index = 1;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
 
-        ps.setString(index++, idSottoDocumento);
-        ps.setString(index++, guidSottoDocumento);
-        ps.setString(index++, gdDoc.getId());
-        ps.setString(index++, sd.getNome());
+            ps.setString(index++, idSottoDocumento);
+            ps.setString(index++, guidSottoDocumento);
+            ps.setString(index++, gdDoc.getId());
+            ps.setString(index++, sd.getNome());
 
-        if (sd.getUuidMongoPdf() != null && !sd.getUuidMongoPdf().equals("")) {
-            int fileLenght = mongo.getSizeByUuid(sd.getUuidMongoPdf()).intValue();
-            ps.setString(index++, sd.getUuidMongoPdf());
-            ps.setInt(index++, fileLenght);
-            ps.setInt(index++,  -1);
+            if (sd.getUuidMongoPdf() != null && !sd.getUuidMongoPdf().equals("")) {
+                int fileLenght = mongo.getSizeByUuid(sd.getUuidMongoPdf()).intValue();
+                ps.setString(index++, sd.getUuidMongoPdf());
+                ps.setInt(index++, fileLenght);
+                ps.setInt(index++,  -1);
+            }
+            else {
+                ps.setString(index++, null);
+                ps.setNull(index++, Types.INTEGER);
+                ps.setInt(index++,  0);
+            }
+
+            if (sd.getUuidMongoOriginale() != null && !sd.getUuidMongoOriginale().equals("")) {
+                int fileLenght = mongo.getSizeByUuid(sd.getUuidMongoOriginale()).intValue();
+                ps.setString(index++, sd.getUuidMongoOriginale());
+                ps.setInt(index++, fileLenght);
+            }
+            else if (sd.getNomePartFileOriginale() != null) {
+                IodaFile uploadedMongoFile = uploadOnMongo(sd.getNomePartFileOriginale(), mongoPath);
+                String uuid = uploadedMongoFile.getUuid();
+                sd.setUuidMongoOriginale(uuid);
+                sd.setMimeTypeFileOriginale(uploadedMongoFile.getMimeType());
+                sd.setNomeFileOriginale(uploadedMongoFile.getFileName());
+                int fileLenght = mongo.getSizeByUuid(uuid).intValue();
+                ps.setString(index++, uuid);
+                ps.setInt(index++, fileLenght);
+            }
+            else {
+                ps.setString(index++, null);
+                ps.setNull(index++, Types.INTEGER);
+            }
+
+            if (sd.getUuidMongoFirmato() != null && !sd.getUuidMongoFirmato().equals("")) {
+                int fileLenght = mongo.getSizeByUuid(sd.getUuidMongoFirmato()).intValue();
+                ps.setString(index++, sd.getUuidMongoFirmato());
+                ps.setInt(index++, fileLenght);
+            }
+            else if (sd.getNomePartFileFirmato() != null) {
+                IodaFile uploadedMongoFile = uploadOnMongo(sd.getNomePartFileFirmato(), mongoPath);
+                String uuid = uploadedMongoFile.getUuid();
+                sd.setUuidMongoFirmato(uuid);
+                sd.setMimeTypeFileFirmato(uploadedMongoFile.getMimeType());
+                sd.setNomeFileFirmato(uploadedMongoFile.getFileName());
+                int fileLenght = mongo.getSizeByUuid(uuid).intValue();
+                ps.setString(index++, uuid);
+                ps.setInt(index++, fileLenght);
+            }
+            else {
+                ps.setString(index++, null);
+                ps.setNull(index++, Types.INTEGER);
+            }
+
+            ps.setInt(index++, sd.isPrincipale() == null || !sd.isPrincipale() ? 0: -1);
+            ps.setString(index++, sd.getTipo());
+
+            if (sd.getTipoFirma() != null)
+                ps.setString(index++, sd.getTipoFirma().getKey());
+            else
+                ps.setString(index++, null);
+
+            if (sd.getUuidMongoOriginale() != null && sd.getMimeTypeFileOriginale() == null)
+                throw new IodaDocumentException("il mimeType del file originale è nullo");
+            ps.setString(index++, sd.getMimeTypeFileOriginale());
+
+            if (sd.getUuidMongoFirmato() != null && sd.getMimeTypeFileFirmato() == null)
+                throw new IodaDocumentException("il mimeType del file firmato è nullo");
+            ps.setString(index++, sd.getMimeTypeFileFirmato());
+
+            ps.setString(index++, sd.getCodiceSottoDocumento());
+
+            ps.setInt(index++, sd.isDaSpedirePecgw() ? -1 : 0);
+            ps.setInt(index++, sd.isSpedisciOriginalePecgw() ? -1 : 0);
+
+            // aggiungo in una lista i sottodocumenti potenzialmente convertibili in pdf (cioè quelli per cui, non mi è stato passato l'uuid del file in pdf), il controllo
+            // per verifivcare se la conversione è supportata verrà fatto successivamente
+            if (sd.getUuidMongoPdf() == null || sd.getUuidMongoPdf().equals("")) {
+                toConvert.add(sd);
+            }
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("SottoDocumento non inserito");
         }
-        else {
-            ps.setString(index++, null);
-            ps.setNull(index++, Types.INTEGER);
-            ps.setInt(index++,  0);
-        }
-        
-        if (sd.getUuidMongoOriginale() != null && !sd.getUuidMongoOriginale().equals("")) {
-            int fileLenght = mongo.getSizeByUuid(sd.getUuidMongoOriginale()).intValue();
-            ps.setString(index++, sd.getUuidMongoOriginale());
-            ps.setInt(index++, fileLenght);
-        }
-        else if (sd.getNomePartFileOriginale() != null) {
-            IodaFile uploadedMongoFile = uploadOnMongo(sd.getNomePartFileOriginale(), mongoPath);
-            String uuid = uploadedMongoFile.getUuid();
-            sd.setUuidMongoOriginale(uuid);
-            sd.setMimeTypeFileOriginale(uploadedMongoFile.getMimeType());
-            sd.setNomeFileOriginale(uploadedMongoFile.getFileName());
-            int fileLenght = mongo.getSizeByUuid(uuid).intValue();
-            ps.setString(index++, uuid);
-            ps.setInt(index++, fileLenght);
-        }
-        else {
-            ps.setString(index++, null);
-            ps.setNull(index++, Types.INTEGER);
-        }
-        
-        if (sd.getUuidMongoFirmato() != null && !sd.getUuidMongoFirmato().equals("")) {
-            int fileLenght = mongo.getSizeByUuid(sd.getUuidMongoFirmato()).intValue();
-            ps.setString(index++, sd.getUuidMongoFirmato());
-            ps.setInt(index++, fileLenght);
-        }
-        else if (sd.getNomePartFileFirmato() != null) {
-            IodaFile uploadedMongoFile = uploadOnMongo(sd.getNomePartFileFirmato(), mongoPath);
-            String uuid = uploadedMongoFile.getUuid();
-            sd.setUuidMongoFirmato(uuid);
-            sd.setMimeTypeFileFirmato(uploadedMongoFile.getMimeType());
-            sd.setNomeFileFirmato(uploadedMongoFile.getFileName());
-            int fileLenght = mongo.getSizeByUuid(uuid).intValue();
-            ps.setString(index++, uuid);
-            ps.setInt(index++, fileLenght);
-        }
-        else {
-            ps.setString(index++, null);
-            ps.setNull(index++, Types.INTEGER);
-        }
-
-        ps.setInt(index++, sd.isPrincipale() == null || !sd.isPrincipale() ? 0: -1);
-        ps.setString(index++, sd.getTipo());
-
-        if (sd.getTipoFirma() != null)
-            ps.setString(index++, sd.getTipoFirma().getKey());
-        else
-            ps.setString(index++, null);
-
-        if (sd.getUuidMongoOriginale() != null && sd.getMimeTypeFileOriginale() == null)
-            throw new IodaDocumentException("il mimeType del file originale è nullo");
-        ps.setString(index++, sd.getMimeTypeFileOriginale());
-
-        if (sd.getUuidMongoFirmato() != null && sd.getMimeTypeFileFirmato() == null)
-            throw new IodaDocumentException("il mimeType del file firmato è nullo");
-        ps.setString(index++, sd.getMimeTypeFileFirmato());
-
-        ps.setString(index++, sd.getCodiceSottoDocumento());
-
-        ps.setInt(index++, sd.isDaSpedirePecgw() ? -1 : 0);
-        ps.setInt(index++, sd.isSpedisciOriginalePecgw() ? -1 : 0);
-
-        // aggiungo in una lista i sottodocumenti potenzialmente convertibili in pdf (cioè quelli per cui, non mi è stato passato l'uuid del file in pdf), il controllo
-        // per verifivcare se la conversione è supportata verrà fatto successivamente
-        if (sd.getUuidMongoPdf() == null || sd.getUuidMongoPdf().equals("")) {
-            toConvert.add(sd);
-        }
-
-        String query = ps.toString();
-        log.debug("eseguo la query: " + query + " ...");
-        int result = ps.executeUpdate();
-        if (result <= 0)
-            throw new SQLException("SottoDocumento non inserito");
     }
     
-    public void deleteSottoDocumento(Connection dbConn, PreparedStatement ps, SottoDocumento sd) throws SQLException {
+    public void deleteSottoDocumento(Connection dbConn, SottoDocumento sd) throws SQLException {
         sd.setPrefissoApplicazioneOrigine(prefixIds);
 
         String sqlText = 
@@ -656,40 +885,42 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "FROM " + getSottoDocumentiTable() + " " +
                 "WHERE codice_sottodocumento = ?";
         
-        ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, sd.getCodiceSottoDocumento());
-        ResultSet res = ps.executeQuery();
-        
-        if (!res.next())
-            throw new SQLException("SottoDocumento non trovato");
-        do {
-            String uuid = res.getString(1);
-            if (uuid != null && !uuid.equals(""))
-                uuidsToDelete.add(uuid);
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, sd.getCodiceSottoDocumento());
+            ResultSet res = ps.executeQuery();
 
-            uuid = res.getString(2);
-            if (uuid != null && !uuid.equals(""))
-                uuidsToDelete.add(uuid);
+            if (!res.next())
+                throw new SQLException("SottoDocumento non trovato");
+            do {
+                String uuid = res.getString(1);
+                if (uuid != null && !uuid.equals(""))
+                    uuidsToDelete.add(uuid);
 
-            uuid = res.getString(3);
-            if (uuid != null && !uuid.equals(""))
-                uuidsToDelete.add(uuid);
+                uuid = res.getString(2);
+                if (uuid != null && !uuid.equals(""))
+                    uuidsToDelete.add(uuid);
+
+                uuid = res.getString(3);
+                if (uuid != null && !uuid.equals(""))
+                    uuidsToDelete.add(uuid);
+            }
+            while (res.next());
+            ps.close();
         }
-        while (res.next());
-        ps.close();
-        
-        sqlText = 
-                "DELETE FROM " + getSottoDocumentiTable() + " " +
-                "WHERE codice_sottodocumento = ?";
-        ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, sd.getCodiceSottoDocumento());
-        
-        String query = ps.toString();
-        log.debug("eseguo la query: " + query + " ...");
-        int result = ps.executeUpdate();
-        if (result <= 0)
-            throw new SQLException("SottoDocumento non trovato");
-        
+
+        sqlText =   "DELETE FROM " + getSottoDocumentiTable() + " " +
+                    "WHERE codice_sottodocumento = ?";
+
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, sd.getCodiceSottoDocumento());
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("SottoDocumento non trovato");
+        }
+
         if (uuidsToDelete != null && !uuidsToDelete.isEmpty())
             deleteAllMongoFileToDelete();
     }
@@ -746,8 +977,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             
             // il numero di id è ottenuto dal numero dei SottoDocumenti + il GdDoc
             int idNumber = 1;
-             if (gdDoc.getFascicoli() != null)
-                idNumber += gdDoc.getFascicoli().size();
+             if (gdDoc.getFascicolazioni()!= null)
+                idNumber += gdDoc.getFascicolazioni().size();
             if (gdDoc.getSottoDocumenti() != null)
                 idNumber += gdDoc.getSottoDocumenti().size();
             params.put(GENERATE_INDE_NUMBER_PARAM_NAME, String.valueOf(idNumber).getBytes());
@@ -773,7 +1004,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     public String getFascicoliGdDocTable() {
         return fascicoliGdDocTable;
     }
-    
+
     public void convertPdf() throws SQLException, NamingException {
         Connection dbConn = null;
         PreparedStatement ps = null;
@@ -856,7 +1087,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     }
     
     public String registraDocumento(Connection dbConn, PreparedStatement ps, ServletContext context, String guid, String codiceRegistro) throws ServletException, SQLException {
-        Registro r = Registro.getRegistro(codiceRegistro, dbConn, ps);
+        Registro r = Registro.getRegistro(codiceRegistro, dbConn);
         return SetDocumentNumber.setNumber(dbConn, context, guid, r.getSequenzaAssociata());
     }
     
