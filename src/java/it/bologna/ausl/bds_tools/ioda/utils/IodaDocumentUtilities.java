@@ -376,7 +376,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         return pubblicazioni;
     }
 
-    private static List<SottoDocumento> caricaSottoDocumenti(Connection dbConn, String idGdDoc) throws SQLException {
+    public static List<SottoDocumento> caricaSottoDocumenti(Connection dbConn, String idGdDoc) throws SQLException {
         String sqlText =        
                 "SELECT  id_sottodocumento, " + 
                         "codice_sottodocumento, " +
