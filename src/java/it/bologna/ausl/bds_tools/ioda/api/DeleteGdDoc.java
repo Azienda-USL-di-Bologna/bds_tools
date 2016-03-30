@@ -58,7 +58,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
             // leggo i parametri dalla richiesta
             IodaRequestDescriptor iodaRequest;
             try {
-                iodaRequest = IodaUtilities.extractIodaRequest(request);
+                iodaRequest = IodaUtilities.extractIodaRequestFromMultipartRequest(request);
             }
             catch (RequestException ex) {
                 log.error(ex);

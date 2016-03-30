@@ -210,9 +210,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
     public void updateFascicolazione(Connection dbConn, Fascicolazione fascicolazione) throws SQLException {
     String sqlText = 
-                "UPDATE FROM " + getFascicoliGdDocTable() + " SET " + 
+                "UPDATE " + getFascicoliGdDocTable() + " SET " + 
                 "id_utente_fascicolatore = coalesce(?, id_utente_fascicolatore), " +
-                "data_assegnazione = coalesce(?, data_assegnazione), " +
+                "data_eliminazione = coalesce(?, data_eliminazione), " +
                 "id_utente_eliminazione = coalesce(?, id_utente_eliminazione) " +
                 "WHERE id_fascicolo_gddoc in (" +
                     "SELECT fg.id_fascicolo_gddoc " +
@@ -275,6 +275,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
      * @throws it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException
      */
     public static GdDoc getGdDoc(Connection dbConn, SimpleDocument doc, Map<String, Object> collections, String prefix) throws SQLException, IodaDocumentException {
+        doc.setPrefissoApplicazioneOrigine(prefix);
 
         String sqlText = 
                 "SELECT  id_gddoc, " +
@@ -312,10 +313,19 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDoc.setApplicazione(result.getString("applicazione"));
                 gdDoc.setCodice(result.getString("codice"));
                 gdDoc.setCodiceRegistro(result.getString("codice_registro"));
-                gdDoc.setData(new DateTime(result.getTimestamp("data_gddoc").getTime()));
-                gdDoc.setDataRegistrazione(new DateTime(result.getTimestamp("data_registrazione").getTime()));
-                gdDoc.setDataUltimaModifica(new DateTime(result.getTimestamp("data_ultima_modifica").getTime()));
-//                gdDoc.setFascicolazioni(prefix);
+                
+                Timestamp dataGdDoc = result.getTimestamp("data_gddoc");
+                if (dataGdDoc != null)
+                    gdDoc.setData(new DateTime(dataGdDoc.getTime()));
+                
+                Timestamp dataRegistrazione = result.getTimestamp("data_registrazione");
+                if (dataRegistrazione != null)
+                    gdDoc.setDataRegistrazione(new DateTime(dataRegistrazione.getTime()));
+                
+                Timestamp dataUltimaModifica = result.getTimestamp("data_ultima_modifica");
+                if (dataUltimaModifica != null)
+                    gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime()));
+
                 gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
                 gdDoc.setNome(result.getString("nome_gddoc"));
                 gdDoc.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
@@ -327,15 +337,20 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 if (result.next())
                     throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
 
-                if ((Boolean)collections.get(GdDoc.GdDocCollection.FASCICOLAZIONI.toString()) == true) {
+                Object collection = collections.get(GdDoc.GdDocCollection.FASCICOLAZIONI.toString());
+                if (collection != null && (Boolean)collections.get(GdDoc.GdDocCollection.FASCICOLAZIONI.toString()) == true) {
                     log.debug("carico: " + GdDoc.GdDocCollection.FASCICOLAZIONI.toString() + "...");
                     gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix));
                 }
-                if ((Boolean)collections.get(GdDoc.GdDocCollection.PUBBLICAZIONI.toString()) == true) {
+                
+                collection = collections.get(GdDoc.GdDocCollection.PUBBLICAZIONI.toString());
+                if (collection != null && (Boolean)collections.get(GdDoc.GdDocCollection.PUBBLICAZIONI.toString()) == true) {
                     log.debug("carico: " + GdDoc.GdDocCollection.PUBBLICAZIONI.toString() + "...");
                     gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc));
                 }
-                if ((Boolean)collections.get(GdDoc.GdDocCollection.SOTTODOCUMENTI.toString()) == true) {
+                
+                collection = collections.get(GdDoc.GdDocCollection.SOTTODOCUMENTI.toString());
+                if (collection != null && (Boolean)collections.get(GdDoc.GdDocCollection.SOTTODOCUMENTI.toString()) == true) {
                     log.debug("carico: " + GdDoc.GdDocCollection.SOTTODOCUMENTI.toString() + "...");
                     gdDoc.setSottoDocumenti(caricaSottoDocumenti(dbConn, idGdDoc));
                 }
@@ -659,14 +674,19 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         List<Fascicolazione> fascicolazioni = gdDoc.getFascicolazioni();
         if (fascicolazioni != null && !fascicolazioni.isEmpty()) {
             for (Fascicolazione fascicolazione : fascicolazioni) {
-                if (fascicolazione.getTipoOperazione() == Document.DocumentOperationType.INSERT)
-                    insertFascicolazione(dbConn, fascicolazione);
-                else if (fascicolazione.getTipoOperazione() == Document.DocumentOperationType.DELETE)
-                    updateFascicolazione(dbConn, fascicolazione);
-                else if (fascicolazione.getTipoOperazione() == Document.DocumentOperationType.DELETE)
-                    deleteFascicolazione(dbConn, fascicolazione);
-                else
-                    throw new IodaDocumentException("operazione non consentita");
+                    switch (fascicolazione.getTipoOperazione()) {
+                    case INSERT:
+                        insertFascicolazione(dbConn, fascicolazione);
+                        break;
+                    case UPDATE:
+                        updateFascicolazione(dbConn, fascicolazione);
+                        break;
+                    case DELETE:
+                        deleteFascicolazione(dbConn, fascicolazione);
+                        break;
+                    default:
+                        throw new IodaDocumentException("operazione non consentita");
+                }
             }
         }
 

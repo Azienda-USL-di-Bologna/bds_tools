@@ -45,7 +45,7 @@ public class IodaFascicolazioniUtilities {
         this.utentiTable = ApplicationParams.getUtentiTableName();
         this.prefixIds = prefixIds;
         this.sd = sd;
-        sd.setPrefissoApplicazioneOrigine(this.prefixIds);
+        //sd.setPrefissoApplicazioneOrigine(this.prefixIds);
         
     }
 

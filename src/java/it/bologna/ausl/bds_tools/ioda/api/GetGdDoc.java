@@ -13,6 +13,7 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.Requestable;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -59,12 +60,16 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
         try { 
             // leggo i parametri dalla richiesta
             IodaRequestDescriptor iodaRequest;
-            try {
-                iodaRequest = IodaUtilities.extractIodaRequest(request);
+            try (InputStream is = request.getInputStream()) {
+                if (is == null) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
+                    return;
+                }
+                iodaRequest = IodaRequestDescriptor.parse(is);
             }
-            catch (RequestException ex) {
-                log.error(ex);
-                response.sendError(ex.getHttpStatusCode(), ex.getMessage());
+            catch (Exception ex) {
+                log.error("formato json della richiesta errato: " + ex);
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex);
                 return;
             }
             
@@ -106,6 +111,8 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
                 if (additionalData == null || additionalData.isEmpty())
                     throw new IodaDocumentException("AdditionalData mancanti");
                 gdDoc = IodaDocumentUtilities.getGdDoc(dbConn, doc, additionalData, prefix);
+                if (gdDoc == null)
+                    throw new ServletException("GdDoc non trovato");
             }
             catch (IodaDocumentException ex) {
                 log.error(ex);

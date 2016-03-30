@@ -23,7 +23,7 @@ public class IodaUtilities {
  
     public static final String REQUEST_DESCRIPTOR_PART_NAME = "request_descriptor";
     
-    public static IodaRequestDescriptor extractIodaRequest(HttpServletRequest request) throws RequestException, IOException, ServletException {
+    public static IodaRequestDescriptor extractIodaRequestFromMultipartRequest(HttpServletRequest request) throws RequestException, IOException, ServletException {
         InputStream iodaRequestIs = null;
         try {
             Part iodaRequestPart = request.getPart(REQUEST_DESCRIPTOR_PART_NAME);

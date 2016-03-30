@@ -63,7 +63,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
 
             IodaRequestDescriptor iodaRequest;
             try {
-                iodaRequest = IodaUtilities.extractIodaRequest(request);
+                iodaRequest = IodaUtilities.extractIodaRequestFromMultipartRequest(request);
             }
             catch (RequestException ex) {
                 log.error(ex);
