@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
@@ -48,6 +49,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tika.mime.MimeTypeException;
+import org.w3c.tidy.Tidy;
 
 public class UtilityFunctions {
 
@@ -375,4 +377,13 @@ static {
         return SupportedFile.isSupported(ApplicationParams.getSupportedFileList(), d.getMimeType(is));
     }
     
+    public static String fixXhtml(String text) {
+        Tidy a = new Tidy();
+        StringReader rd = new StringReader(text);
+        StringWriter w = new StringWriter();
+        a.setPrintBodyOnly(true);
+        a.setXHTML(true);
+        a.parse(rd, w);
+        return w.toString();
+    }
 }

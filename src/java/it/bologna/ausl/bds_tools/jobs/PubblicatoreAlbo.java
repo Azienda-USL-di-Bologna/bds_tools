@@ -120,6 +120,7 @@ public class PubblicatoreAlbo implements Job {
                 
                     PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(pubbIoda.getDataDal().toDate(),pubbIoda.getDataAl().toDate());
                     
+                                       
                     pubblicazione = new Pubblicazione(
                             gddoc.getAnnoRegistrazione(),  
                             gddoc.getNumeroRegistrazione(), 
@@ -127,7 +128,7 @@ public class PubblicatoreAlbo implements Job {
                             registroGddoc.descPubbAlbo, 
                             "esecutiva", 
                             gddoc.getNomeStrutturaFirmatario(), 
-                            gddoc.getOggetto(), 
+                            UtilityFunctions.fixXhtml(gddoc.getOggetto()), 
                             gddoc.getTipoOggettoOrigine(), 
                             "attivo", 
                             gddoc.getData().toDate(), 
