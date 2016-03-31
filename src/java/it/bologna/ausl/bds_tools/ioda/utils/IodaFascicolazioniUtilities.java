@@ -118,8 +118,7 @@ public class IodaFascicolazioniUtilities {
                     "FROM " + getGdDocTable() + " g, " + getFascicoliGdDocTable() + " fg  " +
                     "WHERE g.id_oggetto_origine = ? " +
                     "AND g.tipo_oggetto_origine = ? " +
-                    "AND g.id_gddoc = fg.id_gddoc " + 
-                    "AND fg.data_eliminazione IS NULL ";
+                    "AND g.id_gddoc = fg.id_gddoc "; 
 
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
@@ -217,8 +216,7 @@ public class IodaFascicolazioniUtilities {
                 "AND g.tipo_oggetto_origine = ? " +
                 "AND g.id_gddoc = fg.id_gddoc " +
                 "AND f.id_fascicolo = fg.id_fascicolo " +
-                "AND fg.id_fascicolo = ? " + 
-                "AND fg.data_eliminazione IS NULL ";
+                "AND fg.id_fascicolo = ? " ;
         
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             ps.setString(1, sd.getIdOggettoOrigine());
