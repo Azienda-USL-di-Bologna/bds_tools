@@ -235,7 +235,6 @@ public class IodaFascicolazioniUtilities {
                 DateTime dataAssegnazione;
                 String dataStr = res.getString(index++);
                 try{
-
                     dataAssegnazione = DateTime.parse(dataStr, formatter);
                 } catch(Exception e){
                     formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
@@ -247,8 +246,15 @@ public class IodaFascicolazioniUtilities {
                 // controllo che esista la data di eliminazione
                 String controlloDataEliminazione = res.getString(index++);
                 DateTime dataEliminazione = null;
-                if(controlloDataEliminazione != null && !controlloDataEliminazione.equals(""))
-                    dataEliminazione = DateTime.parse(res.getString(index++), formatter);
+                if(controlloDataEliminazione != null && !controlloDataEliminazione.equals("")){
+                    try{
+                        dataEliminazione = DateTime.parse(controlloDataEliminazione, formatter);
+                    } catch(Exception e){
+                        formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+                        dataEliminazione = DateTime.parse(controlloDataEliminazione, formatter);
+                    }
+                }
+                    
 
 
                 // controllo che esista idUtenteEliminatore
