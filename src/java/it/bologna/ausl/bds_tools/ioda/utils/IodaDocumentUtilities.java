@@ -1,6 +1,8 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import com.mongodb.MongoException;
+import it.bologna.ausl.balboclient.classes.Pubblicazione;
+import it.bologna.ausl.balboclient.classes.PubblicazioneAlbo;
 import it.bologna.ausl.bds_tools.SetDocumentNumber;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
@@ -978,6 +980,49 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
+    public static void UpdatePubblicazione(PubblicazioneIoda p, String pubblicatore) throws NamingException, ServletException, SQLException{
+        
+        Connection dbConn = null;
+               
+        try {
+            dbConn = UtilityFunctions.getDBConnection();
+            }
+        catch (SQLException sQLException) {
+            String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();    
+            log.error(message, sQLException);
+            throw new ServletException(message);
+        }
+        
+        String sqlText = 
+                "UPDATE " + ApplicationParams.getPubblicazioniAlboTableName() + " SET " +
+                "numero_pubblicazione = coalesce(?, numero_pubblicazione), " +
+                "anno_pubblicazione = coalesce(?, anno_pubblicazione), " +
+                "pubblicatore = coalesce(?, pubblicatore) " +
+                "WHERE id = ? ";
+        
+        PreparedStatement ps = dbConn.prepareStatement(sqlText);
+        int index = 1;
+ 
+         // numero
+        ps.setLong(index++, p.getNumeroPubblicazione());
+        
+        // anno
+        ps.setInt(index++, p.getAnnoPubblicazione());
+        
+        // pubblicatore
+        ps.setString(index++, pubblicatore);
+        
+        // id
+        ps.setLong(index++, p.getId());
+        
+        String query = ps.toString();
+        log.debug("eseguo la query: " + query + " ...");
+        ResultSet result = ps.executeQuery();
+        if (!result.next())
+            throw new SQLException("Documento non trovato");
+        
+    }
+    
     public void deleteAllMongoFileUploaded() {
         uploadedUuids.stream().forEach((uuid) -> {
             mongo.delete(uuid);

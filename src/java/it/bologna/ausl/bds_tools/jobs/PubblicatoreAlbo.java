@@ -144,23 +144,31 @@ public class PubblicatoreAlbo implements Job {
                         pubblicazione.addAllegato(allegatoPubblicazione);
                     }
                     
-                    pubblicazioniList.add(pubblicazione);
+                    Pubblicazione p = balboClient.pubblica(pubblicazione);
+                    pubbIoda.setAnnoPubblicazione(p.getAnnoPubblicazione());
+                    pubbIoda.setNumeroPubblicazione(p.getNumeroPubblicazione());
+                    pubbIoda.setPubblicatore("balbo");
+                    
+                    IodaDocumentUtilities.UpdatePubblicazione(pubbIoda, "balbo");
+                    
+                    //pubblicazioniList.add(pubblicazione);
                 }
                 
                 //Ciclo sulla lista di pubblicazioni e le pubbllico per davvero
-                for (Pubblicazione pubb : pubblicazioniList) {
-                    
-                    Pubblicazione p = balboClient.pubblica(pubb);
-                    PubblicazioneAlbo pAlbo = p.getDatiAlbo();
-                    pubblicazioniDaAggiornare.add(new PubblicazioneIoda(p.getNumeroPubblicazione(), 
-                            p.getAnnoPubblicazione(), 
-                            new DateTime(pAlbo.getPubblicazioneDal()), 
-                            new DateTime(pAlbo.getPubblicazioneAl()), 
-                            Document.DocumentOperationType.UPDATE));
-                }
+//                for (Pubblicazione pubb : pubblicazioniList) {
+//                    
+//                    Pubblicazione p = balboClient.pubblica(pubb);
+//                    PubblicazioneAlbo pAlbo = p.getDatiAlbo();
+//                    IodaDocumentUtilities.UpdatePubblicazione(p, "balbo");
+//                    pubblicazioniDaAggiornare.add(new PubblicazioneIoda(p.getNumeroPubblicazione(), 
+//                            p.getAnnoPubblicazione(), 
+//                            new DateTime(pAlbo.getPubblicazioneDal()), 
+//                            new DateTime(pAlbo.getPubblicazioneAl()), 
+//                            Document.DocumentOperationType.UPDATE));
+//                }
                 
                 //Al termine di tutte le pubblicazioni, le aggiorno anche nel gddoc
-                gddoc.setPubblicazioni(pubblicazioniDaAggiornare);
+//                gddoc.setPubblicazioni(pubblicazioniDaAggiornare);
                        
             } //Fine ciclo FOR GDDOC
             
