@@ -67,20 +67,20 @@ public class PubblicatoreAlbo implements Job {
             dbConn.setAutoCommit(false);
             log.debug("inizio transazione, autoCommit settato a: " + dbConn.getAutoCommit());
 
-            String query = ApplicationParams.getGdDocToPublishExtractionQuery();
-            log.debug("query caricata");
+//            String query = ApplicationParams.getGdDocToPublishExtractionQuery();
+//            log.debug("query caricata");
+//
+//            log.debug("preparedStatement per select...");
+//            ps = dbConn.prepareStatement(query);
+//            log.debug("preparedStatement per select settata");
+//
+//            log.debug("sto per eseguire select. Query: " + ps.toString());
+//            ResultSet res = ps.executeQuery();
+//            log.debug("query eseguita");
 
-            log.debug("preparedStatement per select...");
-            ps = dbConn.prepareStatement(query);
-            log.debug("preparedStatement per select settata");
-
-            log.debug("sto per eseguire select. Query: " + ps.toString());
-            ResultSet res = ps.executeQuery();
-            log.debug("query eseguita");
-
-            LocalDateTime dataOdierna = LocalDateTime.now();
-            ZonedDateTime timeZoneDal = dataOdierna.atZone(ZoneId.systemDefault());
-            Date dataDal = Date.from(timeZoneDal.toInstant());
+//            LocalDateTime dataOdierna = LocalDateTime.now();
+//            ZonedDateTime timeZoneDal = dataOdierna.atZone(ZoneId.systemDefault());
+//            Date dataDal = Date.from(timeZoneDal.toInstant());
 
             log.debug("setto balboClient...");
             BalboClient balboClient = new BalboClient(ApplicationParams.getBalboServiceURI());
@@ -110,8 +110,8 @@ public class PubblicatoreAlbo implements Job {
                 //Per ogni GDDOC mi recupero le pubblicazioni associate. Sono solo quelle da pubblicare, opportunamente filtrate quando recuperiamo la lista dei Gddoc da pubblicare
                 List<PubblicazioneIoda> pubblicazioniGdDoc = gddoc.getPubblicazioni();
                 Pubblicazione pubblicazione = null;
-                ArrayList<Pubblicazione> pubblicazioniList = new ArrayList<>();
-                ArrayList<PubblicazioneIoda> pubblicazioniDaAggiornare = new ArrayList<>();
+//                ArrayList<Pubblicazione> pubblicazioniList = new ArrayList<>();
+//                ArrayList<PubblicazioneIoda> pubblicazioniDaAggiornare = new ArrayList<>();
                 
                 //Per ogni Gddoc recupero i sotto documenti da assegnare  alla pubblicazione
                 List<SottoDocumento> sottodocumenti = IodaDocumentUtilities.caricaSottoDocumenti(dbConn, gddoc.getId());
