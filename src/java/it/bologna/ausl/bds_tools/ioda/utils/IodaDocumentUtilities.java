@@ -369,10 +369,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     
     private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc) throws SQLException {
         String sqlText = 
-                "SELECT  numero_pubblicazione integer,\n" +
-                        "anno_pubblicazione integer,\n" +
-                        "data_dal timestamp without time zone,\n" +
-                        "data_al timestamp without time zone,\n" +
+                "SELECT  numero_pubblicazione, " +
+                        "anno_pubblicazione, " +
+                        "data_dal, " +
+                        "data_al, " +
+                        "pubblicatore " + 
                         "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
                         "WHERE id_gddoc = ?";
 
@@ -388,6 +389,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 p.setDataAl(new DateTime(res.getDate("data_al").getTime()));
                 p.setDataDal(new DateTime(res.getDate("data_dal").getTime()));
                 p.setNumeroPubblicazione(res.getLong("numero_pubblicazione"));
+                p.setPubblicatore(res.getString("pubblicatore"));
                 pubblicazioni.add(p);
             }
         }
