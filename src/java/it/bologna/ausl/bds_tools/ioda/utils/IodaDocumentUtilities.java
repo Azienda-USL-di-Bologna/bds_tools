@@ -34,6 +34,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -410,26 +411,28 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "spedisci_originale_pecgw, " +
                         "dimensione_pdf, " +
                         "dimensione_firmato, " +
-                        "dimensione_originale, " +
+                        "dimensione_originale " +
                 "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
                 "WHERE id_gddoc = ?";
         List<SottoDocumento> sottoDocumenti = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             ps.setString(1, idGdDoc);
+            
+            log.debug("eseguo la query: " + ps.toString() + "...");
             ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
             while (res.next()) {
                 SottoDocumento sd = new SottoDocumento();
                 sd.setCodiceSottoDocumento(res.getString("codice_sottodocumento"));
                 sd.setTipo(res.getString("tipo_sottodocumento"));
-                sd.setTipoFirma(TipoFirma.fromString("tipo_firma"));
-                // sd.setFirmatari(List<String> firmatari); TODO: forse compilare con l'elenco dei firmatari letti dal file firmato (se c'è)
+                sd.setTipoFirma(TipoFirma.fromString(res.getString("tipo_firma")));
                 sd.setPrincipale(res.getInt("principale") != 0);
-                sd.setNome(res.getString(""));
-                sd.setUuidMongoPdf(res.getString(""));
-                sd.setUuidMongoFirmato(res.getString(""));
-                sd.setUuidMongoOriginale(res.getString(""));
-                sd.setMimeTypeFileFirmato(res.getString(""));
-                sd.setMimeTypeFileOriginale(res.getString(""));
+                sd.setNome(res.getString("nome_sottodocumento"));
+                sd.setUuidMongoPdf(res.getString("uuid_mongo_pdf"));
+                sd.setUuidMongoFirmato(res.getString("uuid_mongo_firmato"));
+                sd.setUuidMongoOriginale(res.getString("uuid_mongo_originale"));
+                sd.setMimeTypeFileFirmato(res.getString("mimetype_file_firmato"));
+                sd.setMimeTypeFileOriginale(res.getString("mimetype_file_originale"));
                 sd.setDaSpedirePecgw(res.getInt("da_spedire_pecgw") != 0);
                 sd.setSpedisciOriginalePecgw(res.getInt("spedisci_originale_pecgw") != 0);
                 sd.setDimensioneFilePdf(res.getInt("dimensione_pdf"));
@@ -1017,10 +1020,12 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
-        ResultSet result = ps.executeQuery();
-        if (!result.next())
+        int rowsUpdated = ps.executeUpdate();
+        log.debug("eseguita");
+        if (rowsUpdated == 0)
             throw new SQLException("Documento non trovato");
-        
+        else if (rowsUpdated > 1)
+            log.fatal("troppe righe aggiornate, aggiornate " + rowsUpdated + " righe, dovrebbe essere una");
     }
     
     public void deleteAllMongoFileUploaded() {
@@ -1156,11 +1161,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         return SetDocumentNumber.setNumber(dbConn, context, guid, r.getSequenzaAssociata());
     }
     
-     public static ArrayList<GdDoc> getGdDocsDaPubblicare(Connection dbConn)
-    {          
+    public static ArrayList<GdDoc> getGdDocsDaPubblicare(Connection dbConn) throws SQLException {          
         ArrayList<GdDoc> listaGddocs = new ArrayList<>();
         
-        String sqlText = "SELECT  g.id_gddoc, " +
+        String sqlText = "SELECT g.id_gddoc, " +
                         "g.applicazione, " +
                         "g.codice_registro, " +
                         "g.data_gddoc, " +
@@ -1171,29 +1175,26 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "g.oggetto, " +
                         "g.tipo_oggetto_origine, " +
                         "g.stato_gd_doc, " + 
-                        "json_agg(row_to_json(p.*)) AS pubblicazioni "+
-                        " FROM " + ApplicationParams.getGdDocsTableName() + " g " +
-                        " JOIN " + ApplicationParams.getPubblicazioniAlboTableName() + " p on g.id_gddoc = p.id_gddoc  " +
-                        " WHERE p.numero_pubblicazione IS NULL " +
-                        " AND p.anno_pubblicazione IS NULL " +
-                        " GROUP BY g.id_gddoc, g.applicazione, g.codice, g.codice_registro, g.data_gddoc, g.data_registrazione, g.data_ultima_modifica," +
-                        " g.id_oggetto_origine, g.nome_gddoc, g.nome_struttura_firmatario, g.numero_registrazione, g.oggetto, g.tipo_gddoc, g.tipo_oggetto_origine," +
-                        " g.stato_gd_doc" +
-                        " ORDER BY g.id_gddoc ";      
+                        "json_agg(row_to_json(p.*)) AS pubblicazioni " +
+                        "FROM " + ApplicationParams.getGdDocsTableName() + " g " +
+                        "INNER JOIN " + ApplicationParams.getPubblicazioniAlboTableName() + " p on g.id_gddoc = p.id_gddoc  " +
+                        "WHERE p.numero_pubblicazione IS NULL " +
+                        "AND p.anno_pubblicazione IS NULL " +
+                        "GROUP BY g.id_gddoc, g.applicazione, g.codice, g.codice_registro, g.data_gddoc, g.data_registrazione, g.data_ultima_modifica, " +
+                        "g.id_oggetto_origine, g.nome_gddoc, g.nome_struttura_firmatario, g.numero_registrazione, g.oggetto, g.tipo_gddoc, g.tipo_oggetto_origine, " +
+                        "g.stato_gd_doc " +
+                        "ORDER BY g.id_gddoc ";      
         
-        PreparedStatement ps = null;
+        PreparedStatement s = null;
                 
-        try{
-            ps = dbConn.prepareStatement(sqlText);
-            String query = ps.toString();
-            
-            ResultSet result = ps.executeQuery();
-            
+        try {
+            s = dbConn.prepareStatement(sqlText);
+            String query = s.toString();
             log.debug("eseguo la query: " + query + " ...");
-            
+            ResultSet result = s.executeQuery();
+            log.debug("eseguita");
             //Inizio a ciclare sugli elementi trovati....
             while(result.next()){
-                
                 GdDoc gdDocToCreate = new GdDoc();
                 gdDocToCreate.setId(result.getString("id_gddoc"));
                 gdDocToCreate.setApplicazione(result.getString("applicazione"));
@@ -1209,11 +1210,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDocToCreate.setVisibile(result.getInt("stato_gd_doc") != 0); 
                 
                 //Questo campo è un array di elementi Json
-                String elencoPubblicazioniString  = result.getString("pubblicazioni");
+                String elencoPubblicazioniString  = result.getString("pubblicazioni");      
                 JSONArray jsonArray = (JSONArray) JSONValue.parse(elencoPubblicazioniString);
-                
+
                 ArrayList<PubblicazioneIoda> pubblicazioniList = new ArrayList<>();
-                
                 for (int i = 0; i < jsonArray.size(); i++) {
                    
                     JSONObject pubblicazioneJson = (JSONObject) jsonArray.get(i);
@@ -1221,28 +1221,23 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     PubblicazioneIoda pubblicazione = new PubblicazioneIoda();    
                     pubblicazione.setId((Long) pubblicazioneJson.get("id"));
                     pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_dal")));
-                    pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_al")));
+                    pubblicazione.setDataAl(DateTime.parse((String) pubblicazioneJson.get("data_al")));
                     //Aggiungo la pubblicazione appena creata
                     pubblicazioniList.add(pubblicazione);
                 }
-                
+
                 //Setto le pubblicazioni al gddoc
                 gdDocToCreate.setPubblicazioni(pubblicazioniList);
 
                 //Aggiungo il GDDOC alla lista dei Gddoc
                 listaGddocs.add(gdDocToCreate);
                 
-            } //END WHiLE
-                
+            } //END WHILE
         }
-        catch(Exception ex){
-            
-        }
-        finally{
-            if(ps != null)
-            {
+        finally {
+            if(s != null) {
                 try {
-                    ps.close();
+                    s.close();
                 }
                 catch (SQLException ex) {
                 }

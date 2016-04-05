@@ -63,24 +63,9 @@ public class PubblicatoreAlbo implements Job {
         try {
             dbConn = UtilityFunctions.getDBConnection();
             log.debug("connesisone db ottenuta");
-            
+
             dbConn.setAutoCommit(false);
             log.debug("inizio transazione, autoCommit settato a: " + dbConn.getAutoCommit());
-
-//            String query = ApplicationParams.getGdDocToPublishExtractionQuery();
-//            log.debug("query caricata");
-//
-//            log.debug("preparedStatement per select...");
-//            ps = dbConn.prepareStatement(query);
-//            log.debug("preparedStatement per select settata");
-//
-//            log.debug("sto per eseguire select. Query: " + ps.toString());
-//            ResultSet res = ps.executeQuery();
-//            log.debug("query eseguita");
-
-//            LocalDateTime dataOdierna = LocalDateTime.now();
-//            ZonedDateTime timeZoneDal = dataOdierna.atZone(ZoneId.systemDefault());
-//            Date dataDal = Date.from(timeZoneDal.toInstant());
 
             log.debug("setto balboClient...");
             BalboClient balboClient = new BalboClient(ApplicationParams.getBalboServiceURI());
@@ -88,10 +73,10 @@ public class PubblicatoreAlbo implements Job {
 
             //Qui dentro metto tutti i regsitri man mano che scorro i gddoc in modo da evitare di andare a leggere lo stesso dato più volte sul DB
             HashMap<String, Registro> mappaRegistri = new HashMap<>();
-            
+
             ArrayList<GdDoc> listaGdDocsDaPubblicare = IodaDocumentUtilities.getGdDocsDaPubblicare(dbConn);
             Registro registroGddoc;
-            
+
             for (GdDoc gddoc : listaGdDocsDaPubblicare) {
                
                 if(mappaRegistri.containsKey(gddoc.getCodiceRegistro()))
@@ -106,22 +91,24 @@ public class PubblicatoreAlbo implements Job {
                     registroGddoc = reg;
                     mappaRegistri.put(reg.codiceRegistro, reg);
                 }
-                
+
+                //Per ogni Gddoc recupero i sotto documenti da assegnare  alla pubblicazione
+                log.debug("caricamento sottoDocumenti...");
+                List<SottoDocumento> sottodocumenti = IodaDocumentUtilities.caricaSottoDocumenti(dbConn, gddoc.getId());
+                log.debug("sottoDocumenti:");
+                sottodocumenti.stream().forEach(s -> {log.debug(s.toString());});
+
                 //Per ogni GDDOC mi recupero le pubblicazioni associate. Sono solo quelle da pubblicare, opportunamente filtrate quando recuperiamo la lista dei Gddoc da pubblicare
                 List<PubblicazioneIoda> pubblicazioniGdDoc = gddoc.getPubblicazioni();
-                Pubblicazione pubblicazione = null;
-//                ArrayList<Pubblicazione> pubblicazioniList = new ArrayList<>();
-//                ArrayList<PubblicazioneIoda> pubblicazioniDaAggiornare = new ArrayList<>();
-                
-                //Per ogni Gddoc recupero i sotto documenti da assegnare  alla pubblicazione
-                List<SottoDocumento> sottodocumenti = IodaDocumentUtilities.caricaSottoDocumenti(dbConn, gddoc.getId());
-                
+                log.debug("pubblicazioni:");
+                pubblicazioniGdDoc.stream().forEach(p -> {log.debug(p.toString());});
                 for(PubblicazioneIoda pubbIoda : pubblicazioniGdDoc){
-                
-                    PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(pubbIoda.getDataDal().toDate(),pubbIoda.getDataAl().toDate());
+                    log.debug("pubblicazione: " + pubbIoda.toString());
                     
-                                       
-                    pubblicazione = new Pubblicazione(
+                    log.debug("crezione pubblicazione per balbo...");
+                    PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(pubbIoda.getDataDal().toDate(),pubbIoda.getDataAl().toDate());
+
+                    Pubblicazione pubblicazione = new Pubblicazione(
                             gddoc.getAnnoRegistrazione(),  
                             gddoc.getNumeroRegistrazione(), 
                             registroGddoc.codiceRegistro, 
@@ -137,172 +124,35 @@ public class PubblicatoreAlbo implements Job {
                             datiAlbo, 
                             null);
     
-                    //Ad ogni pubblicazione, assegno i sottodocumenti del gddoc a cui appartengono
+                    //ad ogni pubblicazione, assegno i sottodocumenti del gddoc a cui appartengono
                     for (SottoDocumento sottodoc : sottodocumenti) {
-                    
+                        log.debug("aggiunta allegato dal sottodocumento: " + sottodoc.toString());
                         AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(sottodoc.getNome(), sottodoc.getCodiceSottoDocumento());
                         pubblicazione.addAllegato(allegatoPubblicazione);
                     }
+                    log.debug("pubblicazione balbo: " + pubblicazione.toString());
                     
-                    Pubblicazione p = balboClient.pubblica(pubblicazione);
+                    Pubblicazione p = null;
+                    try {
+                        log.info("pubblicazione effettiva su balbo...");
+                        p = balboClient.pubblica(pubblicazione);
+                    }
+                    catch (org.springframework.web.client.HttpClientErrorException ex) {
+                        log.error("errore nella pubblicazione ", ex.getResponseBodyAsString());
+                        throw ex;
+                    }
+                    log.info("pubblicato, pubblicazione balbo aggiornata: " + p.toString());
+                    
                     pubbIoda.setAnnoPubblicazione(p.getAnnoPubblicazione());
                     pubbIoda.setNumeroPubblicazione(p.getNumeroPubblicazione());
                     pubbIoda.setPubblicatore("balbo");
-                    
+
+                    log.info("update pubblicazione ioda locale...");
                     IodaDocumentUtilities.UpdatePubblicazione(pubbIoda, "balbo");
-                    
-                    //pubblicazioniList.add(pubblicazione);
+                    log.info("update pubblicazione ioda locale completato");
                 }
-                
-                //Ciclo sulla lista di pubblicazioni e le pubbllico per davvero
-//                for (Pubblicazione pubb : pubblicazioniList) {
-//                    
-//                    Pubblicazione p = balboClient.pubblica(pubb);
-//                    PubblicazioneAlbo pAlbo = p.getDatiAlbo();
-//                    IodaDocumentUtilities.UpdatePubblicazione(p, "balbo");
-//                    pubblicazioniDaAggiornare.add(new PubblicazioneIoda(p.getNumeroPubblicazione(), 
-//                            p.getAnnoPubblicazione(), 
-//                            new DateTime(pAlbo.getPubblicazioneDal()), 
-//                            new DateTime(pAlbo.getPubblicazioneAl()), 
-//                            Document.DocumentOperationType.UPDATE));
-//                }
-                
-                //Al termine di tutte le pubblicazioni, le aggiorno anche nel gddoc
-//                gddoc.setPubblicazioni(pubblicazioniDaAggiornare);
-                       
             } //Fine ciclo FOR GDDOC
             
-            
-            
-            //TODO ELIMINARE IL WHILE PERCHE' ORA UTILIZZO LA FUNZIONE CHE RESTITUISCE I GDDOC DA CON LE PUBBLICAZIONI DA PUBBLICARE
-//            while (res.next()) {
-//                String idGdDoc = res.getString("id_gddoc");
-//                String idUtenteModifica = res.getString("id_utente_modifica");
-//                String nomeGdDoc = res.getString("nome_gddoc");
-//                String categoriaOrigine = res.getString("categoria_origine");
-//                String tipoGddoc = res.getString("tipo_gddoc");
-//                String dataUltimaModifica = res.getString("data_ultima_modifica");
-//                String statoGdDoc = res.getString("stato_gd_doc");
-//                String inUsoDa = res.getString("in_uso_da");
-//                Date dataGddoc = res.getTimestamp("data_gddoc");
-//                String guidGddoc = res.getString("guid_gddoc");
-//                String codiceRegistro = res.getString("codice_registro_gd");
-//                Date dataRegistrazione = res.getTimestamp("data_registrazione");
-//                String numeroRegistrazione = res.getString("numero_registrazione");
-//                String idUtenteRegistrazione = res.getString("id_utente_registrazione");
-//                Integer annoRegistrazione = res.getInt("anno_registrazione");
-//                String firmato = res.getString("firmato");
-//                String idOggettoOrigine = res.getString("id_oggetto_origine");
-//                String tipoOggettoOrigine = res.getString("tipo_oggetto_origine");
-//                String oggetto = res.getString("oggetto_gddoc");
-//                String codice = res.getString("codice");
-//                String descrizioneRegistro = res.getString("descrizione_albo");
-////                String contenutoTrasparenza = res.getString("contenuto_trasparenza");
-////                String oggettoTrasparenza = res.getString("oggetto_trasparenza");
-////                String spesaPrevista = res.getString("spesa_prevista");
-////                String estremiDocumento = res.getString("estremi_documento");
-////                String tipoProvvedimento = res.getString("tipo_provvedimento_trasparenza");
-//                String articolazione = res.getString("articolazione");
-//                Integer giorniPubblicazione = res.getInt("giorni_pubblicazione");
-//                String nomeSottoDocumento = res.getString("nome_sottodocumento");
-//                String codiceSottoDocumento = res.getString("codice_sottodocumento");
-//                String idApplicazione = res.getString("id_applicazione");
-//
-//                ps.close();
-//                log.debug("prepared statement per select chiuso");
-//                
-//                LocalDateTime dataAlLocalDate = dataOdierna.plusDays(giorniPubblicazione);
-//                ZonedDateTime timeZoneAl = dataAlLocalDate.atZone(ZoneId.systemDefault());
-//                Date dataAl = Date.from(timeZoneAl.toInstant());
-//
-//                log.debug("setto PubblicazioneAlbo...");
-//                PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(dataDal, dataAl);
-//                log.debug("settato PubblicazioneAlbo");
-//                PubblicazioneTrasparenza datiTrasparenza = null;
-//
-//                log.debug("controllo tipo provvedimento");
-////                if ((tipoProvvedimento != null) && (!tipoProvvedimento.equalsIgnoreCase(TIPO_PROVVEDIMENTO_NON_RILEVANTE))) {
-////                    datiTrasparenza = new PubblicazioneTrasparenza(oggettoTrasparenza, spesaPrevista, estremiDocumento);
-////                } else {
-////                    log.debug("setto tipoProvvedimento a vuoto");
-////                    tipoProvvedimento = "";
-////                }
-//
-//                log.debug("setto tipoProvvedimento a vuoto");
-//                String tipoProvvedimento = "";
-//
-//                log.debug("setto Pubblicazione...");
-//                Pubblicazione pubblicazione = new Pubblicazione(annoRegistrazione,
-//                        numeroRegistrazione,
-//                        descrizioneRegistro,
-//                        "esecutiva",
-//                        articolazione,
-//                        oggetto,
-//                        tipoProvvedimento,
-//                        "attivo",
-//                        dataGddoc,
-//                        dataRegistrazione,
-//                        dataRegistrazione,
-//                        datiAlbo,
-//                        datiTrasparenza);
-//                log.debug("settata Pubblicazione");
-//
-//                // allego la stampa unica come allegato
-//                log.debug("setto AllegatoPubblicazione...");
-//                AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(nomeSottoDocumento, codiceSottoDocumento);
-//                log.debug("settato AllegatoPubblicazione");
-//                log.debug("aggiungo allegato...");
-//                pubblicazione.addAllegato(allegatoPubblicazione);
-//                log.debug("allegato inserito");
-//
-//                log.debug("sto per pubblicare...");
-//                pubblicazione = balboClient.pubblica(pubblicazione);
-//                log.debug("pubblicato: " + pubblicazione.toString());
-//
-//                //QUesta parte deve essere sostituita con il ciclo sulla collection gddoc e aggiornamento delle pubblicazioni.
-//                log.debug("preparo query di updateGdDoc...");
-//                String queryUpdatePubblicato = ApplicationParams.getGdDocUpdatePubblicato();
-//                // queryUpdatePubblicato = queryUpdatePubblicato.replace("?", "'" + idGdDoc + "'");
-//                log.debug("preparedStatement per updateGdDoc...");
-//                ps = dbConn.prepareStatement(queryUpdatePubblicato);
-//                log.debug("preparedStatement per updateGdDoc settato");
-//
-//                ps.setString(1, idGdDoc);
-//                log.debug("sto per eseguire update. Query: " + ps.toString());
-//                ps.executeUpdate();
-//                log.debug("eseguito update");
-//
-//                ps.close();
-//                log.debug("prepared statement per updateGdDoc chiuso");
-//
-//
-////                log.debug("preparo query di insert PubblicazioneAlbo...");
-////                String queryInsertPubblicazioneAlbo = ApplicationParams.getPubblicazioniAlboQueryInsertPubblicazione();
-////                log.debug("preparedStatement per insert PubblicazioneAlbo...");
-////                ps = dbConn.prepareStatement(queryInsertPubblicazioneAlbo);
-////                log.debug("preparedStatement per insert PubblicazioneAlbo settato");
-////
-////                log.debug("recupero relata...");
-////                AllegatoPubblicazione relata = pubblicazione.getAllegatiPubblicazione().stream().filter(a -> a.isRelata()).findFirst().get();
-////                log.debug("relata recuperata: " + relata.toString());
-////                
-////                ps.setString(1, String.valueOf(pubblicazione.getId()));
-////                ps.setString(2, idApplicazione);
-////                ps.setTimestamp(3, new Timestamp(pubblicazione.getDatiAlbo().getPubblicazioneDal().getTime()));
-////                ps.setTimestamp(4, new Timestamp(pubblicazione.getDatiAlbo().getPubblicazioneAl().getTime()));
-////                ps.setString(5, relata.getUuid());
-////                ps.setString(6, guidGddoc);
-////                ps.setInt(7, -1);
-////                ps.setTimestamp(8, new Timestamp(pubblicazione.getDataPubblicazione().getTime()));
-////                log.debug("sto per eseguire insert PubblicazioneAlbo. Query: " + ps.toString());
-////                ps.executeUpdate();
-////                log.debug("eseguito insert PubblicazioneAlbo");
-////                ps.close();
-////                log.debug("prepared statement per insert PubblicazioneAlbo chiuso");
-//             
-//                dbConn.commit();
-//            }
-
         } //try
         catch (Throwable t) {
             log.fatal("Errore nel pubblicatore albo", t);
@@ -335,12 +185,4 @@ public class PubblicatoreAlbo implements Job {
             log.debug("Pubblicatore Albo Ended");
         }
     }
-
-//    public void setIntervalDays(int hour) {
-//        this.intervalDays = hour;
-//    }
-//
-//    public void setIntervalDays(String hour) {
-//        this.intervalDays = Integer.valueOf(hour);
-//    }
 }
