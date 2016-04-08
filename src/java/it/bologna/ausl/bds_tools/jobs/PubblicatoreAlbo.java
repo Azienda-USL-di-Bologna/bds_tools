@@ -1,41 +1,23 @@
 package it.bologna.ausl.bds_tools.jobs;
 
-//import it.bologna.ausl.balboclient.BalboClient;
-//import it.bologna.ausl.balboclient.classes.AllegatoPubblicazione;
-//import it.bologna.ausl.balboclient.classes.Pubblicazione;
-//import it.bologna.ausl.balboclient.classes.PubblicazioneAlbo;
-//import it.bologna.ausl.balboclient.classes.PubblicazioneTrasparenza;
 import it.bologna.ausl.balboclient.BalboClient;
 import it.bologna.ausl.balboclient.classes.AllegatoPubblicazione;
 import it.bologna.ausl.balboclient.classes.Pubblicazione;
 import it.bologna.ausl.balboclient.classes.PubblicazioneAlbo;
-import it.bologna.ausl.balboclient.classes.PubblicazioneTrasparenza;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.Registro;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
-import java.util.logging.Level;
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.joda.time.DateTime;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -49,6 +31,7 @@ public class PubblicatoreAlbo implements Job {
 
     private static final Logger log = LogManager.getLogger(PubblicatoreAlbo.class);
     private static final String TIPO_PROVVEDIMENTO_NON_RILEVANTE = "non_rilevante";
+    private static final String PUBBLICATORE = "balbo";
 
     //private int intervalDays;
 //    public PubblicatoreAlbo() {
@@ -78,7 +61,7 @@ public class PubblicatoreAlbo implements Job {
             Registro registroGddoc;
 
             for (GdDoc gddoc : listaGdDocsDaPubblicare) {
-               
+
                 if(mappaRegistri.containsKey(gddoc.getCodiceRegistro()))
                 {
                     //se è già presente questo codice registro, allora utilizzo questo
@@ -104,7 +87,7 @@ public class PubblicatoreAlbo implements Job {
                 pubblicazioniGdDoc.stream().forEach(p -> {log.debug(p.toString());});
                 for(PubblicazioneIoda pubbIoda : pubblicazioniGdDoc){
                     log.debug("pubblicazione: " + pubbIoda.toString());
-                    
+
                     log.debug("crezione pubblicazione per balbo...");
                     PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(pubbIoda.getDataDal().toDate(),pubbIoda.getDataAl().toDate());
 
@@ -113,7 +96,7 @@ public class PubblicatoreAlbo implements Job {
                             gddoc.getNumeroRegistrazione(), 
                             registroGddoc.codiceRegistro, 
                             registroGddoc.descPubbAlbo, 
-                            "esecutiva", 
+                            pubbIoda.getEsecutivita(), 
                             gddoc.getNomeStrutturaFirmatario(), 
                             UtilityFunctions.fixXhtml(gddoc.getOggetto()), 
                             gddoc.getTipoOggettoOrigine(), 
@@ -142,13 +125,13 @@ public class PubblicatoreAlbo implements Job {
                         throw ex;
                     }
                     log.info("pubblicato, pubblicazione balbo aggiornata: " + p.toString());
-                    
+
                     pubbIoda.setAnnoPubblicazione(p.getAnnoPubblicazione());
                     pubbIoda.setNumeroPubblicazione(p.getNumeroPubblicazione());
-                    pubbIoda.setPubblicatore("balbo");
+                    pubbIoda.setPubblicatore(PUBBLICATORE);
 
                     log.info("update pubblicazione ioda locale...");
-                    IodaDocumentUtilities.UpdatePubblicazione(pubbIoda, "balbo");
+                    IodaDocumentUtilities.UpdatePubblicazione(pubbIoda);
                     log.info("update pubblicazione ioda locale completato");
                 }
             } //Fine ciclo FOR GDDOC
