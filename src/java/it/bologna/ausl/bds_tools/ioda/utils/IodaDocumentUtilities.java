@@ -373,7 +373,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "anno_pubblicazione, " +
                         "data_dal, " +
                         "data_al, " +
-                        "pubblicatore " + 
+                        "pubblicatore, " + 
+                        "esecutivita " + 
                         "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
                         "WHERE id_gddoc = ?";
 
@@ -390,6 +391,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 p.setDataDal(new DateTime(res.getDate("data_dal").getTime()));
                 p.setNumeroPubblicazione(res.getLong("numero_pubblicazione"));
                 p.setPubblicatore(res.getString("pubblicatore"));
+                p.setEsecutivita(res.getString("esecutivita"));
                 pubblicazioni.add(p);
             }
         }
@@ -489,12 +491,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         ps.setInt(index++, gdDoc.isVisibile() == null || gdDoc.isVisibile() ? 1 : 0);
         
         // data_gddoc
-        if (gdDoc.getData() == null) {
-                ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
-        }
-        else{
-            ps.setTimestamp(index++, new Timestamp(gdDoc.getData().getMillis()));
-        }
+        ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
         
         // guid_gddoc
         ps.setString(index++, gdDoc.getGuid());
@@ -990,7 +987,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
-    public static void UpdatePubblicazione(PubblicazioneIoda p, String pubblicatore) throws NamingException, ServletException, SQLException{
+    public static void UpdatePubblicazione(PubblicazioneIoda p) throws NamingException, ServletException, SQLException{
         
         Connection dbConn = null;
                
@@ -1020,7 +1017,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         ps.setInt(index++, p.getAnnoPubblicazione());
         
         // pubblicatore
-        ps.setString(index++, pubblicatore);
+        ps.setString(index++, p.getPubblicatore());
         
         // id
         ps.setLong(index++, p.getId());
