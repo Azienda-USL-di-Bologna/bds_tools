@@ -489,7 +489,12 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         ps.setInt(index++, gdDoc.isVisibile() == null || gdDoc.isVisibile() ? 1 : 0);
         
         // data_gddoc
-        ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
+        if (gdDoc.getData() == null) {
+                ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
+        }
+        else{
+            ps.setTimestamp(index++, new Timestamp(gdDoc.getData().getMillis()));
+        }
         
         // guid_gddoc
         ps.setString(index++, gdDoc.getGuid());
