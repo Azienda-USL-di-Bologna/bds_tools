@@ -14,10 +14,12 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTime;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -48,13 +50,13 @@ public class PubblicatoreAlbo implements Job {
             log.debug("connesisone db ottenuta");
 
             dbConn.setAutoCommit(false);
-            log.debug("inizio transazione, autoCommit settato a: " + dbConn.getAutoCommit());
-
+            log.debug("autoCommit settato a: " + dbConn.getAutoCommit());
+            
             log.debug("setto balboClient...");
             BalboClient balboClient = new BalboClient(ApplicationParams.getBalboServiceURI());
             log.debug("balboClient settato");
 
-            //Qui dentro metto tutti i regsitri man mano che scorro i gddoc in modo da evitare di andare a leggere lo stesso dato più volte sul DB
+            //Qui dentro metto tutti i registri man mano che scorro i gddoc in modo da evitare di andare a leggere lo stesso dato più volte sul DB
             HashMap<String, Registro> mappaRegistri = new HashMap<>();
 
             ArrayList<GdDoc> listaGdDocsDaPubblicare = IodaDocumentUtilities.getGdDocsDaPubblicare(dbConn);
@@ -115,24 +117,42 @@ public class PubblicatoreAlbo implements Job {
                     }
                     log.debug("pubblicazione balbo: " + pubblicazione.toString());
                     
-                    Pubblicazione p = null;
+                    List<Pubblicazione> pubblicazioni = null;
                     try {
                         log.info("pubblicazione effettiva su balbo...");
-                        p = balboClient.pubblica(pubblicazione);
+                        pubblicazioni = balboClient.pubblica(pubblicazione);
                     }
                     catch (org.springframework.web.client.HttpClientErrorException ex) {
                         log.error("errore nella pubblicazione ", ex.getResponseBodyAsString());
                         throw ex;
                     }
-                    log.info("pubblicato, pubblicazione balbo aggiornata: " + p.toString());
 
-                    pubbIoda.setAnnoPubblicazione(p.getAnnoPubblicazione());
-                    pubbIoda.setNumeroPubblicazione(p.getNumeroPubblicazione());
-                    pubbIoda.setPubblicatore(PUBBLICATORE);
+                    log.info("pubblicato, pubblicazioni balbo aggiornate: " + Arrays.toString(pubblicazioni.toArray()));
 
-                    log.info("update pubblicazione ioda locale...");
-                    IodaDocumentUtilities.UpdatePubblicazione(pubbIoda);
-                    log.info("update pubblicazione ioda locale completato");
+                    // il pubblicatore mi torna una lista di pubblicazioni 
+                    // (una è quella appena pubblicata e le altre (una sola per ora?) sono quelle che sono state defisse)
+
+                    // per ogni pubblicazione tornata, controllo la data di defissione, se non c'è allora è quella appena pubblicata, altrimenti sono le defisse
+                    for(Pubblicazione p : pubblicazioni) {
+                        PubblicazioneIoda pIoda = new PubblicazioneIoda();
+                        pIoda.setNumeroPubblicazione(p.getNumeroPubblicazione());
+                        pIoda.setAnnoPubblicazione(p.getAnnoPubblicazione());
+                        pIoda.setDataDefissione(new DateTime(p.getDataDefissione().getTime()));
+                        if (p.getDataDefissione() != null) { // pubblicazione defissa, aggiorno la data defissione (numero e anno ci sono già, quindi li uso per individuarla)
+                            log.info("update pubblicazione ioda locale per l'inserimento della data di defissione...");
+                            IodaDocumentUtilities.UpdatePubblicazioneByNumeroAndAnno(p.getNumeroPubblicazione(), p.getAnnoPubblicazione(), pIoda);
+                             log.info("update pubblicazione ioda locale per l'inserimento della data di defissione completato");
+                        }
+                        else {
+                            pIoda.setPubblicatore(PUBBLICATORE);
+                            log.info("update pubblicazione ioda locale per l'inserimento del numero e l'anno...");
+                            IodaDocumentUtilities.UpdatePubblicazioneById(pubbIoda.getId(), pIoda);
+                            log.info("update pubblicazione ioda locale per l'inserimento del numero e l'anno completato");
+                        }
+                    }
+                    
+                    // se tutto è ok faccio il commit
+                    dbConn.commit();
                 }
             } //Fine ciclo FOR GDDOC
             

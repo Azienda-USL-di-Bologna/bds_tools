@@ -38,6 +38,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -987,7 +988,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
     }
 
-    public static void UpdatePubblicazione(PubblicazioneIoda p) throws NamingException, ServletException, SQLException{
+    public static void UpdatePubblicazioneById(long idPubblicaizone, PubblicazioneIoda p) throws NamingException, ServletException, SQLException{
         
         Connection dbConn = null;
                
@@ -1005,6 +1006,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "numero_pubblicazione = coalesce(?, numero_pubblicazione), " +
                 "anno_pubblicazione = coalesce(?, anno_pubblicazione), " +
                 "pubblicatore = coalesce(?, pubblicatore) " +
+                "data_defissione = coalesce(?, data_defissione), " +
                 "WHERE id = ? ";
         
         PreparedStatement ps = dbConn.prepareStatement(sqlText);
@@ -1018,10 +1020,57 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         
         // pubblicatore
         ps.setString(index++, p.getPubblicatore());
-        
+
+        //data defissione
+        ps.setTimestamp(index++, new Timestamp(p.getDataDefissione().getMillis()));
+
         // id
-        ps.setLong(index++, p.getId());
+        ps.setLong(index++, idPubblicaizone);
+
+        String query = ps.toString();
+        log.debug("eseguo la query: " + query + " ...");
+        int rowsUpdated = ps.executeUpdate();
+        log.debug("eseguita");
+        if (rowsUpdated == 0)
+            throw new SQLException("Documento non trovato");
+        else if (rowsUpdated > 1)
+            log.fatal("troppe righe aggiornate, aggiornate " + rowsUpdated + " righe, dovrebbe essere una");
+    }
+    
+    public static void UpdatePubblicazioneByNumeroAndAnno(long numeroPubblicazione, int annoPubblicazione, PubblicazioneIoda p) throws NamingException, ServletException, SQLException{
         
+        Connection dbConn = null;
+               
+        try {
+            dbConn = UtilityFunctions.getDBConnection();
+            }
+        catch (SQLException sQLException) {
+            String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();    
+            log.error(message, sQLException);
+            throw new ServletException(message);
+        }
+        
+        String sqlText = 
+                "UPDATE " + ApplicationParams.getPubblicazioniAlboTableName() + " SET " +
+                "data_defissione = coalesce(?, data_defissione), " +
+                "pubblicatore = coalesce(?, pubblicatore) " +
+                "WHERE numero_pubblicazione = ? AND anno_pubblicazione = ?";
+        
+        PreparedStatement ps = dbConn.prepareStatement(sqlText);
+        int index = 1;
+
+        //data defissione
+        ps.setTimestamp(index++, new Timestamp(p.getDataDefissione().getMillis()));
+        
+        // pubblicatore
+        ps.setString(index++, p.getPubblicatore());
+        
+        // numero
+        ps.setLong(index++, numeroPubblicazione);
+        
+        // anno
+        ps.setInt(index++, annoPubblicazione);
+
         String query = ps.toString();
         log.debug("eseguo la query: " + query + " ...");
         int rowsUpdated = ps.executeUpdate();
@@ -1164,10 +1213,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         Registro r = Registro.getRegistro(codiceRegistro, dbConn);
         return SetDocumentNumber.setNumber(dbConn, context, guid, r.getSequenzaAssociata());
     }
-    
+
     public static ArrayList<GdDoc> getGdDocsDaPubblicare(Connection dbConn) throws SQLException {          
         ArrayList<GdDoc> listaGddocs = new ArrayList<>();
-        
+
         String sqlText = "SELECT g.id_gddoc, " +
                         "g.applicazione, " +
                         "g.codice_registro, " +
@@ -1184,15 +1233,18 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "INNER JOIN " + ApplicationParams.getPubblicazioniAlboTableName() + " p on g.id_gddoc = p.id_gddoc  " +
                         "WHERE p.numero_pubblicazione IS NULL " +
                         "AND p.anno_pubblicazione IS NULL " +
+                        "AND g.numero_registrazione IS NOT NULL " +
+                        "AND g.tipo_gddoc = ? " +
                         "GROUP BY g.id_gddoc, g.applicazione, g.codice, g.codice_registro, g.data_gddoc, g.data_registrazione, g.data_ultima_modifica, " +
                         "g.id_oggetto_origine, g.nome_gddoc, g.nome_struttura_firmatario, g.numero_registrazione, g.oggetto, g.tipo_gddoc, g.tipo_oggetto_origine, " +
                         "g.stato_gd_doc " +
-                        "ORDER BY g.id_gddoc ";      
-        
+                        "ORDER BY g.id_gddoc ";
+
         PreparedStatement s = null;
-                
+
         try {
             s = dbConn.prepareStatement(sqlText);
+            s.setString(1, "r");
             String query = s.toString();
             log.debug("eseguo la query: " + query + " ...");
             ResultSet result = s.executeQuery();
