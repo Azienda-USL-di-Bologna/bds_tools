@@ -129,9 +129,9 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                     if (lock.getLock()) {
 
                         // inserimento GdDoc con fascicolazione e sottodocumenti
-                        iodaUtilities.updateGdDoc(dbConn, ps);
+                        iodaUtilities.updateGdDoc(dbConn, ps, iodaRequest.getAdditionalData());
                         String numero, numeroAndAnno = null;
-                        if(gdDoc.getNumerazioneAutomatica()){
+                        if(gdDoc.getNumerazioneAutomatica() != null && gdDoc.getNumerazioneAutomatica()){
                             if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
                                 gdDoc.setCodiceRegistro(ApplicationParams.getDefaultSequenceName());
                             }
@@ -145,7 +145,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                         }
                         
                         dbConn.commit();
-                        if(gdDoc.getNumerazioneAutomatica())
+                        if(gdDoc.getNumerazioneAutomatica() != null && gdDoc.getNumerazioneAutomatica())
                             log.info("numero assegnato: " + numero);
                         updateComplete = true;
                     }

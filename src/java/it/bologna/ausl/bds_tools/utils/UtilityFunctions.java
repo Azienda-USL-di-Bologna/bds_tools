@@ -6,6 +6,7 @@ package it.bologna.ausl.bds_tools.utils;
  */
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
+import it.bologna.ausl.bds_tools.exceptions.ResourceNotAvailableException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.masterchefclient.PdfConvertParams;
 import it.bologna.ausl.masterchefclient.PdfConvertResult;
@@ -117,6 +118,37 @@ static {
             String message = "applicazione: " + idApplicazione + " autorizzata";
             log.info(message);
             return authenticationResultSet.getString(1);
+        }
+    }
+
+    /**
+     * Controlla se l'applicazione ha l'accesso al repository
+     * @param dbConn connessione
+     * @param idApplicazione id applicazione della quale verificare l'accesso al repository
+     * @return "true" se l'applicazione ha l'accesso al repository, "false" altrimenti
+     * @throws SQLException
+     * @throws NotAuthorizedException se l'applicazione non viene trovata nella tabella delle applicazioni
+     */
+    public static boolean hasAccessoRepository(Connection dbConn, String idApplicazione) throws SQLException {
+        String sqlText = 
+                    "SELECT accesso_repository " +
+                    "FROM " + ApplicationParams.getAuthenticationTable() + " " +
+                    "WHERE id_applicazione = ?";
+
+        PreparedStatement ps = dbConn.prepareStatement(sqlText);
+        ps.setString(1, idApplicazione);
+        String query = ps.toString();
+        log.debug("eseguo la query: " + query + " ...");
+//            dbConn.setAutoCommit(true);
+        ResultSet authenticationResultSet = ps.executeQuery();
+
+        if (authenticationResultSet.next()) {
+            return authenticationResultSet.getInt(1) != 0;
+        }
+        else {
+            String message = "applicazione: " + idApplicazione + " non trovata";
+            log.error(message);
+            throw new SQLException(message);
         }
     }
 

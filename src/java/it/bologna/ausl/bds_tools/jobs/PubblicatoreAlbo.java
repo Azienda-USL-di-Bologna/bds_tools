@@ -101,7 +101,7 @@ public class PubblicatoreAlbo implements Job {
                             pubbIoda.getEsecutivita(), 
                             gddoc.getNomeStrutturaFirmatario(), 
                             UtilityFunctions.fixXhtml(gddoc.getOggetto()), 
-                            gddoc.getTipoOggettoOrigine(), 
+                            "\"\"",
                             "attivo", 
                             gddoc.getData().toDate(), 
                             gddoc.getDataRegistrazione().toDate(),
@@ -137,8 +137,9 @@ public class PubblicatoreAlbo implements Job {
                         PubblicazioneIoda pIoda = new PubblicazioneIoda();
                         pIoda.setNumeroPubblicazione(p.getNumeroPubblicazione());
                         pIoda.setAnnoPubblicazione(p.getAnnoPubblicazione());
-                        pIoda.setDataDefissione(new DateTime(p.getDataDefissione().getTime()));
+                        
                         if (p.getDataDefissione() != null) { // pubblicazione defissa, aggiorno la data defissione (numero e anno ci sono già, quindi li uso per individuarla)
+                            pIoda.setDataDefissione(new DateTime(p.getDataDefissione().getTime()));
                             log.info("update pubblicazione ioda locale per l'inserimento della data di defissione...");
                             IodaDocumentUtilities.UpdatePubblicazioneByNumeroAndAnno(p.getNumeroPubblicazione(), p.getAnnoPubblicazione(), pIoda);
                              log.info("update pubblicazione ioda locale per l'inserimento della data di defissione completato");
