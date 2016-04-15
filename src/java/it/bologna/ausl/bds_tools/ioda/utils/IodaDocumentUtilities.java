@@ -429,7 +429,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 p.setNumeroPubblicazione(res.getLong("numero_pubblicazione"));
                 p.setPubblicatore(res.getString("pubblicatore"));
                 p.setEsecutivita(res.getString("esecutivita"));
-                p.setDataDefissione(new DateTime(res.getTimestamp("data_defissione").getTime()));
+                Timestamp dataDefissione = res.getTimestamp("data_defissione");
+                if (dataDefissione != null)
+                    p.setDataDefissione(new DateTime(dataDefissione.getTime()));
                 pubblicazioni.add(p);
             }
         }
