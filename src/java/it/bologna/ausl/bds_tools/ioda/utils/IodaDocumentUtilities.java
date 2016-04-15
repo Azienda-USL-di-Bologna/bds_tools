@@ -410,7 +410,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "data_dal, " +
                         "data_al, " +
                         "pubblicatore, " + 
-                        "esecutivita " + 
+                        "esecutivita, " + 
+                        "data_defissione " +
                         "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
                         "WHERE id_gddoc = ?";
 
@@ -428,6 +429,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 p.setNumeroPubblicazione(res.getLong("numero_pubblicazione"));
                 p.setPubblicatore(res.getString("pubblicatore"));
                 p.setEsecutivita(res.getString("esecutivita"));
+                p.setDataDefissione(new DateTime(res.getTimestamp("data_defissione").getTime()));
                 pubblicazioni.add(p);
             }
         }
