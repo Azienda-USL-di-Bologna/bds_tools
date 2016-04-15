@@ -129,7 +129,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                     if (lock.getLock()) {
 
                         // inserimento GdDoc con fascicolazione e sottodocumenti
-                        iodaUtilities.updateGdDoc(dbConn, ps, iodaRequest.getAdditionalData());
+                        iodaUtilities.updateGdDoc(dbConn, iodaRequest.getAdditionalData());
                         String numero, numeroAndAnno = null;
                         if(gdDoc.getNumerazioneAutomatica() != null && gdDoc.getNumerazioneAutomatica()){
                             if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {

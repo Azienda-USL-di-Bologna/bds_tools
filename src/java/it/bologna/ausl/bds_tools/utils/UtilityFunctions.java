@@ -102,22 +102,23 @@ static {
                     "FROM " + ApplicationParams.getAuthenticationTable() + " " +
                     "WHERE id_applicazione = ? and token = ?";
 
-        PreparedStatement ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, idApplicazione);
-        ps.setString(2, token);
-        String query = ps.toString().substring(0, ps.toString().lastIndexOf("=") + 1) + " ******";
-        log.debug("eseguo la query: " + query + " ...");
-//            dbConn.setAutoCommit(true);
-        ResultSet authenticationResultSet = ps.executeQuery();
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idApplicazione);
+            ps.setString(2, token);
+            String query = ps.toString().substring(0, ps.toString().lastIndexOf("=") + 1) + " ******";
+            log.debug("eseguo la query: " + query + " ...");
+    //            dbConn.setAutoCommit(true);
+            ResultSet authenticationResultSet = ps.executeQuery();
 
-        if (authenticationResultSet.next() == false) {
-            String message = "applicazione: " + idApplicazione + " non autorizzata";
-            log.error(message);
-            throw new NotAuthorizedException(message);
-        } else {
-            String message = "applicazione: " + idApplicazione + " autorizzata";
-            log.info(message);
-            return authenticationResultSet.getString(1);
+            if (authenticationResultSet.next() == false) {
+                String message = "applicazione: " + idApplicazione + " non autorizzata";
+                log.error(message);
+                throw new NotAuthorizedException(message);
+            } else {
+                String message = "applicazione: " + idApplicazione + " autorizzata";
+                log.info(message);
+                return authenticationResultSet.getString(1);
+            }
         }
     }
 
@@ -127,7 +128,6 @@ static {
      * @param idApplicazione id applicazione della quale verificare l'accesso al repository
      * @return "true" se l'applicazione ha l'accesso al repository, "false" altrimenti
      * @throws SQLException
-     * @throws NotAuthorizedException se l'applicazione non viene trovata nella tabella delle applicazioni
      */
     public static boolean hasAccessoRepository(Connection dbConn, String idApplicazione) throws SQLException {
         String sqlText = 
@@ -135,20 +135,22 @@ static {
                     "FROM " + ApplicationParams.getAuthenticationTable() + " " +
                     "WHERE id_applicazione = ?";
 
-        PreparedStatement ps = dbConn.prepareStatement(sqlText);
-        ps.setString(1, idApplicazione);
-        String query = ps.toString();
-        log.debug("eseguo la query: " + query + " ...");
-//            dbConn.setAutoCommit(true);
-        ResultSet authenticationResultSet = ps.executeQuery();
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
 
-        if (authenticationResultSet.next()) {
-            return authenticationResultSet.getInt(1) != 0;
-        }
-        else {
-            String message = "applicazione: " + idApplicazione + " non trovata";
-            log.error(message);
-            throw new SQLException(message);
+            ps.setString(1, idApplicazione);
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+    //            dbConn.setAutoCommit(true);
+            ResultSet authenticationResultSet = ps.executeQuery();
+
+            if (authenticationResultSet.next()) {
+                return authenticationResultSet.getInt(1) != 0;
+            }
+            else {
+                String message = "applicazione: " + idApplicazione + " non trovata";
+                log.error(message);
+                throw new SQLException(message);
+            }
         }
     }
 

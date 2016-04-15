@@ -141,13 +141,13 @@ public class PubblicatoreAlbo implements Job {
                         if (p.getDataDefissione() != null) { // pubblicazione defissa, aggiorno la data defissione (numero e anno ci sono già, quindi li uso per individuarla)
                             pIoda.setDataDefissione(new DateTime(p.getDataDefissione().getTime()));
                             log.info("update pubblicazione ioda locale per l'inserimento della data di defissione...");
-                            IodaDocumentUtilities.UpdatePubblicazioneByNumeroAndAnno(p.getNumeroPubblicazione(), p.getAnnoPubblicazione(), pIoda);
+                            IodaDocumentUtilities.UpdatePubblicazioneByNumeroAndAnno(dbConn, p.getNumeroPubblicazione(), p.getAnnoPubblicazione(), pIoda);
                              log.info("update pubblicazione ioda locale per l'inserimento della data di defissione completato");
                         }
                         else {
                             pIoda.setPubblicatore(PUBBLICATORE);
                             log.info("update pubblicazione ioda locale per l'inserimento del numero e l'anno...");
-                            IodaDocumentUtilities.UpdatePubblicazioneById(pubbIoda.getId(), pIoda);
+                            IodaDocumentUtilities.UpdatePubblicazioneById(dbConn, pubbIoda.getId(), pIoda);
                             log.info("update pubblicazione ioda locale per l'inserimento del numero e l'anno completato");
                         }
                     }

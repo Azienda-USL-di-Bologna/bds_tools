@@ -122,7 +122,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                 
                 GdDoc gdDoc = iodaUtilities.getGdDoc();
                 
-                String guid = iodaUtilities.insertGdDoc(dbConn, ps);
+                String guid = iodaUtilities.insertGdDoc(dbConn);
                 
                 String numero = null;
                 if(gdDoc.getNumerazioneAutomatica()){

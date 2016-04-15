@@ -112,7 +112,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
 
             try {
                 dbConn.setAutoCommit(false);
-                iodaUtilities.deleteGdDoc(dbConn, ps);
+                iodaUtilities.deleteGdDoc(dbConn);
                 dbConn.commit();
             }
             catch (IodaDocumentException ex) {
