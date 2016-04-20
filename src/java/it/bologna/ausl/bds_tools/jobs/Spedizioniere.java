@@ -526,15 +526,7 @@ public class Spedizioniere implements Job{
                                             mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
                                             spedisciOriginale = false;
                                         }
-
-                                        if (resOfSottoDocumenti.getInt("spedisci_originale_pecgw") != 0) {
-                                            if(spedisciOriginale){
-                                                log.debug("Sottodocumento originale");
-                                                is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
-                                                mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
-                                            }
-                                        }
-
+                                        
                                         log.debug("Creazione tmpFile");
                                         File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
                                         tmpFile.deleteOnExit();
@@ -549,6 +541,29 @@ public class Spedizioniere implements Job{
                                         SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento") + "." + ext, mimeType, tmpFile);
                                         log.debug("Aggiunta attachment");
                                         attachments.add(att);
+
+                                        if (resOfSottoDocumenti.getInt("spedisci_originale_pecgw") != 0) {
+                                            if(spedisciOriginale){
+                                                log.debug("Sottodocumento originale");
+                                                is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
+                                                mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
+                                                
+                                                log.debug("Creazione tmpFile");
+                                                tmpFile = File.createTempFile("spedizioniere_", ".tmp");
+                                                tmpFile.deleteOnExit();
+                                                try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
+                                                    IOUtils.copy(is, outputStream);
+                                                }
+                                                log.debug("mimeType: " + mimeType);
+                                                log.debug("calcolo estensione...");
+                                                ext = SupportedFile.getSupportedFile(ApplicationParams.getSupportedFileList(), mimeType).getExtension().toLowerCase();
+                                                log.debug("estensione: " + ext);
+                                                log.debug("Creazione attachment");
+                                                att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento") + "." + ext, mimeType, tmpFile);
+                                                log.debug("Aggiunta attachment");
+                                                attachments.add(att);
+                                            }
+                                        } 
                                     } 
                                 }
                             }
