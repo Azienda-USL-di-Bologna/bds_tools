@@ -819,7 +819,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
 
         boolean accessoRepository = UtilityFunctions.hasAccessoRepository(dbConn, gdDoc.getApplicazione());
-        if (accessoRepository) {
+        if (!accessoRepository) {
             sqlText = 
                   "SELECT s.uuid_mongo_originale, s.uuid_mongo_pdf, s.uuid_mongo_firmato " +
                   "FROM " + getSottoDocumentiTable() + " s INNER JOIN " + getGdDocTable() + " g ON s.id_gddoc = g.id_gddoc " +
@@ -994,7 +994,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
         // leggo dalla tabella delle applicazioni se l'applicazione ha l'accesso al repository documentale
         boolean accessoRepository = UtilityFunctions.hasAccessoRepository(dbConn, gdDoc.getApplicazione());
-        if (accessoRepository) {
+        if (!accessoRepository) {
 
             String sqlText = 
                     "SELECT uuid_mongo_originale, uuid_mongo_pdf, uuid_mongo_firmato " +
@@ -1045,7 +1045,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
         // leggo dalla tabella delle applicazioni se l'applicazione ha l'accesso al repository documentale
         boolean accessoRepository = UtilityFunctions.hasAccessoRepository(dbConn, gdDoc.getApplicazione());
-        if (accessoRepository) {
+        if (!accessoRepository) {
 
             String sqlText = 
                     "SELECT uuid_mongo_originale, uuid_mongo_pdf, uuid_mongo_firmato " +
