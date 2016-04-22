@@ -90,6 +90,7 @@ public class IodaFascicoliUtilities {
                             "f.numerazione_gerarchica, f.id_utente_responsabile, uResp.nome, uResp.cognome, " +
                             "f.stato_fascicolo, f.id_utente_responsabile_proposto, f.id_fascicolo_padre, " +
                             "f.id_titolo, f.speciale, t.codice_gerarchico || '' || t.codice_titolo || ' ' || t.titolo as titolo, " +
+                            "f.id_fascicolo_importato, f.data_chiusura, f.note_importazione " + 
                             "case when fv.id_fascicolo is null then 0 else -1 end as accesso " +
                             "from " +
                             "gd.fascicoligd f " +
@@ -137,6 +138,9 @@ public class IodaFascicoliUtilities {
             String idTitolo = results.getString(index++);
             int speciale = results.getInt(index++);
             String titolo = results.getString(index++);
+            String idFascicoloImportato = results.getString(index++);                       
+            DateTime dataChiusura = DateTime.parse(results.getString(index++), formatter);  
+            String noteImportazione = results.getString(index++);                           
             int accesso = results.getInt(index++);
             
             
@@ -157,6 +161,9 @@ public class IodaFascicoliUtilities {
             f.setTitolo(titolo);
             f.setAccesso(accesso);
             f.setIdUtenteResponsabileProposto(idUtenteResponsabileProposto);
+            f.setIdFascicoloImportato(idFascicoloImportato);    
+            f.setDataChiusura(dataChiusura);                    
+            f.setNoteImportazione(noteImportazione);            
             
             f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
             
@@ -174,7 +181,8 @@ public class IodaFascicoliUtilities {
         
         String sqlText =    "SELECT id_fascicolo, numerazione_gerarchica, " +
                                 "numero_fascicolo, nome_fascicolo, anno_fascicolo, stato_fascicolo, " +
-                                "id_utente_creazione, id_utente_responsabile, data_creazione, id_livello_fascicolo" +
+                                "id_utente_creazione, id_utente_responsabile, data_creazione, id_livello_fascicolo, " +
+                                "id_fascicolo_importato, data_chiusura, note_importazione" +
                             " FROM " + fascicoliTable + 
                             " WHERE anno_fascicolo = ? AND speciale = ?";
         ps = dbConn.prepareStatement(sqlText);
@@ -202,6 +210,9 @@ public class IodaFascicoliUtilities {
             DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd");
             DateTime dataCreazione = DateTime.parse(results.getString(9), formatter);
             String idLivelloFascicolo = results.getString(10);
+            String idFascicoloImportato = results.getString(11);                        
+            DateTime dataChiusura = DateTime.parse(results.getString(12), formatter);   
+            String noteImportazione = results.getString(13);                            
 
             Fascicolo f = new Fascicolo();
             f.setCodiceFascicolo(numerazioneGerarchica);
@@ -213,6 +224,9 @@ public class IodaFascicoliUtilities {
             f.setIdUtenteCreazione(idUtenteCreazione);
             f.setStatoFascicolo(statoFascicolo);
             f.setIdLivelloFascicolo(idLivelloFascicolo);
+            f.setIdFascicoloImportato(idFascicoloImportato);    
+            f.setDataChiusura(dataChiusura);                    
+            f.setNoteImportazione(noteImportazione);
             
             f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
 

@@ -491,7 +491,9 @@ public class Spedizioniere implements Job{
                         
                         if(resOfGddoc.getString("tipo_gddoc").equals("r")){ // Se il gddoc è un record allora carico i suoi sottoDocumenti
                             log.debug("Il gddoc è di tipo r");
-                            String querySottoDocumenti =    "SELECT id_sottodocumento, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_firmato, uuid_mongo_originale, convertibile_pdf, mimetype_file_firmato, mimetype_file_originale, da_spedire_pecgw, spedisci_originale_pecgw " + 
+                            String querySottoDocumenti =    "SELECT id_sottodocumento, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_firmato, " +
+                                                                "uuid_mongo_originale, convertibile_pdf, mimetype_file_firmato, mimetype_file_originale, " + 
+                                                                "da_spedire_pecgw, spedisci_originale_pecgw, tipo_sottodocumento " + 
                                                             "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
                                                             "WHERE id_gddoc = ?";
                             try (
@@ -512,6 +514,8 @@ public class Spedizioniere implements Job{
                                             log.debug("Sottodocumento firmato");
                                             is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_firmato"));
                                             mimeType = resOfSottoDocumenti.getString("mimetype_file_firmato");
+                                        } else if (resOfSottoDocumenti.getString("uuid_mongo_firmato") == null && resOfSottoDocumenti.getString("tipo_sottodocumento").equals("testo")) {
+                                            // spedisci mail
                                         } else if(resOfSottoDocumenti.getInt("convertibile_pdf") != 0){
                                             if(resOfSottoDocumenti.getString("uuid_mongo_pdf") != null){
                                                 log.debug("Sottodocumento convertibile quindi pdf");
@@ -918,7 +922,7 @@ public class Spedizioniere implements Job{
                 if (spStatus.getStatus() == Status.ACCEPTED || spStatus.getStatus() == Status.CONFIRMED) {
                     log.debug("stato ACCEPTED o CONFIRMED");
                     
-                    if(ricevuteMsg != null && ricevuteMsg.size() > 0 && controlloSpedizione){ // SE CI SONO RICEVUTE -- SE NON CI SONO CONTROLLO IL TIMESTAMP PER VEDERE SE è UNA MAIL O UNA PEC
+                    if(ricevuteMsg != null && ricevuteMsg.size() > 0){ // SE CI SONO RICEVUTE -- SE NON CI SONO CONTROLLO IL TIMESTAMP PER VEDERE SE è UNA MAIL O UNA PEC
                         log.debug("Ricevute != null");
                         
                         String ricevutaFromDb = "SELECT id " +
@@ -948,8 +952,7 @@ public class Spedizioniere implements Job{
                                 catch(Exception e){
                                     log.debug("eccezione nell'update su eccezione della funzione controllaRicevuta(): ", e);
                                 }
-                            }
-                            else {
+                            }else {
                                 log.debug("Ricevuta senza errore");
                                 try (
                                     Connection dbConnection = UtilityFunctions.getDBConnection();

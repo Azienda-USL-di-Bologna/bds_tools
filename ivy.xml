@@ -26,5 +26,6 @@
         <dependency org="org.apache.httpcomponents" name="fluent-hc" rev="4.3.6"/>
         <dependency org="org.apache.httpcomponents" name="httpclient-cache" rev="4.3.6"/>
         <dependency org="net.sf.jtidy" name="jtidy" rev="r938"/>
+        <dependency org="javax.mail" name="javax.mail-api" rev="1.5.5"/>
     </dependencies>
 </ivy-module>
