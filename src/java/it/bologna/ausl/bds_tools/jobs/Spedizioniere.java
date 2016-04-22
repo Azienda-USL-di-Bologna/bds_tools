@@ -718,7 +718,7 @@ public class Spedizioniere implements Job{
         
         private void controlloConsegna() throws SpedizioniereException{
             String query =  "SELECT " +
-                            "id, id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine, verifica_timestamp " +
+                            "id, id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine, verifica_timestamp, descrizione_oggetto " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
                             "WHERE id%? = ? AND stato=?::bds_tools.stati_spedizione FOR UPDATE";
             try (
