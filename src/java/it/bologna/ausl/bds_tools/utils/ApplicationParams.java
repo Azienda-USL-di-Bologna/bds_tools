@@ -38,6 +38,8 @@ public class ApplicationParams {
     private static String sottoDocumentiTableName;
     private static String fascicoliGdDocsTableName;
     private static String titoliTableName;
+    private static String titoliVersioniTableName;
+    private static String titoliVersioniCrossTableName;
     private static String utentiTableName;
     private static String serviziTableName;
     private static String spedizioniPecTableName;
@@ -82,6 +84,8 @@ public class ApplicationParams {
         fascicoliTableName = context.getInitParameter("FascicoliTableName");
         fascicoliGdDocsTableName = context.getInitParameter("FascicoliGdDocsTableName");
         titoliTableName = context.getInitParameter("TitoliTableName");
+        titoliVersioniTableName = context.getInitParameter("TitoliVersioniTableName");
+        titoliVersioniCrossTableName = context.getInitParameter("TitoliVersioniCrossTableName");
         utentiTableName = context.getInitParameter("UtentiTableName");
         gdDocsTableName = context.getInitParameter("GdDocsTableName");
         sottoDocumentiTableName = context.getInitParameter("SottoDocumentiTableName");
@@ -233,6 +237,14 @@ public class ApplicationParams {
 
     public static String getTitoliTableName() {
         return titoliTableName;
+    }
+    
+    public static String getTitoliVersioniTableName() {
+        return titoliVersioniTableName;
+    }
+    
+    public static String getTitoliVersioniCrossTableName() {
+        return titoliVersioniCrossTableName;
     }
 
     public static String getUtentiTableName() {

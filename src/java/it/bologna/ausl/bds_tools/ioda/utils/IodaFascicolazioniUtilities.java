@@ -31,6 +31,8 @@ public class IodaFascicolazioniUtilities {
     private String gdDocTable;
     private String fascicoliTable;
     private String titoliTable;
+    private String titoliVersioniTable;
+    private String titoliVersioniCrossTable;
     private String fascicoliGdDocTable;
     private String utentiTable;
     private String prefixIds; // prefisso da anteporre agli id dei documenti che si inseriscono o che si ricercano (GdDoc, SottoDocumenti)
@@ -41,6 +43,8 @@ public class IodaFascicolazioniUtilities {
         this.gdDocTable = ApplicationParams.getGdDocsTableName();
         this.fascicoliTable = ApplicationParams.getFascicoliTableName();
         this.titoliTable = ApplicationParams.getTitoliTableName();
+        this.titoliVersioniTable = ApplicationParams.getTitoliVersioniTableName();
+        this.titoliVersioniCrossTable = ApplicationParams.getTitoliVersioniCrossTableName();
         this.fascicoliGdDocTable = ApplicationParams.getFascicoliGdDocsTableName();
         this.utentiTable = ApplicationParams.getUtentiTableName();
         this.prefixIds = prefixIds;
@@ -82,10 +86,20 @@ public class IodaFascicolazioniUtilities {
     }
 
     private String getTitolo(Connection dbConn, String codiceGerarchico, String codiceTitolo) throws SQLException {
-        String sqlText = "SELECT titolo " +
+        
+        String sqlTextOld = "SELECT titolo " +
                   "FROM " + getTitoliTable() + " " + 
                   "WHERE codice_gerarchico = ? " +
                   "AND codice_titolo = ? ";
+        
+        String sqlText = "SELECT titolo " +
+                  "FROM " + getTitoliTable() + " t, " + getTitoliVersioniTable() + " vt, " + getTitoliVersioniCrossTable() + " tvc " + 
+                  "WHERE codice_gerarchico = ? " +
+                  "AND codice_titolo = ? " +
+                  "AND vt.stato = 'C' " +
+                  "AND t.id_titolo = tvc.id_titolo " +
+                  "and tvc.id_versione = vt.id_versione ";
+        
         
         String res = null;
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
@@ -305,6 +319,14 @@ public class IodaFascicolazioniUtilities {
     
     public String getTitoliTable() {
         return titoliTable;
+    }
+    
+    public String getTitoliVersioniTable() {
+        return titoliVersioniTable;
+    }
+    
+    public String getTitoliVersioniCrossTable() {
+        return titoliVersioniCrossTable;
     }
     
     public String getFascicoliTable() {

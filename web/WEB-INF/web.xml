@@ -227,6 +227,14 @@
         <param-value>procton.titoli</param-value>
     </context-param>
     <context-param>
+        <param-name>TitoliVersioniTableName</param-name>
+        <param-value>procton.versioni_titoli</param-value>
+    </context-param>
+    <context-param>
+        <param-name>TitoliVersioniCrossTableName</param-name>
+        <param-value>procton.titoli_versioni_cross</param-value>
+    </context-param>
+    <context-param>
         <param-name>PubblicazioniAlboTableName</param-name>
         <param-value>gd.pubblicazioni_albo</param-value>
     </context-param>
