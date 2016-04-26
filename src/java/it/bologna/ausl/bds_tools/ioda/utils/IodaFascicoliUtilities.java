@@ -138,8 +138,11 @@ public class IodaFascicoliUtilities {
             String idTitolo = results.getString(index++);
             int speciale = results.getInt(index++);
             String titolo = results.getString(index++);
-            String idFascicoloImportato = results.getString(index++);                       
-            DateTime dataChiusura = DateTime.parse(results.getString(index++), formatter);  
+            String idFascicoloImportato = results.getString(index++);
+            DateTime dataChiusura = null;
+            if(results.getString(index++)!= null){
+                dataChiusura = DateTime.parse(results.getString(index++), formatter);
+            }
             String noteImportazione = results.getString(index++);                           
             int accesso = results.getInt(index++);
             
@@ -210,8 +213,11 @@ public class IodaFascicoliUtilities {
             DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd");
             DateTime dataCreazione = DateTime.parse(results.getString(9), formatter);
             String idLivelloFascicolo = results.getString(10);
-            String idFascicoloImportato = results.getString(11);                        
-            DateTime dataChiusura = DateTime.parse(results.getString(12), formatter);   
+            String idFascicoloImportato = results.getString(11);
+            DateTime dataChiusura = null;
+            if (results.getString(12) != null){
+                dataChiusura = DateTime.parse(results.getString(12), formatter); 
+            }  
             String noteImportazione = results.getString(13);                            
 
             Fascicolo f = new Fascicolo();
