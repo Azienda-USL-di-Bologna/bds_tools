@@ -87,19 +87,27 @@ public class IodaFascicolazioniUtilities {
 
     private String getTitolo(Connection dbConn, String codiceGerarchico, String codiceTitolo) throws SQLException {
         
-        String sqlTextOld = "SELECT titolo " +
-                  "FROM " + getTitoliTable() + " " + 
-                  "WHERE codice_gerarchico = ? " +
-                  "AND codice_titolo = ? ";
+//        String sqlTextOld = "SELECT titolo " +
+//                  "FROM " + getTitoliTable() + " " + 
+//                  "WHERE codice_gerarchico = ? " +
+//                  "AND codice_titolo = ? ";
         
+//        String sqlText = "SELECT titolo " +
+//                  "FROM " + getTitoliTable() + " t, " + getTitoliVersioniTable() + " vt, " + getTitoliVersioniCrossTable() + " tvc " + 
+//                  "WHERE codice_gerarchico = ? " +
+//                  "AND codice_titolo = ? " +
+//                  "AND vt.stato = 'C' " +
+//                  "AND t.id_titolo = tvc.id_titolo " +
+//                  "and tvc.id_versione = vt.id_versione ";
+
         String sqlText = "SELECT titolo " +
                   "FROM " + getTitoliTable() + " t, " + getTitoliVersioniTable() + " vt, " + getTitoliVersioniCrossTable() + " tvc " + 
                   "WHERE codice_gerarchico = ? " +
                   "AND codice_titolo = ? " +
-                  "AND vt.stato = 'C' " +
                   "AND t.id_titolo = tvc.id_titolo " +
-                  "and tvc.id_versione = vt.id_versione ";
-        
+                  "AND tvc.id_versione = vt.id_versione " +
+                  "GROUP BY t.titolo, t.data_ora_creazione " +
+                  "ORDER BY t.data_ora_creazione DESC";
         
         String res = null;
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
