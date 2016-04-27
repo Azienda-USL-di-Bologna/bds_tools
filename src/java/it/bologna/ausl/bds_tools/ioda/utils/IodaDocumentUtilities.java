@@ -1360,8 +1360,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "AND g.tipo_gddoc = ? " +
                         "GROUP BY g.id_gddoc, g.applicazione, g.codice, g.codice_registro, g.data_gddoc, g.data_registrazione, g.data_ultima_modifica, " +
                         "g.id_oggetto_origine, g.nome_gddoc, g.nome_struttura_firmatario, g.numero_registrazione, g.oggetto, g.tipo_gddoc, g.tipo_oggetto_origine, " +
-                        "g.stato_gd_doc " +
-                        "ORDER BY g.id_gddoc ";
+                        "g.stato_gd_doc, p.id " +
+                        "ORDER BY p.id ";
 
         PreparedStatement s = null;
 
