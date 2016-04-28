@@ -9,6 +9,7 @@ import it.bologna.ausl.bdmclient.BdmClient;
 import it.bologna.ausl.bdmclient.BdmClientImplementation;
 import it.bologna.ausl.bdmclient.BdmClientInterface;
 import it.bologna.ausl.bdmclient.RemoteBdmClientImplementation;
+import it.bologna.ausl.bds_tools.MailSender;
 import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.DocumentNotReadyException;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
@@ -81,6 +82,7 @@ public class Spedizioniere implements Job{
     private MetodiSincronizzati metodiSincronizzati;
     private static final String ERRORE_SPEDIZIONE_MAIL = "?CMD=errore_spedizione_mail;";
     private static final String SPEDIZIONIERE_ACTIVE = "isSpedizioniereActive";
+    private static ArrayList<String> documentiIncriminati; // Sarà popolato ogni volta che verrà rilevato un documento con la lettera non firmata
    
     
     public enum StatiSpedizione {
@@ -514,8 +516,41 @@ public class Spedizioniere implements Job{
                                             log.debug("Sottodocumento firmato");
                                             is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_firmato"));
                                             mimeType = resOfSottoDocumenti.getString("mimetype_file_firmato");
-                                        } else if (resOfSottoDocumenti.getString("uuid_mongo_firmato") == null && resOfSottoDocumenti.getString("tipo_sottodocumento").equals("testo")) {
-                                            // spedisci mail
+                                        } else if (resOfSottoDocumenti.getString("uuid_mongo_firmato") == null && resOfSottoDocumenti.getString("tipo_sottodocumento").equals("testo")) { // Lettera firmata non presente allertare babelAlert
+                                            log.debug("Lettera non firmata!");
+                                            if (documentiIncriminati == null) {
+                                                documentiIncriminati = new ArrayList<>();
+                                            }
+                                            boolean giaPresente = false;
+                                            for (String guidDocumento : documentiIncriminati) {
+                                                if (guidDocumento.equals(res.getString("id_oggetto_origine"))) {
+                                                    giaPresente = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!giaPresente) {
+                                                String[] to = new String[1];
+                                                to[0] = "f.sabir@nextsw.it";
+                                                String from = "babel.alert@ausl.bologna.it";
+                                                String host = "smtp";
+                                                int port = 25;
+                                                String subject = "SPEDIZIONIERE - Tentativo di invio documento con lettera non firmata";
+                                                String messageBody = "Dati del documento:<br/>";
+                                                messageBody = "id: " + res.getString("id") +"<br/>";
+                                                messageBody = "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
+                                                messageBody = "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
+                                                messageBody = "id_spedizione_pecgw: " + res.getString("id_spedizione_pecgw") + "<br/>";
+                                                messageBody = "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
+                                                MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
+                                                try {
+                                                    mailSender.send();
+                                                } catch (Exception e) {
+                                                    log.debug("Errore nell'invio della mail a babelAlert!");
+                                                    throw new SpedizioniereException("Documento con lettera non firmata!");
+                                                }
+                                                documentiIncriminati.add(res.getString("id_oggetto_origine"));
+                                            }                                         
+                                            throw new SpedizioniereException("Documento con lettera non firmata! I membri di babelAlert sono stati avvisati via mail.");
                                         } else if(resOfSottoDocumenti.getInt("convertibile_pdf") != 0){
                                             if(resOfSottoDocumenti.getString("uuid_mongo_pdf") != null){
                                                 log.debug("Sottodocumento convertibile quindi pdf");
