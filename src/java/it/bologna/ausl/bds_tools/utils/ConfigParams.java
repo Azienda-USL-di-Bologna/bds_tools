@@ -24,6 +24,8 @@ public class ConfigParams {
     // Similarly, reads and writes to volatile fields are atomic. 
     // (This does not apply to >>non-volatile<< long or double fields, which may be subject to "word tearing" on some JVMs.)
     private volatile static Map<String, String> params;
+    private static String azienda;
+    private static String ambiente;
 
     public static void initConfigParams() throws IOException {
         ParametersClient client = new ParametersDbClient();
@@ -32,6 +34,8 @@ public class ConfigParams {
         // prima della fine del ricaricamento leggerò sempre i vecchi dati, dopo la fine, sempre i nuovi
         Map<String, String> swap = client.getParameters();
         params = swap;
+        azienda = client.getAzienda();
+        ambiente = client.getAmbiente();
     }
 
     public static Map<String, String> getParams() {
@@ -40,5 +44,13 @@ public class ConfigParams {
 
     public static String getParam(String paramName) {
         return params.get(paramName);
+    }
+
+    public static String getAzienda() {
+        return azienda;
+    }
+
+    public static String getAmbiente() {
+        return ambiente;
     }
 }

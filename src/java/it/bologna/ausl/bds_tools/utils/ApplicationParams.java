@@ -103,6 +103,8 @@ public class ApplicationParams {
         
         schedulatoreActive = Boolean.parseBoolean(context.getInitParameter("schedulatore.active"));
 
+        
+        
         readAuthenticationTable(context);
 
         try {
@@ -137,8 +139,7 @@ public class ApplicationParams {
         }
     }
     private static void initilizeSupporetdFiles(String fileSupportatiTable) throws SQLException, NamingException {
-        
-        
+
         String sqlText = "SELECT * FROM " +  fileSupportatiTable;
         // ottengo una connessione al db
         try (Connection dbConn = UtilityFunctions.getDBConnection();
@@ -372,7 +373,7 @@ public class ApplicationParams {
     public static String getOtherPublicParam(String paramName) {
         return ConfigParams.getParam(paramName);
     }
-    
+
     // per i processi bonita
     public static String getSetCurrentActivityFunctionName(ServletContext context, String idApplicazione) {
         return context.getInitParameter(idApplicazione + "SetCurrentActivityFunctionName");
