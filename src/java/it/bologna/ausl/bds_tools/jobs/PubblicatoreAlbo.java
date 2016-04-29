@@ -105,7 +105,7 @@ public class PubblicatoreAlbo implements Job {
                             "attivo", 
                             gddoc.getData().toDate(), 
                             gddoc.getDataRegistrazione().toDate(),
-                            gddoc.getDataRegistrazione().toDate(), 
+                            gddoc.getDataRegistrazione().toDate(), //TODO: questa è la data di esecutività, forse va passata la data odierna ?? e se non è esecutiva?? si lascia vuota??
                             datiAlbo, 
                             null);
     
