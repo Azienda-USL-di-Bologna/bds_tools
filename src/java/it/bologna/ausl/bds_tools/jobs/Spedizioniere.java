@@ -529,18 +529,19 @@ public class Spedizioniere implements Job{
                                                 }
                                             }
                                             if (!giaPresente) {
+                                                // Metadata
                                                 String[] to = new String[1];
-                                                to[0] = "f.sabir@nextsw.it";
-                                                String from = "babel.alert@ausl.bologna.it";
-                                                String host = "smtp";
-                                                int port = 25;
+                                                to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
+                                                String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
+                                                String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
+                                                int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
+                                                // Email
                                                 String subject = "SPEDIZIONIERE - Tentativo di invio documento con lettera non firmata";
                                                 String messageBody = "Dati del documento:<br/>";
-                                                messageBody = "id: " + res.getString("id") +"<br/>";
-                                                messageBody = "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
-                                                messageBody = "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
-                                                messageBody = "id_spedizione_pecgw: " + res.getString("id_spedizione_pecgw") + "<br/>";
-                                                messageBody = "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
+                                                messageBody += "id: " + res.getString("id") +"<br/>";
+                                                messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
+                                                messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
+                                                messageBody += "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
                                                 MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
                                                 try {
                                                     mailSender.send();
@@ -592,6 +593,8 @@ public class Spedizioniere implements Job{
                                                 tmpFile.deleteOnExit();
                                                 try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
                                                     IOUtils.copy(is, outputStream);
+                                                } catch (IOException ex) {
+                                                    log.debug("Eccezione nel creare file temporaneo per l'attachment", ex);
                                                 }
                                                 log.debug("mimeType: " + mimeType);
                                                 log.debug("calcolo estensione...");
@@ -605,8 +608,7 @@ public class Spedizioniere implements Job{
                                         } 
                                     } 
                                 }
-                            }
-                            catch(Exception ex) {
+                            } catch (SQLException | NamingException ex) {
                                 try {
                                     setMessaggioErrore("Errore nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine"), res.getLong("id"));
                                 } catch (SQLException e) {
@@ -618,12 +620,10 @@ public class Spedizioniere implements Job{
                         else {
                             throw new DocumentNotReadyException("Il gddoc non è ancora un record");
                         }
-                    }
-                    catch(DocumentNotReadyException ex) {
+                    } catch(DocumentNotReadyException ex) {
                         log.info("il documento non è stato preso in carico perché non è ancora un record", ex);
                         return;
-                    }
-                    catch(Exception ex){
+                    } catch (SQLException | NamingException ex) {
                         log.debug("Eccezione nel caricamento del gddoc (sottodocumenti): ", ex);
                         try {
                             setMessaggioErrore("Errore nel caricamento dei sottodocumenti", res.getLong("id"));
