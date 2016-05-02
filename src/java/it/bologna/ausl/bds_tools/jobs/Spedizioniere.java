@@ -1026,6 +1026,27 @@ public class Spedizioniere implements Job{
                                             log.debug("Errore: ", ex);
                                             throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
                                         }
+                                        
+                                        // QUERY DI AGGIORNAMENTO DEGLI STATI DA CONFIRMED -> CONSEGNATO 
+                                        //                                    DA ACCEPTED -> PRESA IN CARICO
+                                        String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                                        "SET stato=?::bds_tools.stati_spedizione, verifica_timestamp=now() " +
+                                                        "WHERE id = ?";
+                                        try (
+                                            Connection conn = UtilityFunctions.getDBConnection();
+                                            PreparedStatement psquery = conn.prepareStatement(query)
+                                        ) {
+                                            if (spStatus.getStatus() == Status.ACCEPTED) {
+                                                psquery.setString(1, StatiSpedizione.SPEDITO.toString());
+                                            }else{
+                                                psquery.setString(1, StatiSpedizione.CONSEGNATO.toString());
+                                            }
+                                            psquery.setLong(2, id);
+                                            log.debug("Query: " + psquery);
+                                            psquery.executeUpdate();
+                                        } catch (Exception ex) {
+                                            log.debug("eccezione aggiornamento stato SPEDITO o CONSEGNATO nella funzione controllaRicevuta()", ex);
+                                        }
                                     }
                                 } catch (NamingException | SpedizioniereException e) {
                                     log.debug(e);
@@ -1033,26 +1054,7 @@ public class Spedizioniere implements Job{
                                 }
                             }
                         }
-                        // QUERY DI AGGIORNAMENTO DEGLI STATI DA CONFIRMED -> CONSEGNATO 
-                        //                                    DA ACCEPTED -> PRESA IN CARICO
-                        String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                        "SET stato=?::bds_tools.stati_spedizione, verifica_timestamp=now() " +
-                                        "WHERE id = ?";
-                        try (
-                            Connection conn = UtilityFunctions.getDBConnection();
-                            PreparedStatement ps = conn.prepareStatement(query)
-                        ) {
-                            if (spStatus.getStatus() == Status.ACCEPTED) {
-                                ps.setString(1, StatiSpedizione.SPEDITO.toString());
-                            }else{
-                                ps.setString(1, StatiSpedizione.CONSEGNATO.toString());
-                            }
-                            ps.setLong(2, id);
-                            log.debug("Query: " + ps);
-                            ps.executeUpdate();
-                        } catch (Exception ex) {
-                            log.debug("eccezione aggiornamento stato SPEDITO o CONSEGNATO nella funzione controllaRicevuta()", ex);
-                        }
+                        
                     }else{ // NEL CASO SIA UNA MAIL NORMALE E NON UNA PEC DOPO TOT GIORNI DEVE ESSERE MESSA A CONFIMED E SETTARE IL TIMESTAMP
                         log.debug("SONO NELLO STATO CONTROLLO CONSEGNA OPPURE NON HO RICEVUTE");
                         if (spStatus.getStatus() == Status.ACCEPTED) {
