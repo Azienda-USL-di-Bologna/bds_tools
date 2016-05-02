@@ -14,6 +14,7 @@ import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.DocumentNotReadyException;
 import it.bologna.ausl.bds_tools.exceptions.SpedizioniereException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
+import it.bologna.ausl.bds_tools.utils.ConfigParams;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.masterchefclient.UpdateBabelParams;
@@ -46,6 +47,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -82,7 +86,7 @@ public class Spedizioniere implements Job{
     private MetodiSincronizzati metodiSincronizzati;
     private static final String ERRORE_SPEDIZIONE_MAIL = "?CMD=errore_spedizione_mail;";
     private static final String SPEDIZIONIERE_ACTIVE = "isSpedizioniereActive";
-    private static ArrayList<String> documentiIncriminati; // Sarà popolato ogni volta che verrà rilevato un documento con la lettera non firmata
+    private static volatile Set<String> documentiIncriminati = new HashSet<>(); // Sarà popolato ogni volta che verrà rilevato un documento con la lettera non firmata
    
     
     public enum StatiSpedizione {
@@ -518,30 +522,26 @@ public class Spedizioniere implements Job{
                                             mimeType = resOfSottoDocumenti.getString("mimetype_file_firmato");
                                         } else if (resOfSottoDocumenti.getString("uuid_mongo_firmato") == null && resOfSottoDocumenti.getString("tipo_sottodocumento").equals("testo")) { // Lettera firmata non presente allertare babelAlert
                                             log.debug("Lettera non firmata!");
-                                            if (documentiIncriminati == null) {
-                                                documentiIncriminati = new ArrayList<>();
-                                            }
-                                            boolean giaPresente = false;
-                                            for (String guidDocumento : documentiIncriminati) {
-                                                if (guidDocumento.equals(res.getString("id_oggetto_origine"))) {
-                                                    giaPresente = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!giaPresente) {
+                                            if (!documentiIncriminati.contains(res.getString("id_oggetto_origine"))) {
                                                 // Metadata
                                                 String[] to = new String[1];
-                                                to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
+                                                if (ConfigParams.getAmbiente().toLowerCase().equals("test")) {  // Se in ambiente di test spedisci solo a Fayssel
+                                                    to[0] = "f.sabir@nextsw.it";
+                                                }else{
+                                                    to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
+                                                }
                                                 String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
                                                 String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
                                                 int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
                                                 // Email
-                                                String subject = "SPEDIZIONIERE - Tentativo di invio documento con lettera non firmata";
+                                                String subject = "SPEDIZIONIERE | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Tentativo di invio documento con lettera non firmata";
                                                 String messageBody = "Dati del documento:<br/>";
                                                 messageBody += "id: " + res.getString("id") +"<br/>";
                                                 messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
                                                 messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
                                                 messageBody += "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
+                                                messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
+                                                messageBody += "Ambiente: " + ConfigParams.getAmbiente();
                                                 MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
                                                 try {
                                                     mailSender.send();
