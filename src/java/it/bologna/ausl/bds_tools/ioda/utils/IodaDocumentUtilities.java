@@ -51,6 +51,7 @@ import javax.servlet.http.Part;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.tika.mime.MediaType;
 import org.apache.tika.mime.MimeTypeException;
 import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
@@ -92,9 +93,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         String mongoUri = ApplicationParams.getMongoRepositoryUri();
         this.mongo = new MongoWrapper(mongoUri);
         this.sottoDocumentiTable = ApplicationParams.getSottoDocumentiTableName();
+        this.prefixIds = prefixIds;
         
         if (operation != Document.DocumentOperationType.DELETE) {
-            this.prefixIds = prefixIds;
             this.detector = new Detector();
             this.indeIdIndex = 0; 
             this.mongoParentPath = ApplicationParams.getUploadGdDocMongoPath();
@@ -812,25 +813,25 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     }
 
     public void deleteGdDoc(Connection dbConn) throws SQLException, IodaDocumentException{
-        String sqlText = 
-                "SELECT numero_registrazione " +
-                "FROM " + getGdDocTable() + " " +
-                "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
-        
-        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
-            ps.setString(1, gdDoc.getIdOggettoOrigine());
-            ps.setString(2, gdDoc.getTipoOggettoOrigine());
-            ResultSet res = ps.executeQuery();
-            if (!res.next())
-                throw new SQLException("documento non trovato");
-            String numeroRegistrazione = res.getString(1);
-            if (numeroRegistrazione != null && !numeroRegistrazione.equals(""))
-                throw new IodaDocumentException("impossibile eliminare un document registrato");
-        }
+//        String sqlText = 
+//                "SELECT numero_registrazione " +
+//                "FROM " + getGdDocTable() + " " +
+//                "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
+//        
+//        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+//            ps.setString(1, gdDoc.getIdOggettoOrigine());
+//            ps.setString(2, gdDoc.getTipoOggettoOrigine());
+//            ResultSet res = ps.executeQuery();
+//            if (!res.next())
+//                throw new SQLException("documento non trovato");
+//            String numeroRegistrazione = res.getString(1);
+//            if (numeroRegistrazione != null && !numeroRegistrazione.equals(""))
+//                throw new IodaDocumentException("impossibile eliminare un document registrato");
+//        }
 
         boolean accessoRepository = UtilityFunctions.hasAccessoRepository(dbConn, gdDoc.getApplicazione());
         if (!accessoRepository) {
-            sqlText = 
+            String sqlText = 
                   "SELECT s.uuid_mongo_originale, s.uuid_mongo_pdf, s.uuid_mongo_firmato " +
                   "FROM " + getSottoDocumentiTable() + " s INNER JOIN " + getGdDocTable() + " g ON s.id_gddoc = g.id_gddoc " +
                   "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
@@ -854,7 +855,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             }
         }
 
-        sqlText =
+        String sqlText =
                 "DELETE " +
                 "FROM " + getGdDocTable() + " " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
@@ -986,8 +987,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             ps.setInt(index++, sd.isSpedisciOriginalePecgw() ? -1 : 0);
 
             // aggiungo in una lista i sottodocumenti potenzialmente convertibili in pdf (cioè quelli per cui, non mi è stato passato l'uuid del file in pdf), il controllo
-            // per verifivcare se la conversione è supportata verrà fatto successivamente
-            if (sd.getUuidMongoPdf() == null || sd.getUuidMongoPdf().equals("")) {
+            // per verificare se la conversione è supportata verrà fatto successivamente
+            if (MediaType.parse(sd.getMimeTypeFileOriginale()) != (Detector.MEDIA_TYPE_APPLICATION_PDF) && (sd.getUuidMongoPdf() == null || sd.getUuidMongoPdf().equals(""))) {
                 toConvert.add(sd);
             }
 
