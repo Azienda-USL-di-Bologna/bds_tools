@@ -51,6 +51,7 @@ import javax.servlet.http.Part;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.tika.mime.MediaType;
 import org.apache.tika.mime.MimeTypeException;
 import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
@@ -986,8 +987,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             ps.setInt(index++, sd.isSpedisciOriginalePecgw() ? -1 : 0);
 
             // aggiungo in una lista i sottodocumenti potenzialmente convertibili in pdf (cioè quelli per cui, non mi è stato passato l'uuid del file in pdf), il controllo
-            // per verifivcare se la conversione è supportata verrà fatto successivamente
-            if (sd.getUuidMongoPdf() == null || sd.getUuidMongoPdf().equals("")) {
+            // per verificare se la conversione è supportata verrà fatto successivamente
+            if (MediaType.parse(sd.getMimeTypeFileOriginale()) != (Detector.MEDIA_TYPE_APPLICATION_PDF) && (sd.getUuidMongoPdf() == null || sd.getUuidMongoPdf().equals(""))) {
                 toConvert.add(sd);
             }
 
