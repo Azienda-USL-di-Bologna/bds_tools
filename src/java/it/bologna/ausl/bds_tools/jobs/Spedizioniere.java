@@ -1086,7 +1086,8 @@ public class Spedizioniere implements Job{
                     } 
                 } else if (spStatus.getStatus() == SpedizioniereStatus.Status.ERROR) { // NEL CASO DI STATO DI ERRORE
                     log.debug("Dentro ERROR");
-                    String ricevutaFromDb = "SELECT id " +
+                    if(ricevuteMsg != null && ricevuteMsg.size() > 0){
+                        String ricevutaFromDb = "SELECT id " +
                                             "FROM " + ApplicationParams.getRicevutePecTableName() + " " +
                                             "WHERE uuid=?";
                     
@@ -1107,34 +1108,35 @@ public class Spedizioniere implements Job{
                             // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
                             if (ricevutaResultSet == null || !ricevutaResultSet.next()) {
                                 log.debug("Dentro idRicevuta == null");
-                                try (
-                                    Connection settaUuid = UtilityFunctions.getDBConnection();
-                                    PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
-                                ) {
-//                                    if(spStatus.getStatus() == Status.ACCEPTED){
-//                                        log.debug(" IF Status accepted");
-//                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_ACCETTAZIONE.toString());
-//                                    }else{
-//                                        log.debug("else");
-//                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_CONSEGNA.toString());
-//                                    }
-                                    prepared.setString(1, spedizioniereRecepit.getTipo().name());
-                                    prepared.setString(2, spedizioniereRecepit.getUuid());
-                                    prepared.setString(3, res.getString("id_oggetto_origine"));
-                                    prepared.setString(4, res.getString("tipo_oggetto_origine"));
-                                    prepared.setString(5, res.getString("descrizione_oggetto"));
-                                    prepared.setLong(6, id);
+                                    try (
+                                        Connection settaUuid = UtilityFunctions.getDBConnection();
+                                        PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
+                                    ) {
+    //                                    if(spStatus.getStatus() == Status.ACCEPTED){
+    //                                        log.debug(" IF Status accepted");
+    //                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_ACCETTAZIONE.toString());
+    //                                    }else{
+    //                                        log.debug("else");
+    //                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_CONSEGNA.toString());
+    //                                    }
+                                        prepared.setString(1, spedizioniereRecepit.getTipo().name());
+                                        prepared.setString(2, spedizioniereRecepit.getUuid());
+                                        prepared.setString(3, res.getString("id_oggetto_origine"));
+                                        prepared.setString(4, res.getString("tipo_oggetto_origine"));
+                                        prepared.setString(5, res.getString("descrizione_oggetto"));
+                                        prepared.setLong(6, id);
 
-                                    log.debug("esecuzione query di inserimento della ricevuta: " + prepared.toString());
-                                    prepared.executeUpdate();
-                                } catch (NamingException ex) {
-                                    log.debug("Errore: ", ex.getMessage());
-                                    throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
+                                        log.debug("esecuzione query di inserimento della ricevuta: " + prepared.toString());
+                                        prepared.executeUpdate();
+                                    } catch (NamingException ex) {
+                                        log.debug("Errore: ", ex.getMessage());
+                                        throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
+                                    }
                                 }
+                            } catch (NamingException e) {
+                                log.debug(e);
+                                throw new SpedizioniereException("Errore nel reperimento delle ricevute", e);
                             }
-                        } catch (NamingException e) {
-                            log.debug(e);
-                            throw new SpedizioniereException("Errore nel reperimento delle ricevute", e);
                         }
                     }
                     log.debug("Verra eseguito update");
