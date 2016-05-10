@@ -334,7 +334,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "tipo_oggetto_origine, " +
                         "stato_gd_doc, " +
                         "url_command, " +
-                        "categoria_origine " +
+                        "categoria_origine, " +
+                        "data_esecutivita, " +
+                        "esecutivita " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
 
@@ -367,6 +369,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 Timestamp dataUltimaModifica = result.getTimestamp("data_ultima_modifica");
                 if (dataUltimaModifica != null)
                     gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime()));
+                
+                Timestamp dataEsecutivita = result.getTimestamp("data_esecutivita");
+                if(dataEsecutivita != null)
+                    gdDoc.setDataEsecutivita(new DateTime(dataEsecutivita.getTime()));
 
                 gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
                 gdDoc.setNome(result.getString("nome_gddoc"));
@@ -378,6 +384,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
                 gdDoc.setUrlCommand(result.getString("url_command"));
                 gdDoc.setCategoriaOrigine(result.getString("categoria_origine"));
+                gdDoc.setEsecutiva(result.getBoolean("esecutivita"));
                 
                 if (result.next())
                     throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
@@ -507,7 +514,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "anno_registrazione, oggetto, " +
                         "id_oggetto_origine, tipo_oggetto_origine, " +
                         "codice, nome_struttura_firmatario, applicazione, " +
-                        "url_command, categoria_origine) " +
+                        "url_command, categoria_origine, " +
+                        "data_esecutivita, esecutiva) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -516,6 +524,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "?, ?, " +
                         "?, ?, " +
                         "?, ?, ?, " + 
+                        "?, ?, " +
                         "?, ?)";
         
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
@@ -602,6 +611,14 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             
             // categoria_origine
             ps.setString(index++, gdDoc.getCategoriaOrigine());
+            
+            // data_esecutivita
+            Timestamp dataEsecutivita = (gdDoc.getDataEsecutivita() != null) ? new Timestamp(gdDoc.getDataEsecutivita().getMillis()) : null;
+            ps.setTimestamp(index++, dataEsecutivita);
+            
+            // esecutiva
+            ps.setBoolean(index++, gdDoc.getEsecutiva());
+            
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -658,6 +675,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "applicazione = coalesce(?, applicazione), " +
                 "url_command = coalesce(?, url_command), " +
                 "categoria_origine = coalesce(?, categoria_origine) " + 
+                "data_esecutivita = coalesce(?, data_esecutivita) " +
+                "esecutiva = coalesce(?, esecutiva) " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
 
@@ -748,6 +767,17 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
             // tipo_oggetto_origine
             ps.setString(index++, gdDoc.getTipoOggettoOrigine());
+            
+            // data_esecutivita
+            Timestamp dataEsecutivita = (gdDoc.getDataEsecutivita() != null) ? new Timestamp(gdDoc.getDataEsecutivita().getMillis()) : null;
+            if (dataEsecutivita != null)
+                ps.setTimestamp(index++, dataEsecutivita);
+            else
+                ps.setNull(index++, Types.TIMESTAMP);
+            
+            // esecutiva
+            ps.setBoolean(index++, gdDoc.getEsecutiva());
+            
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
