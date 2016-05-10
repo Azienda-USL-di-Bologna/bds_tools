@@ -333,7 +333,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "tipo_gddoc, " +
                         "tipo_oggetto_origine, " +
                         "stato_gd_doc, " +
-                        "url_command " +
+                        "url_command, " +
+                        "categoria_origine " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
 
@@ -376,6 +377,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
                 gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
                 gdDoc.setUrlCommand(result.getString("url_command"));
+                gdDoc.setCategoriaOrigine(result.getString("categoria_origine"));
                 
                 if (result.next())
                     throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
@@ -504,7 +506,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "data_registrazione, numero_registrazione, " +
                         "anno_registrazione, oggetto, " +
                         "id_oggetto_origine, tipo_oggetto_origine, " +
-                        "codice, nome_struttura_firmatario, applicazione, url_command) " +
+                        "codice, nome_struttura_firmatario, applicazione, " +
+                        "url_command, categoria_origine) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -512,7 +515,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "?, ?, " +
                         "?, ?, " +
                         "?, ?, " +
-                        "?, ?, ?, ?)";
+                        "?, ?, ?, " + 
+                        "?, ?)";
         
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
@@ -595,6 +599,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
             // url_command
             ps.setString(index++, gdDoc.getUrlCommand());
+            
+            // categoria_origine
+            ps.setString(index++, gdDoc.getCategoriaOrigine());
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -649,7 +656,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "oggetto = coalesce(?, oggetto), " +
                 "nome_struttura_firmatario = coalesce(?, nome_struttura_firmatario), " +
                 "applicazione = coalesce(?, applicazione), " +
-                "url_command = coalesce(?, url_command) " +
+                "url_command = coalesce(?, url_command), " +
+                "categoria_origine = coalesce(?, categoria_origine) " + 
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
 
@@ -731,6 +739,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             
             // url_command
             ps.setString(index++, gdDoc.getUrlCommand());
+            
+            // categoria_origine
+            ps.setString(index++, gdDoc.getCategoriaOrigine());
 
             // id_oggetto_origine
             ps.setString(index++, gdDoc.getIdOggettoOrigine());
