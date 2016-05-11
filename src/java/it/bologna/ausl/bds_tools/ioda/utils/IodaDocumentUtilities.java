@@ -334,7 +334,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "tipo_oggetto_origine, " +
                         "stato_gd_doc, " +
                         "url_command, " +
-                        "categoria_origine, " +
+                        "categoria_origine " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
 
@@ -420,7 +420,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "esecutivita, " + 
                         "data_defissione " +
                         "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
-                        "WHERE id_gddoc = ?";
+                        "WHERE id_gddoc = ? " + 
+                        "ORDER BY numero_pubblicazione";
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
