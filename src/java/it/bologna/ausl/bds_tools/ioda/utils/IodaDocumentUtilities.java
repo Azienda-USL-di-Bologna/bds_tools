@@ -509,8 +509,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "anno_registrazione, oggetto, " +
                         "id_oggetto_origine, tipo_oggetto_origine, " +
                         "codice, nome_struttura_firmatario, applicazione, " +
-                        "url_command, categoria_origine, " +
-                        "data_esecutivita, esecutiva) " +
+                        "url_command, categoria_origine) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -518,7 +517,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "?, ?, " +
                         "?, ?, " +
                         "?, ?, " +
-                        "?, ?, ?, " + 
+                        "?, ?, ?, " +
                         "?, ?)";
         
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
