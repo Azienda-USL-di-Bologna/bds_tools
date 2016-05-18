@@ -205,7 +205,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             else
                 ps.setNull(index++, Types.TIMESTAMP);
 
-            ps.setInt(index++, pubblicazione.getEsecutiva() ? -1: 0);
+            ps.setInt(index++, pubblicazione.isEsecutiva() ? -1: 0);
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
