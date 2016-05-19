@@ -256,12 +256,20 @@ public class IodaFascicolazioniUtilities {
                 String nomeFascicolo = res.getString(index++);
                 DateTime dataAssegnazione;
                 String dataStr = res.getString(index++);
-                try{
-                    dataAssegnazione = DateTime.parse(dataStr, formatter);
-                } catch(Exception e){
-                    formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-                    dataAssegnazione = DateTime.parse(dataStr, formatter);
+                
+                if (dataStr != null){
+                   try{
+                        dataAssegnazione = DateTime.parse(dataStr, formatter);
+                    } catch(Exception e){
+                        formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+                        dataAssegnazione = DateTime.parse(dataStr, formatter);
+                    } 
                 }
+                else{
+                    dataAssegnazione = null;
+                }
+                
+                
 
                 String idUtenteFascicolatore = res.getString(index++);
 
