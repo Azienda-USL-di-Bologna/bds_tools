@@ -334,7 +334,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "tipo_oggetto_origine, " +
                         "stato_gd_doc, " +
                         "url_command, " +
-                        "categoria_origine " +
+                        "id_utente_creazione " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
 
@@ -377,7 +377,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
                 gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
                 gdDoc.setUrlCommand(result.getString("url_command"));
-                gdDoc.setCategoriaOrigine(result.getString("categoria_origine"));
+                gdDoc.setIdUtenteCrezione(result.getString("id_utente_creazione"));
                 
                 if (result.next())
                     throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
@@ -507,7 +507,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "anno_registrazione, oggetto, " +
                         "id_oggetto_origine, tipo_oggetto_origine, " +
                         "codice, nome_struttura_firmatario, applicazione, " +
-                        "url_command, categoria_origine) " +
+                        "url_command, id_utente_creazione) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -601,7 +601,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             ps.setString(index++, gdDoc.getUrlCommand());
             
             // categoria_origine
-            ps.setString(index++, gdDoc.getCategoriaOrigine());
+            ps.setString(index++, gdDoc.getIdUtenteCreazione());
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -657,7 +657,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "nome_struttura_firmatario = coalesce(?, nome_struttura_firmatario), " +
                 "applicazione = coalesce(?, applicazione), " +
                 "url_command = coalesce(?, url_command), " +
-                "categoria_origine = coalesce(?, categoria_origine) " + 
+                "id_utente_creazione = coalesce(?, id_utente_creazione) " + 
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
 
@@ -741,7 +741,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             ps.setString(index++, gdDoc.getUrlCommand());
             
             // categoria_origine
-            ps.setString(index++, gdDoc.getCategoriaOrigine());
+            ps.setString(index++, gdDoc.getIdUtenteCreazione());
 
             // id_oggetto_origine
             ps.setString(index++, gdDoc.getIdOggettoOrigine());
