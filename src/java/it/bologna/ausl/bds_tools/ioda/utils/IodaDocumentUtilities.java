@@ -169,8 +169,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     public void insertPubblicazione(Connection dbConn, PubblicazioneIoda pubblicazione) throws SQLException {
         String sqlText = 
                 "INSERT INTO " + ApplicationParams.getPubblicazioniAlboTableName() + "(" +
-                "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc, pubblicatore, esecutivita, data_defissione) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc, pubblicatore, esecutivita, data_defissione, data_esecutivita, esecutiva) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
             if (pubblicazione.getNumeroPubblicazione() != null)
@@ -199,6 +199,13 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 ps.setTimestamp(index++, new Timestamp(pubblicazione.getDataDefissione().getMillis()));
             else
                 ps.setNull(index++, Types.TIMESTAMP);
+
+            if (pubblicazione.getDataEsecutivita() != null)
+                ps.setTimestamp(index++, new Timestamp(pubblicazione.getDataEsecutivita().getMillis()));
+            else
+                ps.setNull(index++, Types.TIMESTAMP);
+
+            ps.setInt(index++, pubblicazione.isEsecutiva() ? -1: 0);
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -1431,7 +1438,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     pubblicazione.setAnnoPubblicazione((Integer) pubblicazioneJson.get("anno_pubblicazione"));
                     pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_dal")));
                     pubblicazione.setDataAl(DateTime.parse((String) pubblicazioneJson.get("data_al")));
+                    pubblicazione.setDataEsecutivita(DateTime.parse((String) pubblicazioneJson.get("data_esecutivita")));
                     pubblicazione.setEsecutivita((String) pubblicazioneJson.get("esecutivita"));
+                    pubblicazione.setEsecutiva((Boolean) pubblicazioneJson.get("esecutivita"));
                     pubblicazione.setPubblicatore((String) pubblicazioneJson.get("pubblicatore"));
                     //Aggiungo la pubblicazione appena creata
                     pubblicazioniList.add(pubblicazione);
