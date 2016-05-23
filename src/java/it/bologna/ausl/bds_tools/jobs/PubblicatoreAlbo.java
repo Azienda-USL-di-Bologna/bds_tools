@@ -94,10 +94,15 @@ public class PubblicatoreAlbo implements Job {
                     log.debug("crezione pubblicazione per balbo...");
                     PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(pubbIoda.getDataDal().toDate(),pubbIoda.getDataAl().toDate());
 
-                    Date dataEsecutivita = pubbIoda.getDataEsecutivita().toDate();
-                    if (dataEsecutivita == null && pubbIoda.isEsecutiva()) {
+                    DateTime dataEsecutivitaDateTime = pubbIoda.getDataEsecutivita();
+                    Date dataEsecutivita = null;
+                    if (dataEsecutivitaDateTime == null && pubbIoda.isEsecutiva()) {
                         dataEsecutivita = new Date();
                     }
+                    else {
+                        dataEsecutivita = dataEsecutivitaDateTime.toDate();
+                    }
+                        
 
                     Pubblicazione pubblicazione = new Pubblicazione(
                             gddoc.getAnnoRegistrazione(),  
@@ -166,6 +171,9 @@ public class PubblicatoreAlbo implements Job {
         } //try
         catch (Throwable t) {
             log.fatal("Errore nel pubblicatore albo", t);
+            //log.fatal("causa: ", t.getCause());
+            //log.fatal(t.toString());
+            //t.printStackTrace();
             try {
                 if (dbConn != null) {
                     log.info("rollback...");
