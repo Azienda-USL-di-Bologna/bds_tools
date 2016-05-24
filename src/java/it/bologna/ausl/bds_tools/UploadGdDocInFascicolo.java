@@ -478,8 +478,8 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
     private Boolean insertGdDoc(String nomeGddoc, String uuidUploadFile) {
 
         String gdDocsTable = ApplicationParams.getGdDocsTableName();
-        String query = "INSERT INTO " + gdDocsTable + " (id_gddoc, nome_gddoc, categoria_origine, multiplo, uuid_mongo, tipo_gddoc, uuid_mongo_pdf,"
-                + " stato_gd_doc, data_gddoc) VALUES (?,?,?,?,?,?,?,?,?)";
+        String query = "INSERT INTO " + gdDocsTable + " (id_gddoc, nome_gddoc, multiplo, uuid_mongo, tipo_gddoc, uuid_mongo_pdf,"
+                + " stato_gd_doc, data_gddoc) VALUES (?,?,?,?,?,?,?,?)";
                
         idGdDocInserito = generateKey(20);
         
@@ -490,13 +490,12 @@ private static final Logger log = LogManager.getLogger(UploadGdDocInFascicolo.cl
             ps = dbConn.prepareStatement(query);
             ps.setString(1,idGdDocInserito);
             ps.setString(2, nomeGddoc);
-            ps.setString(3, "Upload");
-            ps.setInt(4, 0);
-            ps.setString(5, uuidUploadFile);
-            ps.setString(6, "d");
-            ps.setString(7, uuidUploadFile);
-            ps.setInt(8, 1);
-            ps.setTimestamp(9, currentDate);
+            ps.setInt(3, 0);
+            ps.setString(4, uuidUploadFile);
+            ps.setString(5, "d");
+            ps.setString(6, uuidUploadFile);
+            ps.setInt(7, 1);
+            ps.setTimestamp(8, currentDate);
             
             log.info("eseguo la query: " + ps.toString() + "...");
             
