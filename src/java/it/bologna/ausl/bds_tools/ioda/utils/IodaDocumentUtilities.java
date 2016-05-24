@@ -1438,9 +1438,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     pubblicazione.setAnnoPubblicazione((Integer) pubblicazioneJson.get("anno_pubblicazione"));
                     pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_dal")));
                     pubblicazione.setDataAl(DateTime.parse((String) pubblicazioneJson.get("data_al")));
-                    pubblicazione.setDataEsecutivita(DateTime.parse((String) pubblicazioneJson.get("data_esecutivita")));
+                    String data_esecutivita = (String) pubblicazioneJson.get("data_esecutivita");
+                    if (data_esecutivita != null && !data_esecutivita.isEmpty())
+                        pubblicazione.setDataEsecutivita(DateTime.parse(data_esecutivita));
                     pubblicazione.setEsecutivita((String) pubblicazioneJson.get("esecutivita"));
-                    pubblicazione.setEsecutiva((Boolean) pubblicazioneJson.get("esecutivita"));
+                    pubblicazione.setEsecutiva(((Long) pubblicazioneJson.get("esecutiva")) != 0);
                     pubblicazione.setPubblicatore((String) pubblicazioneJson.get("pubblicatore"));
                     //Aggiungo la pubblicazione appena creata
                     pubblicazioniList.add(pubblicazione);
