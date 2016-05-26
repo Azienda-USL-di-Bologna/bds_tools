@@ -96,13 +96,14 @@ public class PubblicatoreAlbo implements Job {
 
                     DateTime dataEsecutivitaDateTime = pubbIoda.getDataEsecutivita();
                     Date dataEsecutivita = null;
-                    if (dataEsecutivitaDateTime == null && pubbIoda.isEsecutiva()) {
-                        dataEsecutivita = new Date();
+                    if (pubbIoda.isEsecutiva()) {
+                        if (dataEsecutivitaDateTime == null) {
+                            dataEsecutivita = new Date();
+                        }
+                        else {
+                            dataEsecutivita = dataEsecutivitaDateTime.toDate();
+                        }
                     }
-                    else {
-                        dataEsecutivita = dataEsecutivitaDateTime.toDate();
-                    }
-                        
 
                     Pubblicazione pubblicazione = new Pubblicazione(
                             gddoc.getAnnoRegistrazione(),  
