@@ -609,7 +609,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             // url_command
             ps.setString(index++, gdDoc.getUrlCommand());
             
-            // categoria_origine
+            // Vecchio categoria_origine ora id_utente_creazione
             ps.setString(index++, gdDoc.getIdUtenteCreazione());
             
             
@@ -751,7 +751,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             // url_command
             ps.setString(index++, gdDoc.getUrlCommand());
             
-            // categoria_origine
+            // Vecchio categoria_origine ora id_utente_creazione
             ps.setString(index++, gdDoc.getIdUtenteCreazione());
 
             // id_oggetto_origine
