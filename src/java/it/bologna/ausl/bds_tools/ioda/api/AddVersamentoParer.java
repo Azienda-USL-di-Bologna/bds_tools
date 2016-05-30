@@ -59,6 +59,7 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
                 iodaReq = IodaRequestDescriptor.parse(request.getInputStream());
             }
             catch (Exception ex) {
+                log.error("formato json della richiesta errato: " + ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());
                 return;
             }

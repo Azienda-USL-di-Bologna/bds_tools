@@ -7,12 +7,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  *
  * @author gdm
  */
 public class IodaParerUtilities {
+    
+    private static final Logger log = LogManager.getLogger(IodaParerUtilities.class);
+    
     private String gdDocTable;
     private String aggiornamentiParerTable;
 
@@ -68,7 +73,12 @@ public class IodaParerUtilities {
             // xml specifico aggiornamento
             ps.setString(index++, datiParer.getXmlSpecifico());
             
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            
             int result = ps.executeUpdate();
+            log.debug("fatto");
+            
             if (result <= 0)
                 throw new SQLException("Update non inserito");
         }
@@ -129,7 +139,12 @@ public class IodaParerUtilities {
             ps.setString(index++, datiParer.getIdOggettoOrigine());
             ps.setString(index++, datiParer.getTipoOggettoOrigine());
 
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            
             int res = ps.executeUpdate();
+            log.debug("fatto");
+            
             if (res == 0)
                throw new SQLException("Documento non trovato");
         }
@@ -153,7 +168,13 @@ public class IodaParerUtilities {
             ps = dbConn.prepareStatement(sqlText);
             ps.setString(1, datiParer.getIdOggettoOrigine());
             ps.setString(2, datiParer.getTipoOggettoOrigine());
+            
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            
             ResultSet res = ps.executeQuery();
+            log.debug("fatto");
+            
             if (res.next() == false)
                 throw new SQLException("Documento non trovato");
             else 
@@ -181,7 +202,13 @@ public class IodaParerUtilities {
             ps = dbConn.prepareStatement(sqlText);
             ps.setString(1, datiParer.getIdOggettoOrigine());
             ps.setString(2, datiParer.getTipoOggettoOrigine());
+            
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            
             ResultSet res = ps.executeQuery();
+            log.debug("fatto");
+            
             if (res.next() == false)
                 throw new SQLException("Documento non trovato");
             else 
