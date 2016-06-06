@@ -7,14 +7,17 @@
 package it.bologna.ausl.bds_tools;
 
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Enumeration;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,6 +43,30 @@ private static final Logger log = LogManager.getLogger(Debug.class);
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+            ServletInputStream requestIs = null;
+            IodaRequestDescriptor iodaReq = null;
+            try {
+                requestIs = request.getInputStream();
+                if (requestIs == null) {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
+                    return;
+                }
+                iodaReq = IodaRequestDescriptor.parse(request.getInputStream());
+                System.out.println(iodaReq.getJSONString());
+            }
+            catch (Exception ex) {
+                log.error("formato json della richiesta errato: " + ex);
+                ex.printStackTrace();
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());
+                return;
+            }
+            finally {
+                IOUtils.closeQuietly(requestIs);
+            }
+        
+        if(true)
+            return;
+        
         Enumeration<String> parametersNames = request.getParameterNames();
         log.info("parameters:");
         String parameters = "";
@@ -58,6 +85,9 @@ private static final Logger log = LogManager.getLogger(Debug.class);
         for (String font : fonts) {
             output += "\n" + font;
         }
+
+
+        
 
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
