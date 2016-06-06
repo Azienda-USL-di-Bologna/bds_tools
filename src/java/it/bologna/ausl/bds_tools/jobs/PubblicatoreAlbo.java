@@ -127,10 +127,10 @@ public class PubblicatoreAlbo implements Job {
                     // va cambiato usando un campo sul sottodocumento che indica se pubblicarlo oppure no
                     
                     // tira fuori le stampe uniche dai sotto documenti (se ci sono omissis saranno 2, altrimenti sarà solo una)
-                    List<SottoDocumento> stampeUniche = sottodocumenti.stream().filter(s -> (s.equals("stampa_unica") || s.equals("stampa_unica_omissis"))).collect(Collectors.toList());
+                    List<SottoDocumento> stampeUniche = sottodocumenti.stream().filter(s -> (s.getTipo().equals("stampa_unica") || s.getTipo().equals("stampa_unica_omissis"))).collect(Collectors.toList());
                     
                     // c'è la stampa unica omissis, prendo quella
-                    if (stampeUniche.stream().anyMatch(s -> s.equals("stampa_unica_omissis"))) {
+                    if (stampeUniche.stream().anyMatch(s -> s.getTipo().equals("stampa_unica_omissis"))) {
                         SottoDocumento stampaUnicaOmissis = stampeUniche.stream().filter(s -> (s.equals("stampa_unica_omissis"))).findAny().get();
                         if (stampaUnicaOmissis != null) {
                             log.debug("aggiunta allegato dal sottodocumento: " + stampaUnicaOmissis.toString());
@@ -142,9 +142,9 @@ public class PubblicatoreAlbo implements Job {
                             throw new ServletException("dovrebbe esserci la stampa unica omissis, ma non c'è");
                         }
                     }
-                    // non c'è la stampa unica omissi, per cui prendo quella normale
+                    // non c'è la stampa unica omissis, per cui prendo quella normale
                     else {
-                        SottoDocumento stampaUnica = stampeUniche.stream().filter(s -> (s.equals("stampa_unica"))).findAny().get();
+                        SottoDocumento stampaUnica = stampeUniche.stream().filter(s -> (s.getTipo().equals("stampa_unica"))).findAny().get();
                         if (stampaUnica != null) {
                             log.debug("aggiunta allegato dal sottodocumento: " + stampaUnica.toString());
                             AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(stampaUnica.getNome(), stampaUnica.getCodiceSottoDocumento());
