@@ -18,6 +18,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
+import javax.servlet.ServletException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
@@ -121,12 +123,46 @@ public class PubblicatoreAlbo implements Job {
                             datiAlbo, 
                             null);
 
-                    //ad ogni pubblicazione, assegno i sottodocumenti del gddoc a cui appartengono
-                    for (SottoDocumento sottodoc : sottodocumenti) {
-                        log.debug("aggiunta allegato dal sottodocumento: " + sottodoc.toString());
-                        AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(sottodoc.getNome(), sottodoc.getCodiceSottoDocumento());
-                        pubblicazione.addAllegato(allegatoPubblicazione);
+                    // TEMPORANEO pubblico solo la stampa unica con omissis se c'è, sennò la stampa unica normale
+                    // va cambiato usando un campo sul sottodocumento che indica se pubblicarlo oppure no
+                    
+                    // tira fuori le stampe uniche dai sotto documenti (se ci sono omissis saranno 2, altrimenti sarà solo una)
+                    List<SottoDocumento> stampeUniche = sottodocumenti.stream().filter(s -> (s.equals("stampa_unica") || s.equals("stampa_unica_omissis"))).collect(Collectors.toList());
+                    
+                    // c'è la stampa unica omissis, prendo quella
+                    if (stampeUniche.stream().anyMatch(s -> s.equals("stampa_unica_omissis"))) {
+                        SottoDocumento stampaUnicaOmissis = stampeUniche.stream().filter(s -> (s.equals("stampa_unica_omissis"))).findAny().get();
+                        if (stampaUnicaOmissis != null) {
+                            log.debug("aggiunta allegato dal sottodocumento: " + stampaUnicaOmissis.toString());
+                            AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(stampaUnicaOmissis.getNome(), stampaUnicaOmissis.getCodiceSottoDocumento());
+                            pubblicazione.addAllegato(allegatoPubblicazione);
+                        }
+                        else {
+                            log.error("dovrebbe esserci la stampa unica omissis, ma non c'è");
+                            throw new ServletException("dovrebbe esserci la stampa unica omissis, ma non c'è");
+                        }
                     }
+                    // non c'è la stampa unica omissi, per cui prendo quella normale
+                    else {
+                        SottoDocumento stampaUnica = stampeUniche.stream().filter(s -> (s.equals("stampa_unica"))).findAny().get();
+                        if (stampaUnica != null) {
+                            log.debug("aggiunta allegato dal sottodocumento: " + stampaUnica.toString());
+                            AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(stampaUnica.getNome(), stampaUnica.getCodiceSottoDocumento());
+                            pubblicazione.addAllegato(allegatoPubblicazione);
+                        }
+                        else {
+                            log.error("dovrebbe esserci la stampa unica, ma non c'è");
+                            throw new ServletException("dovrebbe esserci la stampa unica, ma non c'è");
+                        }
+                    }
+                    
+//                    //ad ogni pubblicazione, assegno i sottodocumenti del gddoc a cui appartengono
+//                    for (SottoDocumento sottodoc : sottodocumenti) {
+//                        log.debug("aggiunta allegato dal sottodocumento: " + sottodoc.toString());
+//                        AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(sottodoc.getNome(), sottodoc.getCodiceSottoDocumento());
+//                        pubblicazione.addAllegato(allegatoPubblicazione);
+//                    }
+
                     log.debug("pubblicazione balbo: " + pubblicazione.toString());
 
                     List<Pubblicazione> pubblicazioni = null;
