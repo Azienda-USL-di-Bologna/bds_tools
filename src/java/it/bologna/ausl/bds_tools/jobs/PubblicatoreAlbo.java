@@ -131,7 +131,7 @@ public class PubblicatoreAlbo implements Job {
                     
                     // c'è la stampa unica omissis, prendo quella
                     if (stampeUniche.stream().anyMatch(s -> s.getTipo().equals("stampa_unica_omissis"))) {
-                        SottoDocumento stampaUnicaOmissis = stampeUniche.stream().filter(s -> (s.equals("stampa_unica_omissis"))).findAny().get();
+                        SottoDocumento stampaUnicaOmissis = stampeUniche.stream().filter(s -> (s.getTipo().equals("stampa_unica_omissis"))).findAny().get();
                         if (stampaUnicaOmissis != null) {
                             log.debug("aggiunta allegato dal sottodocumento: " + stampaUnicaOmissis.toString());
                             AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(stampaUnicaOmissis.getNome(), stampaUnicaOmissis.getCodiceSottoDocumento());
