@@ -123,6 +123,17 @@ public class PubblicatoreAlbo implements Job {
                             datiAlbo, 
                             null);
 
+                    // devo pubblicare solo i sotto documenti che hanno il flag "pubblicazione_albo" restituito da isPubblicazioneAlbo
+                    // filtro solo i sottoducumenti da pubblicare e per ognuno creo l'allegato pubblicazione e lo aggiungo alla pubblicazione
+                    sottodocumenti.stream().filter(
+                            s -> s.isPubblicazioneAlbo()).
+                                forEach(s -> {
+                                    log.info("crezione dell'AllegatoPubblicazione: " + s.getNome() + " - " + s.getCodiceSottoDocumento() + "...");
+                                    AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(s.getNome(), s.getCodiceSottoDocumento());
+                                    pubblicazione.addAllegato(allegatoPubblicazione);
+                                });
+                    
+                   /* 
                     // TEMPORANEO pubblico solo la stampa unica con omissis se c'è, sennò la stampa unica normale
                     // va cambiato usando un campo sul sottodocumento che indica se pubblicarlo oppure no
                     
@@ -155,13 +166,7 @@ public class PubblicatoreAlbo implements Job {
                             throw new ServletException("dovrebbe esserci la stampa unica, ma non c'è");
                         }
                     }
-                    
-//                    //ad ogni pubblicazione, assegno i sottodocumenti del gddoc a cui appartengono
-//                    for (SottoDocumento sottodoc : sottodocumenti) {
-//                        log.debug("aggiunta allegato dal sottodocumento: " + sottodoc.toString());
-//                        AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(sottodoc.getNome(), sottodoc.getCodiceSottoDocumento());
-//                        pubblicazione.addAllegato(allegatoPubblicazione);
-//                    }
+                    */
 
                     log.debug("pubblicazione balbo: " + pubblicazione.toString());
 
