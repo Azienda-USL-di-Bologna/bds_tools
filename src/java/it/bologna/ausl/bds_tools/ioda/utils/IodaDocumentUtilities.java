@@ -470,7 +470,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "spedisci_originale_pecgw, " +
                         "dimensione_pdf, " +
                         "dimensione_firmato, " +
-                        "dimensione_originale " +
+                        "dimensione_originale, " +
+                        "pubblicazione_albo " +
                 "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
                 "WHERE id_gddoc = ?";
         List<SottoDocumento> sottoDocumenti = new ArrayList<>();
@@ -497,7 +498,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 sd.setDimensioneFilePdf(res.getInt("dimensione_pdf"));
                 sd.setDimensioneFileFirmato(res.getInt("dimensione_firmato"));
                 sd.setDimensioneFileOriginale(res.getInt("dimensione_originale"));
-                
+                sd.setPubblicazioneAlbo(res.getInt("pubblicazione_albo") != 0);
+
                 sottoDocumenti.add(sd);
             }
         }
@@ -919,7 +921,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "principale, tipo_sottodocumento, tipo_firma, " +
                 "mimetype_file_originale, mimetype_file_firmato, " +
                 "codice_sottodocumento, " +
-                "da_spedire_pecgw, spedisci_originale_pecgw)" +
+                "da_spedire_pecgw, spedisci_originale_pecgw, pubblicazione_albo)" +
                 "VALUES (" +
                 "?, ?, ?, ?, " +
                 "?, ?, ?, " +
@@ -928,7 +930,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "?, ?, ?, " +
                 "?, ?, " +
                 "?, " +
-                "?, ?)";
+                "?, ?, ?)";
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
 
@@ -1009,6 +1011,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
             ps.setInt(index++, sd.isDaSpedirePecgw() ? -1 : 0);
             ps.setInt(index++, sd.isSpedisciOriginalePecgw() ? -1 : 0);
+            ps.setInt(index++, sd.isPubblicazioneAlbo()? -1 : 0);
 
             // aggiungo in una lista i sottodocumenti potenzialmente convertibili in pdf (cioè quelli per cui, non mi è stato passato l'uuid del file in pdf), il controllo
             // per verificare se la conversione è supportata verrà fatto successivamente
