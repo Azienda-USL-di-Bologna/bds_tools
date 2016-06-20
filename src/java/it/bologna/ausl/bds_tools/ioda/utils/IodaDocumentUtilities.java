@@ -214,7 +214,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             if (!dbConn.getAutoCommit()) {
                 log.debug("creazione savepoint...");
                 savepoint = dbConn.setSavepoint();
-                log.debug("savepoint " + savepoint.getSavepointName() + " creato");
+                log.debug("savepoint " + savepoint.getSavepointId() + " creato");
             }
 
             log.debug("eseguo la query: " + query + " ...");
@@ -228,7 +228,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 if (ex.getSQLState().startsWith(UtilityFunctions.SQL_INTEGRITY_VIOLATION_EXCEPTION)) {
                     log.debug("pubblicazione uguale già esistente, non faccio niente...", ex);
                     if (savepoint != null) {
-                        log.debug("rollback al savepoint " + savepoint.getSavepointName());
+                        log.debug("rollback al savepoint " + savepoint.getSavepointId());
                         dbConn.rollback(savepoint);
                     }
                 }
