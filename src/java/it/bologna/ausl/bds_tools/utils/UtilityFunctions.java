@@ -56,6 +56,8 @@ public class UtilityFunctions {
 
 private static final Logger log = LogManager.getLogger(UtilityFunctions.class);
 
+public static final String SQL_INTEGRITY_VIOLATION_EXCEPTION = "23"; // lo da ad esempio quando cerchi di inserire un elemento che c'è già
+
 //private static Context initContext;
 private static  DataSource ds;
 

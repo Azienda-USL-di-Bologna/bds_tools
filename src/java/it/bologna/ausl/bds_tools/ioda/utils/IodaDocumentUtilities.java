@@ -35,6 +35,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -208,10 +209,33 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             ps.setInt(index++, pubblicazione.isEsecutiva() ? -1: 0);
 
             String query = ps.toString();
+            
+            Savepoint savepoint = null;
+            if (!dbConn.getAutoCommit()) {
+                log.debug("creazione savepoint...");
+                savepoint = dbConn.setSavepoint();
+                log.debug("savepoint " + savepoint.getSavepointName() + " creato");
+            }
+
             log.debug("eseguo la query: " + query + " ...");
-            int result = ps.executeUpdate();
-            if (result <= 0)
-                throw new SQLException("Fascicolo non inserito");
+
+            try {
+                int result = ps.executeUpdate();
+                if (result <= 0)
+                    throw new SQLException("Pubblicazione non inserita");
+            }
+            catch (SQLException ex) {
+                if (ex.getSQLState().startsWith(UtilityFunctions.SQL_INTEGRITY_VIOLATION_EXCEPTION)) {
+                    log.debug("pubblicazione uguale già esistente, non faccio niente...", ex);
+                    if (savepoint != null) {
+                        log.debug("rollback al savepoint " + savepoint.getSavepointName());
+                        dbConn.rollback(savepoint);
+                    }
+                }
+                else {
+                    throw ex;
+                }
+            }
         }
     }
     
