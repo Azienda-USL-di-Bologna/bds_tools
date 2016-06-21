@@ -223,6 +223,14 @@
         <param-value>gd.fascicoli_gddocs</param-value>
     </context-param>
     <context-param>
+        <param-name>GdDocSessioniVersamentoParerTableName</param-name>
+        <param-value>gd.gddocs_sessioni_versamento</param-value>
+    </context-param>
+    <context-param>
+        <param-name>SessioniVersamentoParerTableName</param-name>
+        <param-value>gd.sessioni_versamento_parer</param-value>
+    </context-param>
+    <context-param>
         <param-name>TitoliTableName</param-name>
         <param-value>procton.titoli</param-value>
     </context-param>

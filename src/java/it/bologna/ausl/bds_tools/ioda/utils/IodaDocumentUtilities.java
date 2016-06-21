@@ -1,10 +1,7 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import com.mongodb.MongoException;
-import it.bologna.ausl.balboclient.classes.Pubblicazione;
-import it.bologna.ausl.balboclient.classes.PubblicazioneAlbo;
 import it.bologna.ausl.bds_tools.SetDocumentNumber;
-import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.Registro;
@@ -16,6 +13,7 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
+import it.bologna.ausl.ioda.iodaobjectlibrary.SessioneVersamentoParer;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento.TipoFirma;
@@ -36,11 +34,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -431,6 +427,12 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     log.debug("carico: " + GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString() + "...");
                     gdDoc.setSottoDocumenti(caricaSottoDocumenti(dbConn, idGdDoc));
                 }
+                
+                collection = collections.get(GdDoc.GdDocCollectionNames.SESSIONI_VERSAMENTO_PARER.toString());
+                if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                    log.debug("carico: " + GdDoc.GdDocCollectionNames.SESSIONI_VERSAMENTO_PARER.toString() + "...");
+                    gdDoc.setSessioniVersamentoParer(caricaSessioniVersamentoParer(dbConn, idGdDoc));
+                }
             }
         }
         return gdDoc;
@@ -528,8 +530,45 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             }
         }
         return sottoDocumenti;
-    }   
+    }
 
+    public static List<SessioneVersamentoParer> caricaSessioniVersamentoParer(Connection dbConn, String idGdDoc) throws SQLException {
+        String sqlText =
+                "SELECT  s.data_inizio as data_inizio, " +
+                        "s.data_fine as data_fine, " +
+                        "gsv.xml_versato as xml_versato, " +
+                        "gsv.esito as esito, " +
+                        "gsv.codice_errore as codice_errore, " +
+                        "gsv.descrizione_errore as descrizione_errore, " +
+                        "gsv.rapporto_versamento as rapporto_versamento " +
+                "FROM " + ApplicationParams.getSessioniVersamentoParerTableName() + " s " +
+                        "JOIN " + 
+                        ApplicationParams.getGdDocSessioniVersamentoParerTableName() + " gsv " + 
+                        "ON s.id_sessione_versamento_parer = gsv.id_sessione_versamento_parer " +
+                "WHERE gsv.id_gddoc = ?";
+
+        List<SessioneVersamentoParer> sessioniVersamentoParer = new ArrayList<>();
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idGdDoc);
+
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
+            while (res.next()) {
+                SessioneVersamentoParer sessioneVersamentoParer = new SessioneVersamentoParer();
+                sessioneVersamentoParer.setDataInizio(new DateTime(res.getDate("data_inizio").getTime()));
+                sessioneVersamentoParer.setDataFine(new DateTime(res.getDate("data_fine").getTime()));
+                sessioneVersamentoParer.setXmlVersato(res.getString("xml_versato"));
+                sessioneVersamentoParer.setEsito(SessioneVersamentoParer.EsitoVersamento.valueOf(res.getString("esito")));
+                sessioneVersamentoParer.setCodiceErrore(res.getString("codice_errore"));
+                sessioneVersamentoParer.setDescrizioneErrore(res.getString("descrizione_errore"));
+                sessioneVersamentoParer.setRapportoVersamento(res.getString("rapporto_versamento"));
+
+                sessioniVersamentoParer.add(sessioneVersamentoParer);
+            }
+        }
+        return sessioniVersamentoParer;
+    }   
     
     public String insertGdDoc(Connection dbConn) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
 
@@ -668,7 +707,6 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     /**
      * 
      * @param dbConn
-     * @param ps
      * @param collectionData contiene le informazioni che indicano se svuotare le collection
      * @throws SQLException
      * @throws IOException

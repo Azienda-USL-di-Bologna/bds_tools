@@ -37,6 +37,8 @@ public class ApplicationParams {
     private static String gdDocsTableName;
     private static String sottoDocumentiTableName;
     private static String fascicoliGdDocsTableName;
+    private static String gdDocSessioniVersamentoParerTableName;
+    private static String sessioniVersamentoParerTableName;
     private static String titoliTableName;
     private static String titoliVersioniTableName;
     private static String titoliVersioniCrossTableName;
@@ -89,6 +91,8 @@ public class ApplicationParams {
         utentiTableName = context.getInitParameter("UtentiTableName");
         gdDocsTableName = context.getInitParameter("GdDocsTableName");
         sottoDocumentiTableName = context.getInitParameter("SottoDocumentiTableName");
+        gdDocSessioniVersamentoParerTableName = context.getInitParameter("GdDocSessioniVersamentoParerTableName");
+        sessioniVersamentoParerTableName = context.getInitParameter("SessioniVersamentoParerTableName");
         spedizioniPecTableName = context.getInitParameter("SpedizioniPecTableName");
         indirizziMailTestTableName = context.getInitParameter("IndirizziMailTestTableName");
         updateNumberFunctionNameTemplate = context.getInitParameter("UpdateNumberFunctionNameTemplate");
@@ -236,6 +240,14 @@ public class ApplicationParams {
         return fascicoliGdDocsTableName;
     }
 
+    public static String getGdDocSessioniVersamentoParerTableName() {
+        return gdDocSessioniVersamentoParerTableName;
+    }
+
+    public static String getSessioniVersamentoParerTableName() {
+        return sessioniVersamentoParerTableName;
+    }
+
     public static String getTitoliTableName() {
         return titoliTableName;
     }
@@ -336,7 +348,7 @@ public class ApplicationParams {
         return fileSupportatiTable;
     }
     
-    public static String  getSchedulatoreConf(){
+    public static String getSchedulatoreConf(){
         return schedulatoreConf;
     }
 
