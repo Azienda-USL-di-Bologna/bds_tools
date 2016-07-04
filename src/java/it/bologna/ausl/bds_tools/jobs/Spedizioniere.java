@@ -1038,6 +1038,7 @@ public class Spedizioniere implements Job{
                                                     log.debug("Errore nell'invio della mail a Fayssel Sabir!");
                                                     throw new SpedizioniereException("Ricevuta senza uuid!");
                                                 }
+                                                throw new SpedizioniereException("Errore la ricevuta non ha l'uuid");
                                             }else{
                                                 prepared.setString(2, spedizioniereRecepit.getUuid());
                                             }
