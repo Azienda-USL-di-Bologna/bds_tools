@@ -215,6 +215,10 @@
         <param-value>gd.gddocs</param-value>
     </context-param>
     <context-param>
+        <param-name>DatiParerGdDocTableName</param-name>
+        <param-value>gd.dati_parer_gddoc</param-value>
+    </context-param>
+    <context-param>
         <param-name>SottoDocumentiTableName</param-name>
         <param-value>gd.sotto_documenti</param-value>
     </context-param>
