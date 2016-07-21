@@ -298,7 +298,7 @@ public class IodaFascicolazioniUtilities {
                 }
                 String descrizioneFascicolatore = null;
                 if(idUtenteFascicolatore != null && !idUtenteFascicolatore.equals("")){
-                    descrizioneFascicolatore = this.getNomeCognome(dbConn, descrizioneFascicolatore);
+                    descrizioneFascicolatore = this.getNomeCognome(dbConn, idUtenteFascicolatore);
                 }
 
                 fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);

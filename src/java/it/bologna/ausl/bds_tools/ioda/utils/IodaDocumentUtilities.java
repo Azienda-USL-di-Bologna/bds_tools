@@ -399,7 +399,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime()));
                 
 
-                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine").replaceFirst(prefix, ""));
                 gdDoc.setNome(result.getString("nome_gddoc"));
                 gdDoc.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
                 gdDoc.setNumeroRegistrazione(result.getString("numero_registrazione"));
