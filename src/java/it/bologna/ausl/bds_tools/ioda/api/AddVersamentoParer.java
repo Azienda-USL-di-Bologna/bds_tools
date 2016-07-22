@@ -52,13 +52,18 @@ private static final Logger log = LogManager.getLogger(AddVersamentoParer.class)
             IodaRequestDescriptor iodaReq = null;
             try {
                 requestIs = request.getInputStream();
+                
+//                String requestString = UtilityFunctions.inputStreamToString(requestIs);
+//                log.info("request:\n" + requestString);
+                
                 if (requestIs == null) {
                     response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
                     return;
                 }
-                iodaReq = IodaRequestDescriptor.parse(request.getInputStream());
+                iodaReq = IodaRequestDescriptor.parse(requestIs);
             }
             catch (Exception ex) {
+                log.error("formato json della richiesta errato: " + ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex.getMessage());
                 return;
             }

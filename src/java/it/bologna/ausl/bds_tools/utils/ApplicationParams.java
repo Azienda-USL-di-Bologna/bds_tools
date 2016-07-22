@@ -35,8 +35,11 @@ public class ApplicationParams {
     private static String uploadGdDocMongoPath;
     private static String fascicoliTableName;
     private static String gdDocsTableName;
+    private static String datiParerGdDocTable;
     private static String sottoDocumentiTableName;
     private static String fascicoliGdDocsTableName;
+    private static String gdDocSessioniVersamentoParerTableName;
+    private static String sessioniVersamentoParerTableName;
     private static String titoliTableName;
     private static String titoliVersioniTableName;
     private static String titoliVersioniCrossTableName;
@@ -88,7 +91,10 @@ public class ApplicationParams {
         titoliVersioniCrossTableName = context.getInitParameter("TitoliVersioniCrossTableName");
         utentiTableName = context.getInitParameter("UtentiTableName");
         gdDocsTableName = context.getInitParameter("GdDocsTableName");
+        datiParerGdDocTable = context.getInitParameter("DatiParerGdDocTableName");
         sottoDocumentiTableName = context.getInitParameter("SottoDocumentiTableName");
+        gdDocSessioniVersamentoParerTableName = context.getInitParameter("GdDocSessioniVersamentoParerTableName");
+        sessioniVersamentoParerTableName = context.getInitParameter("SessioniVersamentoParerTableName");
         spedizioniPecTableName = context.getInitParameter("SpedizioniPecTableName");
         indirizziMailTestTableName = context.getInitParameter("IndirizziMailTestTableName");
         updateNumberFunctionNameTemplate = context.getInitParameter("UpdateNumberFunctionNameTemplate");
@@ -227,6 +233,11 @@ public class ApplicationParams {
     public static String getGdDocsTableName() {
         return gdDocsTableName;
     }
+    
+    
+    public static String getDatiParerGdDocTableName() {
+        return datiParerGdDocTable;
+    }
 
     public static String getSottoDocumentiTableName() {
         return sottoDocumentiTableName;
@@ -234,6 +245,14 @@ public class ApplicationParams {
 
     public static String getFascicoliGdDocsTableName() {
         return fascicoliGdDocsTableName;
+    }
+
+    public static String getGdDocSessioniVersamentoParerTableName() {
+        return gdDocSessioniVersamentoParerTableName;
+    }
+
+    public static String getSessioniVersamentoParerTableName() {
+        return sessioniVersamentoParerTableName;
     }
 
     public static String getTitoliTableName() {
@@ -336,7 +355,7 @@ public class ApplicationParams {
         return fileSupportatiTable;
     }
     
-    public static String  getSchedulatoreConf(){
+    public static String getSchedulatoreConf(){
         return schedulatoreConf;
     }
 

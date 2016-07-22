@@ -2,3 +2,6 @@
 <Context antiJARLocking="true" path="/bds_tools">
   <Resource auth="Container" driverClassName="org.postgresql.Driver" maxActive="100" maxIdle="30" maxWait="10000" name="jdbc/argo" password="siamofreschi" type="javax.sql.DataSource" url="jdbc:postgresql://gdml:5432/argo" username="argo" validationQuery="select 1"/>
 </Context>
+<!--<Context antiJARLocking="true" path="/bds_tools">
+  <Resource auth="Container" driverClassName="org.postgresql.Driver" maxActive="100" maxIdle="30" maxWait="10000" name="jdbc/argo" password="siamocaldi" type="javax.sql.DataSource" url="jdbc:postgresql://toshiro:5432/argo" username="argo" validationQuery="select 1"/>
+</Context>-->

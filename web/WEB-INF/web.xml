@@ -215,12 +215,24 @@
         <param-value>gd.gddocs</param-value>
     </context-param>
     <context-param>
+        <param-name>DatiParerGdDocTableName</param-name>
+        <param-value>gd.dati_parer_gddoc</param-value>
+    </context-param>
+    <context-param>
         <param-name>SottoDocumentiTableName</param-name>
         <param-value>gd.sotto_documenti</param-value>
     </context-param>
     <context-param>
         <param-name>FascicoliGdDocsTableName</param-name>
         <param-value>gd.fascicoli_gddocs</param-value>
+    </context-param>
+    <context-param>
+        <param-name>GdDocSessioniVersamentoParerTableName</param-name>
+        <param-value>gd.gddocs_sessioni_versamento</param-value>
+    </context-param>
+    <context-param>
+        <param-name>SessioniVersamentoParerTableName</param-name>
+        <param-value>gd.sessioni_versamento_parer</param-value>
     </context-param>
     <context-param>
         <param-name>TitoliTableName</param-name>
@@ -292,8 +304,7 @@
             SELECT g.id_gddoc, 
                 id_utente_modifica, 
                 nome_gddoc,
-                id_documento_origine, 
-                categoria_origine, 
+                id_documento_origine,
                 tipo_gddoc,
                 g.data_ultima_modifica, 
                 stato_gd_doc, 
@@ -481,6 +492,13 @@
         <servlet-name>GetGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/</url-pattern>
     </servlet-mapping>
+<!--    
+            <context-param>
+            <param-name>schedulatore.active</param-name>
+            <param-value>true</param-value>
+        </context-param>-->
+
+    
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>

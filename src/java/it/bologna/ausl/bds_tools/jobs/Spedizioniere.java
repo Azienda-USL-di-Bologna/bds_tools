@@ -1015,7 +1015,33 @@ public class Spedizioniere implements Job{
 //                                                prepared.setString(1, TipiRicevutaOLD.RICEVUTA_CONSEGNA.toString());
 //                                            }
                                             prepared.setString(1, spedizioniereRecepit.getTipo().name());
-                                            prepared.setString(2, spedizioniereRecepit.getUuid());
+                                            if (spedizioniereRecepit.getUuid() == null || spedizioniereRecepit.getUuid().equals("")) {
+                                                String[] to = new String[1];
+                                                to[0] = "f.sabir@nextsw.it";
+                                                String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
+                                                String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
+                                                int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
+                                                // Email
+                                                String subject = "DISASTROOO! PANICOOOO!! RICEVUTA SENZA UUID!!! " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente();
+                                                String messageBody = "Dati della ricevuta:<br/>";
+                                                messageBody += "Tipo ricevuta: " + spedizioniereRecepit.getTipo().name() + "<br/>";
+                                                messageBody += "uuid: " + spedizioniereRecepit.getUuid() + "<br/>";
+                                                messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
+                                                messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
+                                                messageBody += "descrizione_oggetto: " + res.getString("descrizione_oggetto") + "<br/>";
+                                                messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
+                                                messageBody += "Ambiente: " + ConfigParams.getAmbiente(); 
+                                                MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
+                                                try {
+                                                    mailSender.send();
+                                                } catch (Exception e) {
+                                                    log.debug("Errore nell'invio della mail a Fayssel Sabir!");
+                                                    throw new SpedizioniereException("Ricevuta senza uuid!");
+                                                }
+                                                throw new SpedizioniereException("Errore la ricevuta non ha l'uuid");
+                                            }else{
+                                                prepared.setString(2, spedizioniereRecepit.getUuid());
+                                            }
                                             prepared.setString(3, res.getString("id_oggetto_origine"));
                                             prepared.setString(4, res.getString("tipo_oggetto_origine"));
                                             prepared.setString(5, res.getString("descrizione_oggetto"));

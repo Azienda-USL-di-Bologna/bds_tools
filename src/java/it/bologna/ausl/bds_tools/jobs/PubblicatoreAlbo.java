@@ -15,8 +15,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
+import javax.servlet.ServletException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
@@ -47,7 +50,7 @@ public class PubblicatoreAlbo implements Job {
         PreparedStatement ps = null;
         try {
             dbConn = UtilityFunctions.getDBConnection();
-            log.debug("connesisone db ottenuta");
+            log.debug("connessione db ottenuta");
 
             dbConn.setAutoCommit(false);
             log.debug("autoCommit settato a: " + dbConn.getAutoCommit());
@@ -56,7 +59,7 @@ public class PubblicatoreAlbo implements Job {
             BalboClient balboClient = new BalboClient(ApplicationParams.getBalboServiceURI());
             log.debug("balboClient settato");
 
-            //Qui dentro metto tutti i registri man mano che scorro i gddoc in modo da evitare di andare a leggere lo stesso dato più volte sul DB
+            // qui dentro metto tutti i registri man mano che scorro i gddoc in modo da evitare di andare a leggere lo stesso dato più volte sul DB
             HashMap<String, Registro> mappaRegistri = new HashMap<>();
 
             ArrayList<GdDoc> listaGdDocsDaPubblicare = IodaDocumentUtilities.getGdDocsDaPubblicare(dbConn);
@@ -93,6 +96,17 @@ public class PubblicatoreAlbo implements Job {
                     log.debug("crezione pubblicazione per balbo...");
                     PubblicazioneAlbo datiAlbo = new PubblicazioneAlbo(pubbIoda.getDataDal().toDate(),pubbIoda.getDataAl().toDate());
 
+                    DateTime dataEsecutivitaDateTime = pubbIoda.getDataEsecutivita();
+                    Date dataEsecutivita = null;
+                    if (pubbIoda.isEsecutiva()) {
+                        if (dataEsecutivitaDateTime == null) {
+                            dataEsecutivita = new Date();
+                        }
+                        else {
+                            dataEsecutivita = dataEsecutivitaDateTime.toDate();
+                        }
+                    }
+
                     Pubblicazione pubblicazione = new Pubblicazione(
                             gddoc.getAnnoRegistrazione(),  
                             gddoc.getNumeroRegistrazione(), 
@@ -105,18 +119,57 @@ public class PubblicatoreAlbo implements Job {
                             "attivo", 
                             gddoc.getData().toDate(), 
                             gddoc.getDataRegistrazione().toDate(),
-                            gddoc.getDataRegistrazione().toDate(), //TODO: questa è la data di esecutività, forse va passata la data odierna ?? e se non è esecutiva?? si lascia vuota??
+                            dataEsecutivita,
                             datiAlbo, 
                             null);
-    
-                    //ad ogni pubblicazione, assegno i sottodocumenti del gddoc a cui appartengono
-                    for (SottoDocumento sottodoc : sottodocumenti) {
-                        log.debug("aggiunta allegato dal sottodocumento: " + sottodoc.toString());
-                        AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(sottodoc.getNome(), sottodoc.getCodiceSottoDocumento());
-                        pubblicazione.addAllegato(allegatoPubblicazione);
-                    }
-                    log.debug("pubblicazione balbo: " + pubblicazione.toString());
+
+                    // devo pubblicare solo i sotto documenti che hanno il flag "pubblicazione_albo" restituito da isPubblicazioneAlbo
+                    // filtro solo i sottoducumenti da pubblicare e per ognuno creo l'allegato pubblicazione e lo aggiungo alla pubblicazione
+                    sottodocumenti.stream().filter(
+                            s -> s.isPubblicazioneAlbo()).
+                                forEach(s -> {
+                                    log.info("crezione dell'AllegatoPubblicazione: " + s.getNome() + " - " + s.getCodiceSottoDocumento() + "...");
+                                    AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(s.getNome(), s.getCodiceSottoDocumento());
+                                    pubblicazione.addAllegato(allegatoPubblicazione);
+                                });
                     
+                   /* 
+                    // TEMPORANEO pubblico solo la stampa unica con omissis se c'è, sennò la stampa unica normale
+                    // va cambiato usando un campo sul sottodocumento che indica se pubblicarlo oppure no
+                    
+                    // tira fuori le stampe uniche dai sotto documenti (se ci sono omissis saranno 2, altrimenti sarà solo una)
+                    List<SottoDocumento> stampeUniche = sottodocumenti.stream().filter(s -> (s.getTipo().equals("stampa_unica") || s.getTipo().equals("stampa_unica_omissis"))).collect(Collectors.toList());
+                    
+                    // c'è la stampa unica omissis, prendo quella
+                    if (stampeUniche.stream().anyMatch(s -> s.getTipo().equals("stampa_unica_omissis"))) {
+                        SottoDocumento stampaUnicaOmissis = stampeUniche.stream().filter(s -> (s.getTipo().equals("stampa_unica_omissis"))).findAny().get();
+                        if (stampaUnicaOmissis != null) {
+                            log.debug("aggiunta allegato dal sottodocumento: " + stampaUnicaOmissis.toString());
+                            AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(stampaUnicaOmissis.getNome(), stampaUnicaOmissis.getCodiceSottoDocumento());
+                            pubblicazione.addAllegato(allegatoPubblicazione);
+                        }
+                        else {
+                            log.error("dovrebbe esserci la stampa unica omissis, ma non c'è");
+                            throw new ServletException("dovrebbe esserci la stampa unica omissis, ma non c'è");
+                        }
+                    }
+                    // non c'è la stampa unica omissis, per cui prendo quella normale
+                    else {
+                        SottoDocumento stampaUnica = stampeUniche.stream().filter(s -> (s.getTipo().equals("stampa_unica"))).findAny().get();
+                        if (stampaUnica != null) {
+                            log.debug("aggiunta allegato dal sottodocumento: " + stampaUnica.toString());
+                            AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(stampaUnica.getNome(), stampaUnica.getCodiceSottoDocumento());
+                            pubblicazione.addAllegato(allegatoPubblicazione);
+                        }
+                        else {
+                            log.error("dovrebbe esserci la stampa unica, ma non c'è");
+                            throw new ServletException("dovrebbe esserci la stampa unica, ma non c'è");
+                        }
+                    }
+                    */
+
+                    log.debug("pubblicazione balbo: " + pubblicazione.toString());
+
                     List<Pubblicazione> pubblicazioni = null;
                     try {
                         log.info("pubblicazione effettiva su balbo...");
@@ -160,6 +213,9 @@ public class PubblicatoreAlbo implements Job {
         } //try
         catch (Throwable t) {
             log.fatal("Errore nel pubblicatore albo", t);
+            //log.fatal("causa: ", t.getCause());
+            //log.fatal(t.toString());
+            //t.printStackTrace();
             try {
                 if (dbConn != null) {
                     log.info("rollback...");

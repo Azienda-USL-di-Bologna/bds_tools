@@ -256,12 +256,20 @@ public class IodaFascicolazioniUtilities {
                 String nomeFascicolo = res.getString(index++);
                 DateTime dataAssegnazione;
                 String dataStr = res.getString(index++);
-                try{
-                    dataAssegnazione = DateTime.parse(dataStr, formatter);
-                } catch(Exception e){
-                    formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-                    dataAssegnazione = DateTime.parse(dataStr, formatter);
+                
+                if (dataStr != null){
+                   try{
+                        dataAssegnazione = DateTime.parse(dataStr, formatter);
+                    } catch(Exception e){
+                        formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+                        dataAssegnazione = DateTime.parse(dataStr, formatter);
+                    } 
                 }
+                else{
+                    dataAssegnazione = null;
+                }
+                
+                
 
                 String idUtenteFascicolatore = res.getString(index++);
 
@@ -288,8 +296,10 @@ public class IodaFascicolazioniUtilities {
                     eliminato = true;
                     descrizioneEliminatore = this.getNomeCognome(dbConn, idUtenteEliminatore);
                 }
-                String descrizioneFascicolatore = this.getNomeCognome(dbConn, idUtenteFascicolatore);         
-
+                String descrizioneFascicolatore = null;
+                if(idUtenteFascicolatore != null && !idUtenteFascicolatore.equals("")){
+                    descrizioneFascicolatore = this.getNomeCognome(dbConn, idUtenteFascicolatore);
+                }
 
                 fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
 

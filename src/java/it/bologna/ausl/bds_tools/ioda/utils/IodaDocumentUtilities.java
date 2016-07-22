@@ -1,21 +1,20 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
 import com.mongodb.MongoException;
-import it.bologna.ausl.balboclient.classes.Pubblicazione;
-import it.bologna.ausl.balboclient.classes.PubblicazioneAlbo;
 import it.bologna.ausl.bds_tools.SetDocumentNumber;
-import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.Registro;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParerGdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
+import it.bologna.ausl.ioda.iodaobjectlibrary.SessioneVersamentoParer;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento.TipoFirma;
@@ -35,11 +34,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +74,7 @@ private MongoWrapper mongo;
 private String mongoParentPath;
 private String getIndeIdServletUrl;
 private String gdDocTable;
+private String datiParerGdDocTable;
 private String sottoDocumentiTable;
 private String fascicoliTable;
 private String fascicoliGdDocTable;
@@ -90,6 +89,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
     private IodaDocumentUtilities(Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this.gdDocTable = ApplicationParams.getGdDocsTableName();
+        this.datiParerGdDocTable = ApplicationParams.getDatiParerGdDocTableName();
         String mongoUri = ApplicationParams.getMongoRepositoryUri();
         this.mongo = new MongoWrapper(mongoUri);
         this.sottoDocumentiTable = ApplicationParams.getSottoDocumentiTableName();
@@ -169,8 +169,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     public void insertPubblicazione(Connection dbConn, PubblicazioneIoda pubblicazione) throws SQLException {
         String sqlText = 
                 "INSERT INTO " + ApplicationParams.getPubblicazioniAlboTableName() + "(" +
-                "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc, pubblicatore, esecutivita, data_defissione) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc, pubblicatore, esecutivita, data_defissione, data_esecutivita, esecutiva) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
             if (pubblicazione.getNumeroPubblicazione() != null)
@@ -200,11 +200,41 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             else
                 ps.setNull(index++, Types.TIMESTAMP);
 
+            if (pubblicazione.getDataEsecutivita() != null)
+                ps.setTimestamp(index++, new Timestamp(pubblicazione.getDataEsecutivita().getMillis()));
+            else
+                ps.setNull(index++, Types.TIMESTAMP);
+
+            ps.setInt(index++, pubblicazione.isEsecutiva() ? -1: 0);
+
             String query = ps.toString();
+            
+            Savepoint savepoint = null;
+            if (!dbConn.getAutoCommit()) {
+                log.debug("creazione savepoint...");
+                savepoint = dbConn.setSavepoint();
+                log.debug("savepoint " + savepoint.getSavepointId() + " creato");
+            }
+
             log.debug("eseguo la query: " + query + " ...");
-            int result = ps.executeUpdate();
-            if (result <= 0)
-                throw new SQLException("Fascicolo non inserito");
+
+            try {
+                int result = ps.executeUpdate();
+                if (result <= 0)
+                    throw new SQLException("Pubblicazione non inserita");
+            }
+            catch (SQLException ex) {
+                if (ex.getSQLState().startsWith(UtilityFunctions.SQL_INTEGRITY_VIOLATION_EXCEPTION)) {
+                    log.debug("pubblicazione uguale già esistente, non faccio niente...", ex);
+                    if (savepoint != null) {
+                        log.debug("rollback al savepoint " + savepoint.getSavepointId());
+                        dbConn.rollback(savepoint);
+                    }
+                }
+                else {
+                    throw ex;
+                }
+            }
         }
     }
     
@@ -333,7 +363,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "tipo_gddoc, " +
                         "tipo_oggetto_origine, " +
                         "stato_gd_doc, " +
-                        "url_command " +
+                        "url_command, " +
+                        "id_utente_creazione " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
 
@@ -366,8 +397,9 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 Timestamp dataUltimaModifica = result.getTimestamp("data_ultima_modifica");
                 if (dataUltimaModifica != null)
                     gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime()));
+                
 
-                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine").replaceFirst(prefix, ""));
                 gdDoc.setNome(result.getString("nome_gddoc"));
                 gdDoc.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
                 gdDoc.setNumeroRegistrazione(result.getString("numero_registrazione"));
@@ -376,26 +408,37 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
                 gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
                 gdDoc.setUrlCommand(result.getString("url_command"));
+                gdDoc.setIdUtenteCrezione(result.getString("id_utente_creazione"));
                 
                 if (result.next())
                     throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
 
-                Object collection = collections.get(GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString());
-                if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
-                    log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
-                    gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix));
-                }
+                gdDoc.setDatiParerGdDoc(caricaDatiParerGdDoc(dbConn, idGdDoc, gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine()));
+                
+                if (collections != null){
+                    Object collection = collections.get(GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
+                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix));
+                    }
 
-                collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
-                if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
-                    log.debug("carico: " + GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString() + "...");
-                    gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc));
-                }
+                    collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString() + "...");
+                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc));
+                    }
 
-                collection = collections.get(GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString());
-                if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
-                    log.debug("carico: " + GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString() + "...");
-                    gdDoc.setSottoDocumenti(caricaSottoDocumenti(dbConn, idGdDoc));
+                    collection = collections.get(GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString() + "...");
+                        gdDoc.setSottoDocumenti(caricaSottoDocumenti(dbConn, idGdDoc));
+                    }
+
+                    collection = collections.get(GdDoc.GdDocCollectionNames.SESSIONI_VERSAMENTO_PARER.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.SESSIONI_VERSAMENTO_PARER.toString() + "...");
+                        gdDoc.setSessioniVersamentoParer(caricaSessioniVersamentoParer(dbConn, idGdDoc));
+                    }
                 }
             }
         }
@@ -417,7 +460,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "esecutivita, " + 
                         "data_defissione " +
                         "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
-                        "WHERE id_gddoc = ?";
+                        "WHERE id_gddoc = ? " + 
+                        "ORDER BY numero_pubblicazione";
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
@@ -459,7 +503,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "spedisci_originale_pecgw, " +
                         "dimensione_pdf, " +
                         "dimensione_firmato, " +
-                        "dimensione_originale " +
+                        "dimensione_originale, " +
+                        "pubblicazione_albo " +
                 "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
                 "WHERE id_gddoc = ?";
         List<SottoDocumento> sottoDocumenti = new ArrayList<>();
@@ -486,13 +531,51 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 sd.setDimensioneFilePdf(res.getInt("dimensione_pdf"));
                 sd.setDimensioneFileFirmato(res.getInt("dimensione_firmato"));
                 sd.setDimensioneFileOriginale(res.getInt("dimensione_originale"));
-                
+                sd.setPubblicazioneAlbo(res.getInt("pubblicazione_albo") != 0);
+
                 sottoDocumenti.add(sd);
             }
         }
         return sottoDocumenti;
-    }   
+    }
 
+    public static List<SessioneVersamentoParer> caricaSessioniVersamentoParer(Connection dbConn, String idGdDoc) throws SQLException {
+        String sqlText =
+                "SELECT  s.data_inizio as data_inizio, " +
+                        "s.data_fine as data_fine, " +
+                        "gsv.xml_versato as xml_versato, " +
+                        "gsv.esito as esito, " +
+                        "gsv.codice_errore as codice_errore, " +
+                        "gsv.descrizione_errore as descrizione_errore, " +
+                        "gsv.rapporto_versamento as rapporto_versamento " +
+                "FROM " + ApplicationParams.getSessioniVersamentoParerTableName() + " s " +
+                        "JOIN " + 
+                        ApplicationParams.getGdDocSessioniVersamentoParerTableName() + " gsv " + 
+                        "ON s.id_sessione_versamento_parer = gsv.id_sessione_versamento_parer " +
+                "WHERE gsv.id_gddoc = ?";
+
+        List<SessioneVersamentoParer> sessioniVersamentoParer = new ArrayList<>();
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idGdDoc);
+
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
+            while (res.next()) {
+                SessioneVersamentoParer sessioneVersamentoParer = new SessioneVersamentoParer();
+                sessioneVersamentoParer.setDataInizio(new DateTime(res.getDate("data_inizio").getTime()));
+                sessioneVersamentoParer.setDataFine(new DateTime(res.getDate("data_fine").getTime()));
+                sessioneVersamentoParer.setXmlVersato(res.getString("xml_versato"));
+                sessioneVersamentoParer.setEsito(SessioneVersamentoParer.EsitoVersamento.valueOf(res.getString("esito")));
+                sessioneVersamentoParer.setCodiceErrore(res.getString("codice_errore"));
+                sessioneVersamentoParer.setDescrizioneErrore(res.getString("descrizione_errore"));
+                sessioneVersamentoParer.setRapportoVersamento(res.getString("rapporto_versamento"));
+
+                sessioniVersamentoParer.add(sessioneVersamentoParer);
+            }
+        }
+        return sessioniVersamentoParer;
+    }   
     
     public String insertGdDoc(Connection dbConn) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
 
@@ -504,7 +587,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "data_registrazione, numero_registrazione, " +
                         "anno_registrazione, oggetto, " +
                         "id_oggetto_origine, tipo_oggetto_origine, " +
-                        "codice, nome_struttura_firmatario, applicazione, url_command) " +
+                        "codice, nome_struttura_firmatario, applicazione, " +
+                        "url_command, id_utente_creazione) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -512,7 +596,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "?, ?, " +
                         "?, ?, " +
                         "?, ?, " +
-                        "?, ?, ?, ?)";
+                        "?, ?, ?, " +
+                        "?, ?)";
         
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
@@ -595,6 +680,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
             // url_command
             ps.setString(index++, gdDoc.getUrlCommand());
+            
+            // Vecchio categoria_origine ora id_utente_creazione
+            ps.setString(index++, gdDoc.getIdUtenteCreazione());
+            
+            
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -602,6 +692,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             if (result <= 0)
                 throw new SQLException("Documento non inserito");
 
+            // gestione dati ParER
+            if (gdDoc.getDatiParerGdDoc() != null){
+                insertDatiParerGdDoc(dbConn, gdDoc.getDatiParerGdDoc());
+            }
+            
             // inseririmento delle fascicolazioni
             List<Fascicolazione> fascicolazioni = gdDoc.getFascicolazioni();
             if (fascicolazioni != null && !fascicolazioni.isEmpty()) {
@@ -624,7 +719,6 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     /**
      * 
      * @param dbConn
-     * @param ps
      * @param collectionData contiene le informazioni che indicano se svuotare le collection
      * @throws SQLException
      * @throws IOException
@@ -649,7 +743,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "oggetto = coalesce(?, oggetto), " +
                 "nome_struttura_firmatario = coalesce(?, nome_struttura_firmatario), " +
                 "applicazione = coalesce(?, applicazione), " +
-                "url_command = coalesce(?, url_command) " +
+                "url_command = coalesce(?, url_command), " +
+                "id_utente_creazione = coalesce(?, id_utente_creazione) " + 
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
 
@@ -731,12 +826,17 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             
             // url_command
             ps.setString(index++, gdDoc.getUrlCommand());
+            
+            // Vecchio categoria_origine ora id_utente_creazione
+            ps.setString(index++, gdDoc.getIdUtenteCreazione());
 
             // id_oggetto_origine
             ps.setString(index++, gdDoc.getIdOggettoOrigine());
 
             // tipo_oggetto_origine
             ps.setString(index++, gdDoc.getTipoOggettoOrigine());
+            
+            
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -746,6 +846,16 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             gdDoc.setId(result.getString(1));
             gdDoc.setGuid(result.getString(2));
         }
+        
+        // gestioni dati ParER
+        if (gdDoc.getDatiParerGdDoc() != null){
+            log.debug("dati_parer_gddoc: " + gdDoc.getDatiParerGdDoc().getJSONString());
+            updateDatiParerGdDoc(dbConn, gdDoc.getDatiParerGdDoc());
+        }
+        else{
+            log.debug("dati_parer_gddoc == NULL");
+        }
+        
         // fascicolazioni
         // azzeramento della collection, se richiesto
         if (collectionData != null) {
@@ -864,12 +974,283 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             ps.setString(1, gdDoc.getIdOggettoOrigine());
             ps.setString(2, gdDoc.getTipoOggettoOrigine());
             int ris = ps.executeUpdate();
-
+            
             if (ris > 0)
                 if (uuidsToDelete != null && !uuidsToDelete.isEmpty())
                     deleteAllMongoFileToDelete();
         }
+        
+        // cancellazione corrispondenti dati ParER
+        sqlText =
+                "DELETE " +
+                "FROM " + getDatiParerGdDocTable() + " " +
+                "WHERE id_gddoc = ?";
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, gdDoc.getId());
+            int ris = ps.executeUpdate();
+            
+        }
+        
     }   
+    
+    public void insertDatiParerGdDoc(Connection dbConn, DatiParerGdDoc datiParer) throws SQLException{
+        
+        String sqlText =
+                "INSERT INTO " + getDatiParerGdDocTable() + " (" +
+                "id_gddoc, stato_versamento_proposto, stato_versamento_effettivo, " +
+                "xml_specifico_parer, forza_conservazione, forza_accettazione, " +
+                "forza_collegamento)" +
+                "VALUES (" + 
+                "?, ?, DEFAULT, " +
+                "?, ?, ?, " +
+                "?)";
+        
+        if (datiParer.getStatoVersamentoEffettivo() != null && !datiParer.getStatoVersamentoEffettivo().equals("")){
+            sqlText = sqlText.replaceFirst("DEFAULT", "'" + datiParer.getStatoVersamentoEffettivo() + "'");
+        }
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            
+            ps.setString(index++, gdDoc.getId());
+                ps.setString(index++, datiParer.getStatoVersamentoProposto());
+
+                ps.setString(index++, datiParer.getXmlSpecifico());
+                // forza_conservazione
+                if (datiParer.getForzaConservazione() != null && datiParer.getForzaConservazione())    
+                    ps.setInt(index++, -1);
+                else
+                    ps.setInt(index++, 0);
+
+                // forza_accettazione
+                if (datiParer.getForzaAccettazione()!= null && datiParer.getForzaAccettazione())    
+                    ps.setInt(index++, -1);
+                else
+                    ps.setInt(index++, 0);
+
+                // forza_collegamento
+                if (datiParer.getForzaCollegamento()!= null && datiParer.getForzaCollegamento())    
+                    ps.setInt(index++, -1);
+                else
+                    ps.setInt(index++, 0);
+
+                String query = ps.toString();
+                log.debug("eseguo la query: " + query + " ...");
+                int result = ps.executeUpdate();
+                log.debug("eseguita");
+                if (result <= 0)
+                    throw new SQLException("Dati Parer non inserito");
+        }
+        
+        
+        
+        
+//        if (datiParer.getStatoVersamentoEffettivo() != null && !datiParer.getStatoVersamentoEffettivo().equals("")){
+//            String sqlText =
+//                "INSERT INTO " + getDatiParerGdDocTable() + " (" +
+//                "id_gddoc, stato_versamento_proposto, stato_versamento_effettivo, " +
+//                "xml_specifico_parer, forza_conservazione, forza_accettazione, " +
+//                "forza_collegamento)" +
+//                "VALUES (" + 
+//                "?, ?, ?, " +
+//                "?, ?, ?, " +
+//                "?)";
+//        
+//            try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+//                int index = 1;
+//
+//                ps.setString(index++, gdDoc.getId());
+//                ps.setString(index++, datiParer.getStatoVersamentoProposto());
+//                ps.setString(index++, datiParer.getStatoVersamentoEffettivo());
+//
+//                ps.setString(index++, datiParer.getXmlSpecifico());
+//                // forza_conservazione
+//                if (datiParer.getForzaConservazione() != null && datiParer.getForzaConservazione())    
+//                    ps.setInt(index++, -1);
+//                else
+//                    ps.setInt(index++, 0);
+//
+//                // forza_accettazione
+//                if (datiParer.getForzaAccettazione()!= null && datiParer.getForzaAccettazione())    
+//                    ps.setInt(index++, -1);
+//                else
+//                    ps.setInt(index++, 0);
+//
+//                // forza_collegamento
+//                if (datiParer.getForzaCollegamento()!= null && datiParer.getForzaCollegamento())    
+//                    ps.setInt(index++, -1);
+//                else
+//                    ps.setInt(index++, 0);
+//
+//                String query = ps.toString();
+//                query.re
+//                log.debug("eseguo la query: " + query + " ...");
+//                int result = ps.executeUpdate();
+//                log.debug("eseguita");
+//                if (result <= 0)
+//                    throw new SQLException("Dati Parer non inserito");
+//            }
+//        }
+//        else{
+//            String sqlText =
+//                "INSERT INTO " + getDatiParerGdDocTable() + " (" +
+//                "id_gddoc, stato_versamento_proposto, " +
+//                "xml_specifico_parer, forza_conservazione, forza_accettazione, " +
+//                "forza_collegamento)" +
+//                "VALUES (" + 
+//                "?, ?, " +
+//                "?, ?, ?, " +
+//                "?)";
+//        
+//            try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+//                int index = 1;
+//
+//                ps.setString(index++, gdDoc.getId());
+//                ps.setString(index++, datiParer.getStatoVersamentoProposto());
+//                ps.setString(index++, datiParer.getXmlSpecifico());
+//                // forza_conservazione
+//                if (datiParer.getForzaConservazione() != null && datiParer.getForzaConservazione())    
+//                    ps.setInt(index++, -1);
+//                else
+//                    ps.setInt(index++, 0);
+//
+//                // forza_accettazione
+//                if (datiParer.getForzaAccettazione()!= null && datiParer.getForzaAccettazione())    
+//                    ps.setInt(index++, -1);
+//                else
+//                    ps.setInt(index++, 0);
+//
+//                // forza_collegamento
+//                if (datiParer.getForzaCollegamento()!= null && datiParer.getForzaCollegamento())    
+//                    ps.setInt(index++, -1);
+//                else
+//                    ps.setInt(index++, 0);
+//
+//                String query = ps.toString();
+//                log.debug("eseguo la query: " + query + " ...");
+//                
+//                int result = ps.executeUpdate();
+//                log.debug("eseguita");
+//                if (result <= 0)
+//                    throw new SQLException("Dati Parer non inserito");
+//            }
+//        }
+        
+    }
+    
+    public void updateDatiParerGdDoc(Connection dbConn, DatiParerGdDoc datiParer) throws SQLException{
+    
+        boolean datiPresenti = false;
+        
+        // controlla se esistono già i dati pro ParER
+        String sql =
+                "SELECT id_dato_parer_gddoc " +
+                "FROM gd.dati_parer_gddoc " + 
+                "WHERE id_gddoc = ? ";
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            ps.setString(1, gdDoc.getId());
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
+            
+            if (res.next())
+                datiPresenti = true;            
+        }
+        
+        // se dati sono già presenti allora li aggiorno
+        if (datiPresenti){
+            String sqlText = 
+                "UPDATE " + ApplicationParams.getDatiParerGdDocTableName() + " SET " +
+                "stato_versamento_proposto = coalesce(?, stato_versamento_proposto), " +
+                "stato_versamento_effettivo = coalesce(?, stato_versamento_effettivo), " +
+                "xml_specifico_parer = coalesce(?, xml_specifico_parer), " +
+                "forza_conservazione = coalesce(?, forza_conservazione), " +
+                "forza_accettazione = coalesce(?, forza_accettazione), " +
+                "forza_collegamento = coalesce(?, forza_collegamento) " +
+                "WHERE id_gddoc = ? ";
+    
+            try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+                int index = 1;
+
+                ps.setString(index++, datiParer.getStatoVersamentoProposto());
+                if (datiParer.getStatoVersamentoEffettivo() != null && !datiParer.getStatoVersamentoEffettivo().equals(""))
+                     ps.setString(index++, datiParer.getStatoVersamentoEffettivo());
+                else
+                     ps.setString(index++, null);
+               
+                ps.setString(index++, datiParer.getXmlSpecifico());
+
+                // forza_conservazione
+                if (datiParer.getForzaConservazione() != null && datiParer.getForzaConservazione())    
+                    ps.setInt(index++, -1);
+                else
+                    ps.setInt(index++, 0);
+
+                // forza_accettazione
+                if (datiParer.getForzaAccettazione()!= null && datiParer.getForzaAccettazione())    
+                    ps.setInt(index++, -1);
+                else
+                    ps.setInt(index++, 0);
+
+                // forza_collegamento
+                if (datiParer.getForzaCollegamento()!= null && datiParer.getForzaCollegamento())    
+                    ps.setInt(index++, -1);
+                else
+                    ps.setInt(index++, 0);
+
+                ps.setString(index++, gdDoc.getId());
+
+                String query = ps.toString();
+                log.debug("eseguo la query: " + query + " ...");
+                int rowsUpdated = ps.executeUpdate();
+                log.debug("eseguita");
+                if (rowsUpdated == 0)
+                    throw new SQLException("Documento non trovato");
+                else if (rowsUpdated > 1)
+                    log.fatal("troppe righe aggiornate; aggiornate " + rowsUpdated + " righe, dovrebbe essere una");
+            }
+        }
+        else{ // altrimenti effettuo l'inserimento del record
+            insertDatiParerGdDoc(dbConn, datiParer);
+        }
+        
+        
+    }
+    
+    public static DatiParerGdDoc caricaDatiParerGdDoc(Connection dbConn, String idGdDoc, String idOggettoOrigine, String tipoOggettoOrigine) throws SQLException {
+        String sqlText =        
+                "SELECT  stato_versamento_proposto, " + 
+                        "stato_versamento_effettivo, " +
+                        "xml_specifico_parer, " +
+                        "forza_conservazione, " +
+                        "forza_accettazione, " +
+                        "forza_collegamento " +
+                "FROM " + ApplicationParams.getDatiParerGdDocTableName() + " " +
+                "WHERE id_gddoc = ?";
+
+        DatiParerGdDoc datiParerGdDoc = null;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, idGdDoc);
+            
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
+            while (res.next()) {
+                datiParerGdDoc = new DatiParerGdDoc();
+                datiParerGdDoc.setIdOggettoOrigine(idOggettoOrigine);
+                datiParerGdDoc.setTipoOggettoOrigine(tipoOggettoOrigine);
+                datiParerGdDoc.setStatoVersamentoProposto(res.getString("stato_versamento_proposto"));
+                datiParerGdDoc.setStatoVersamentoEffettivo(res.getString("stato_versamento_effettivo"));
+                datiParerGdDoc.setXmlSpecifico(res.getString("xml_specifico_parer"));
+                datiParerGdDoc.setForzaConservazione(res.getInt("forza_conservazione") != 0);
+                datiParerGdDoc.setForzaAccettazione(res.getInt("forza_accettazione") != 0);
+                datiParerGdDoc.setForzaCollegamento(res.getInt("forza_collegamento") != 0);
+            }
+        }
+        return datiParerGdDoc;
+    }
     
     public void insertSottoDocumento(Connection dbConn, SottoDocumento sd) throws SQLException, IOException, ServletException, UnsupportedEncodingException, MimeTypeException, IodaDocumentException, IodaFileException {
 
@@ -895,7 +1276,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "principale, tipo_sottodocumento, tipo_firma, " +
                 "mimetype_file_originale, mimetype_file_firmato, " +
                 "codice_sottodocumento, " +
-                "da_spedire_pecgw, spedisci_originale_pecgw)" +
+                "da_spedire_pecgw, spedisci_originale_pecgw, pubblicazione_albo)" +
                 "VALUES (" +
                 "?, ?, ?, ?, " +
                 "?, ?, ?, " +
@@ -904,7 +1285,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "?, ?, ?, " +
                 "?, ?, " +
                 "?, " +
-                "?, ?)";
+                "?, ?, ?)";
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
 
@@ -985,6 +1366,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
             ps.setInt(index++, sd.isDaSpedirePecgw() ? -1 : 0);
             ps.setInt(index++, sd.isSpedisciOriginalePecgw() ? -1 : 0);
+            ps.setInt(index++, sd.isPubblicazioneAlbo()? -1 : 0);
 
             // aggiungo in una lista i sottodocumenti potenzialmente convertibili in pdf (cioè quelli per cui, non mi è stato passato l'uuid del file in pdf), il controllo
             // per verificare se la conversione è supportata verrà fatto successivamente
@@ -1249,6 +1631,10 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     public String getGdDocTable() {
         return gdDocTable;
     }
+    
+    public String getDatiParerGdDocTable() {
+        return datiParerGdDocTable;
+    }
 
     public String getSottoDocumentiTable() {
         return sottoDocumentiTable;
@@ -1414,7 +1800,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     pubblicazione.setAnnoPubblicazione((Integer) pubblicazioneJson.get("anno_pubblicazione"));
                     pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_dal")));
                     pubblicazione.setDataAl(DateTime.parse((String) pubblicazioneJson.get("data_al")));
+                    String data_esecutivita = (String) pubblicazioneJson.get("data_esecutivita");
+                    if (data_esecutivita != null && !data_esecutivita.isEmpty())
+                        pubblicazione.setDataEsecutivita(DateTime.parse(data_esecutivita));
                     pubblicazione.setEsecutivita((String) pubblicazioneJson.get("esecutivita"));
+                    pubblicazione.setEsecutiva(((Long) pubblicazioneJson.get("esecutiva")) != 0);
                     pubblicazione.setPubblicatore((String) pubblicazioneJson.get("pubblicatore"));
                     //Aggiungo la pubblicazione appena creata
                     pubblicazioniList.add(pubblicazione);
