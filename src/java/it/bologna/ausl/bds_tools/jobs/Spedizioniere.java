@@ -492,134 +492,135 @@ public class Spedizioniere implements Job{
                         psForGddoc.setString(2, res.getString("id_applicazione"));
                         log.debug("Query: " + psForGddoc);
                         ResultSet resOfGddoc = psForGddoc.executeQuery();
-                        resOfGddoc.next();
-                        log.debug("gddoc applicazione in psForGddoc: " + resOfGddoc.getString("applicazione"));
-                        
-                        if(resOfGddoc.getString("tipo_gddoc").equals("r")){ // Se il gddoc è un record allora carico i suoi sottoDocumenti
-                            log.debug("Il gddoc è di tipo r");
-                            String querySottoDocumenti =    "SELECT id_sottodocumento, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_firmato, " +
-                                                                "uuid_mongo_originale, convertibile_pdf, mimetype_file_firmato, mimetype_file_originale, " + 
-                                                                "da_spedire_pecgw, spedisci_originale_pecgw, tipo_sottodocumento " + 
-                                                            "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
-                                                            "WHERE id_gddoc = ?";
-                            try (
-                                Connection connForSottoDocumenti = UtilityFunctions.getDBConnection();
-                                PreparedStatement psForSottoDocumenti = connForSottoDocumenti.prepareStatement(querySottoDocumenti)
-                            ) {
-                                psForSottoDocumenti.setString(1, resOfGddoc.getString("id_gddoc"));;
-                                ResultSet resOfSottoDocumenti = psForSottoDocumenti.executeQuery();
+                        while (resOfGddoc.next()) {                            
+                            log.debug("gddoc applicazione in psForGddoc: " + resOfGddoc.getString("applicazione"));
+                            if(resOfGddoc.getString("tipo_gddoc").equals("r")){ // Se il gddoc è un record allora carico i suoi sottoDocumenti
+                                log.debug("Il gddoc è di tipo r");
+                                String querySottoDocumenti =    "SELECT id_sottodocumento, nome_sottodocumento, uuid_mongo_pdf, uuid_mongo_firmato, " +
+                                                                    "uuid_mongo_originale, convertibile_pdf, mimetype_file_firmato, mimetype_file_originale, " + 
+                                                                    "da_spedire_pecgw, spedisci_originale_pecgw, tipo_sottodocumento " + 
+                                                                "FROM " + ApplicationParams.getSottoDocumentiTableName() + " " +
+                                                                "WHERE id_gddoc = ?";
+                                try (
+                                    Connection connForSottoDocumenti = UtilityFunctions.getDBConnection();
+                                    PreparedStatement psForSottoDocumenti = connForSottoDocumenti.prepareStatement(querySottoDocumenti)
+                                ) {
+                                    psForSottoDocumenti.setString(1, resOfGddoc.getString("id_gddoc"));;
+                                    ResultSet resOfSottoDocumenti = psForSottoDocumenti.executeQuery();
 
-                                while (resOfSottoDocumenti.next()) {
-                                    log.debug("Sottodocumento: " + resOfSottoDocumenti.getString("id_sottodocumento"));
-                                    if (resOfSottoDocumenti.getInt("da_spedire_pecgw") != 0) {
-                                        InputStream is = null;
-                                        String mimeType = null;
-                                        Boolean spedisciOriginale = true;
+                                    while (resOfSottoDocumenti.next()) {
+                                        log.debug("Sottodocumento: " + resOfSottoDocumenti.getString("id_sottodocumento"));
+                                        if (resOfSottoDocumenti.getInt("da_spedire_pecgw") != 0) {
+                                            InputStream is = null;
+                                            String mimeType = null;
+                                            Boolean spedisciOriginale = true;
 
-                                        if (resOfSottoDocumenti.getString("uuid_mongo_firmato") != null) { // FIRMATO
-                                            log.debug("Sottodocumento firmato");
-                                            is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_firmato"));
-                                            mimeType = resOfSottoDocumenti.getString("mimetype_file_firmato");
-                                        } else if (resOfSottoDocumenti.getString("uuid_mongo_firmato") == null && resOfSottoDocumenti.getString("tipo_sottodocumento").equals("testo")) { // Lettera firmata non presente allertare babelAlert
-                                            log.debug("Lettera non firmata!");
-                                            if (!documentiIncriminati.contains(res.getString("id_oggetto_origine"))) {
-                                                // Metadata
-                                                String[] to = new String[1];
-                                                if (ConfigParams.getAmbiente().toLowerCase().equals("test")) {  // Se in ambiente di test spedisci solo a Fayssel
-                                                    to[0] = "f.sabir@nextsw.it";
+                                            if (resOfSottoDocumenti.getString("uuid_mongo_firmato") != null) { // FIRMATO
+                                                log.debug("Sottodocumento firmato");
+                                                is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_firmato"));
+                                                mimeType = resOfSottoDocumenti.getString("mimetype_file_firmato");
+                                            } else if (resOfSottoDocumenti.getString("uuid_mongo_firmato") == null && resOfSottoDocumenti.getString("tipo_sottodocumento").equals("testo")) { // Lettera firmata non presente allertare babelAlert
+                                                log.debug("Lettera non firmata!");
+                                                if (!documentiIncriminati.contains(res.getString("id_oggetto_origine"))) {
+                                                    // Metadata
+                                                    String[] to = new String[1];
+                                                    if (ConfigParams.getAmbiente().toLowerCase().equals("test")) {  // Se in ambiente di test spedisci solo a Fayssel
+                                                        to[0] = "f.sabir@nextsw.it";
+                                                    }else{
+                                                        to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
+                                                    }
+                                                    String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
+                                                    String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
+                                                    int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
+                                                    // Email
+                                                    String subject = "SPEDIZIONIERE | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Tentativo di invio documento con lettera non firmata";
+                                                    String messageBody = "Dati del documento:<br/>";
+                                                    messageBody += "id: " + res.getString("id") +"<br/>";
+                                                    messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
+                                                    messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
+                                                    messageBody += "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
+                                                    messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
+                                                    messageBody += "Ambiente: " + ConfigParams.getAmbiente();
+                                                    MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
+                                                    try {
+                                                        mailSender.send();
+                                                    } catch (Exception e) {
+                                                        log.debug("Errore nell'invio della mail a babelAlert!");
+                                                        throw new SpedizioniereException("Documento con lettera non firmata!");
+                                                    }
+                                                    documentiIncriminati.add(res.getString("id_oggetto_origine"));
+                                                }                                         
+                                                throw new SpedizioniereException("Documento con lettera non firmata! I membri di babelAlert sono stati avvisati via mail.");
+                                            } else if(resOfSottoDocumenti.getInt("convertibile_pdf") != 0){
+                                                if(resOfSottoDocumenti.getString("uuid_mongo_pdf") != null){
+                                                    log.debug("Sottodocumento convertibile quindi pdf");
+                                                    is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_pdf"));
+                                                    mimeType = "application/pdf"; // Da rivedere**********!
                                                 }else{
-                                                    to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
+                                                    throw new SpedizioniereException("Il sotto documento è convertibile ma uuid_mongo_pdf non è presente");
                                                 }
-                                                String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
-                                                String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
-                                                int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
-                                                // Email
-                                                String subject = "SPEDIZIONIERE | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Tentativo di invio documento con lettera non firmata";
-                                                String messageBody = "Dati del documento:<br/>";
-                                                messageBody += "id: " + res.getString("id") +"<br/>";
-                                                messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
-                                                messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
-                                                messageBody += "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
-                                                messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
-                                                messageBody += "Ambiente: " + ConfigParams.getAmbiente();
-                                                MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
-                                                try {
-                                                    mailSender.send();
-                                                } catch (Exception e) {
-                                                    log.debug("Errore nell'invio della mail a babelAlert!");
-                                                    throw new SpedizioniereException("Documento con lettera non firmata!");
-                                                }
-                                                documentiIncriminati.add(res.getString("id_oggetto_origine"));
-                                            }                                         
-                                            throw new SpedizioniereException("Documento con lettera non firmata! I membri di babelAlert sono stati avvisati via mail.");
-                                        } else if(resOfSottoDocumenti.getInt("convertibile_pdf") != 0){
-                                            if(resOfSottoDocumenti.getString("uuid_mongo_pdf") != null){
-                                                log.debug("Sottodocumento convertibile quindi pdf");
-                                                is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_pdf"));
-                                                mimeType = "application/pdf"; // Da rivedere**********!
                                             }else{
-                                                throw new SpedizioniereException("Il sotto documento è convertibile ma uuid_mongo_pdf non è presente");
-                                            }
-                                        }else{
-                                            log.debug("Sottodocumento originale else");
-                                            is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
-                                            mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
-                                            spedisciOriginale = false;
-                                        }
-                                        
-                                        log.debug("Creazione tmpFile");
-                                        File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
-                                        tmpFile.deleteOnExit();
-                                        try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
-                                            IOUtils.copy(is, outputStream);
-                                        }
-                                        log.debug("mimeType: " + mimeType);
-                                        log.debug("calcolo estensione...");
-                                        String ext = SupportedFile.getSupportedFile(ApplicationParams.getSupportedFileList(), mimeType).getExtension().toLowerCase();
-                                        log.debug("estensione: " + ext);
-                                        log.debug("Creazione attachment");
-                                        SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento") + "." + ext, mimeType, tmpFile);
-                                        log.debug("Aggiunta attachment");
-                                        attachments.add(att);
-
-                                        if (resOfSottoDocumenti.getInt("spedisci_originale_pecgw") != 0) {
-                                            if(spedisciOriginale){
-                                                log.debug("Sottodocumento originale");
+                                                log.debug("Sottodocumento originale else");
                                                 is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
                                                 mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
-                                                
-                                                log.debug("Creazione tmpFile");
-                                                tmpFile = File.createTempFile("spedizioniere_", ".tmp");
-                                                tmpFile.deleteOnExit();
-                                                try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
-                                                    IOUtils.copy(is, outputStream);
-                                                } catch (IOException ex) {
-                                                    log.debug("Eccezione nel creare file temporaneo per l'attachment", ex);
-                                                }
-                                                log.debug("mimeType: " + mimeType);
-                                                log.debug("calcolo estensione...");
-                                                ext = SupportedFile.getSupportedFile(ApplicationParams.getSupportedFileList(), mimeType).getExtension().toLowerCase();
-                                                log.debug("estensione: " + ext);
-                                                log.debug("Creazione attachment");
-                                                att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento") + "." + ext, mimeType, tmpFile);
-                                                log.debug("Aggiunta attachment");
-                                                attachments.add(att);
+                                                spedisciOriginale = false;
                                             }
+
+                                            log.debug("Creazione tmpFile");
+                                            File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
+                                            tmpFile.deleteOnExit();
+                                            try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
+                                                IOUtils.copy(is, outputStream);
+                                            }
+                                            log.debug("mimeType: " + mimeType);
+                                            log.debug("calcolo estensione...");
+                                            String ext = SupportedFile.getSupportedFile(ApplicationParams.getSupportedFileList(), mimeType).getExtension().toLowerCase();
+                                            log.debug("estensione: " + ext);
+                                            log.debug("Creazione attachment");
+                                            SpedizioniereAttachment att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento") + "." + ext, mimeType, tmpFile);
+                                            log.debug("Aggiunta attachment");
+                                            attachments.add(att);
+
+                                            if (resOfSottoDocumenti.getInt("spedisci_originale_pecgw") != 0) {
+                                                if(spedisciOriginale){
+                                                    log.debug("Sottodocumento originale");
+                                                    is = mongo.get(resOfSottoDocumenti.getString("uuid_mongo_originale"));
+                                                    mimeType = resOfSottoDocumenti.getString("mimetype_file_originale");
+
+                                                    log.debug("Creazione tmpFile");
+                                                    tmpFile = File.createTempFile("spedizioniere_", ".tmp");
+                                                    tmpFile.deleteOnExit();
+                                                    try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
+                                                        IOUtils.copy(is, outputStream);
+                                                    } catch (IOException ex) {
+                                                        log.debug("Eccezione nel creare file temporaneo per l'attachment", ex);
+                                                    }
+                                                    log.debug("mimeType: " + mimeType);
+                                                    log.debug("calcolo estensione...");
+                                                    ext = SupportedFile.getSupportedFile(ApplicationParams.getSupportedFileList(), mimeType).getExtension().toLowerCase();
+                                                    log.debug("estensione: " + ext);
+                                                    log.debug("Creazione attachment");
+                                                    att = new SpedizioniereAttachment(resOfSottoDocumenti.getString("nome_sottodocumento") + "." + ext, mimeType, tmpFile);
+                                                    log.debug("Aggiunta attachment");
+                                                    attachments.add(att);
+                                                }
+                                            } 
                                         } 
-                                    } 
+                                    }
+                                } catch (SQLException | NamingException ex) {
+                                    try {
+                                        setMessaggioErrore("Errore nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine"), res.getLong("id"));
+                                    } catch (SQLException e) {
+                                        log.debug("Errore update messaggio_errore: ", e);
+                                    }
+                                    log.debug("Eccezione nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine") + " : " + ex);
                                 }
-                            } catch (SQLException | NamingException ex) {
-                                try {
-                                    setMessaggioErrore("Errore nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine"), res.getLong("id"));
-                                } catch (SQLException e) {
-                                    log.debug("Errore update messaggio_errore: ", e);
-                                }
-                                log.debug("Eccezione nel caricamento del gddoc con id_oggetto_origine: " + res.getString("id_oggetto_origine") + " : " + ex);
+                            }
+                            else {
+                                throw new DocumentNotReadyException("Il gddoc non è ancora un record");
                             }
                         }
-                        else {
-                            throw new DocumentNotReadyException("Il gddoc non è ancora un record");
-                        }
+                        
                     } catch(DocumentNotReadyException ex) {
                         log.info("il documento non è stato preso in carico perché non è ancora un record", ex);
                         return;
@@ -1016,28 +1017,28 @@ public class Spedizioniere implements Job{
 //                                            }
                                             prepared.setString(1, spedizioniereRecepit.getTipo().name());
                                             if (spedizioniereRecepit.getUuid() == null || spedizioniereRecepit.getUuid().equals("")) {
-                                                String[] to = new String[1];
-                                                to[0] = "f.sabir@nextsw.it";
-                                                String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
-                                                String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
-                                                int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
-                                                // Email
-                                                String subject = "DISASTROOO! PANICOOOO!! RICEVUTA SENZA UUID!!! " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente();
-                                                String messageBody = "Dati della ricevuta:<br/>";
-                                                messageBody += "Tipo ricevuta: " + spedizioniereRecepit.getTipo().name() + "<br/>";
-                                                messageBody += "uuid: " + spedizioniereRecepit.getUuid() + "<br/>";
-                                                messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
-                                                messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
-                                                messageBody += "descrizione_oggetto: " + res.getString("descrizione_oggetto") + "<br/>";
-                                                messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
-                                                messageBody += "Ambiente: " + ConfigParams.getAmbiente(); 
-                                                MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
-                                                try {
-                                                    mailSender.send();
-                                                } catch (Exception e) {
-                                                    log.debug("Errore nell'invio della mail a Fayssel Sabir!");
-                                                    throw new SpedizioniereException("Ricevuta senza uuid!");
-                                                }
+//                                                String[] to = new String[1];
+//                                                to[0] = "f.sabir@nextsw.it";
+//                                                String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
+//                                                String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
+//                                                int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
+//                                                // Email
+//                                                String subject = "DISASTROOO! PANICOOOO!! RICEVUTA SENZA UUID!!! " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente();
+//                                                String messageBody = "Dati della ricevuta:<br/>";
+//                                                messageBody += "Tipo ricevuta: " + spedizioniereRecepit.getTipo().name() + "<br/>";
+//                                                messageBody += "uuid: " + spedizioniereRecepit.getUuid() + "<br/>";
+//                                                messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
+//                                                messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
+//                                                messageBody += "descrizione_oggetto: " + res.getString("descrizione_oggetto") + "<br/>";
+//                                                messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
+//                                                messageBody += "Ambiente: " + ConfigParams.getAmbiente(); 
+//                                                MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
+//                                                try {
+//                                                    mailSender.send();
+//                                                } catch (Exception e) {
+//                                                    log.debug("Errore nell'invio della mail a Fayssel Sabir!");
+//                                                    throw new SpedizioniereException("Ricevuta senza uuid!");
+//                                                }
                                                 throw new SpedizioniereException("Errore la ricevuta non ha l'uuid");
                                             }else{
                                                 prepared.setString(2, spedizioniereRecepit.getUuid());
