@@ -9,7 +9,7 @@
         <dependency org="org.mongodb" name="mongo-java-driver" rev="2.+"/>
         <dependency org="commons-io" name="commons-io" rev="latest.release"/>
         <dependency org="com.googlecode.json-simple" name="json-simple" rev="1.+"/>
-        <dependency org="redis.clients" name="jedis" rev="2.6.+"/>
+        <dependency org="redis.clients" name="jedis" rev="2.9.0"/>
         <dependency org="org.quartz-scheduler" name="quartz" rev="2.2.+"/>
         <dependency org="joda-time" name="joda-time" rev="2.5"/>
         <dependency org="com.fasterxml.jackson.core" name="jackson-annotations" rev="2.4.+"/>
