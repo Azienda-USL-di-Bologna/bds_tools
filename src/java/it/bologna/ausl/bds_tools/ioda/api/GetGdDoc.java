@@ -108,8 +108,8 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
                     throw new IodaDocumentException("json descrittivo del documento mancante");
                 }
                 Map<String, Object> additionalData = iodaRequest.getAdditionalData();
-                if (additionalData == null || additionalData.isEmpty())
-                    throw new IodaDocumentException("AdditionalData mancanti");
+//                if (additionalData == null || additionalData.isEmpty())
+//                    throw new IodaDocumentException("AdditionalData mancanti");
                 gdDoc = IodaDocumentUtilities.getGdDoc(dbConn, doc, additionalData, prefix);
                 if (gdDoc == null)
                     throw new ServletException("GdDoc non trovato");
