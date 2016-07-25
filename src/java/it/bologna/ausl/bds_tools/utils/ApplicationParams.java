@@ -35,6 +35,7 @@ public class ApplicationParams {
     private static String uploadGdDocMongoPath;
     private static String fascicoliTableName;
     private static String gdDocsTableName;
+    private static String datiParerGdDocTable;
     private static String sottoDocumentiTableName;
     private static String fascicoliGdDocsTableName;
     private static String gdDocSessioniVersamentoParerTableName;
@@ -90,6 +91,7 @@ public class ApplicationParams {
         titoliVersioniCrossTableName = context.getInitParameter("TitoliVersioniCrossTableName");
         utentiTableName = context.getInitParameter("UtentiTableName");
         gdDocsTableName = context.getInitParameter("GdDocsTableName");
+        datiParerGdDocTable = context.getInitParameter("DatiParerGdDocTableName");
         sottoDocumentiTableName = context.getInitParameter("SottoDocumentiTableName");
         gdDocSessioniVersamentoParerTableName = context.getInitParameter("GdDocSessioniVersamentoParerTableName");
         sessioniVersamentoParerTableName = context.getInitParameter("SessioniVersamentoParerTableName");
@@ -230,6 +232,11 @@ public class ApplicationParams {
 
     public static String getGdDocsTableName() {
         return gdDocsTableName;
+    }
+    
+    
+    public static String getDatiParerGdDocTableName() {
+        return datiParerGdDocTable;
     }
 
     public static String getSottoDocumentiTableName() {
