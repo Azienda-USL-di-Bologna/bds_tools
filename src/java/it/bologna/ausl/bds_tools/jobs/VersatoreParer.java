@@ -14,16 +14,23 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
+import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -33,6 +40,7 @@ import org.quartz.JobExecutionException;
  *
  * @author andrea
  */
+@DisallowConcurrentExecution
 public class VersatoreParer implements Job {
 
     private static final Logger log = LogManager.getLogger(VersatoreParer.class);
@@ -41,7 +49,8 @@ public class VersatoreParer implements Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
 
-//        Connection dbConn = null;
+        try {
+            //        Connection dbConn = null;
 //        PreparedStatement ps = null;
 //        try {
 //            dbConn = UtilityFunctions.getDBConnection();
@@ -50,7 +59,7 @@ public class VersatoreParer implements Job {
 //            dbConn.setAutoCommit(false);
 //            log.debug("autoCommit settato a: " + dbConn.getAutoCommit());
 //
-//            
+//
 //            
 //            // se tutto è ok faccio il commit
 //            dbConn.commit();
@@ -83,6 +92,11 @@ public class VersatoreParer implements Job {
 //                    log.error(ex);
 //                }
 //            }
+          Thread.sleep(5000);
+        } catch (InterruptedException ex) {
+            java.util.logging.Logger.getLogger(VersatoreParer.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
             log.debug("Versatore ParER Ended");
        // }
     }
@@ -102,4 +116,5 @@ public class VersatoreParer implements Job {
             throw new VersatoreParerException("Errore nel reperimento dei dati di servizio", ex);
         }
     }
+    
 }

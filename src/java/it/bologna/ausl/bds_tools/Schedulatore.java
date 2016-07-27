@@ -100,26 +100,27 @@ public class Schedulatore extends HttpServlet {
                     jb.usingJobData(k, jp.getParam(k));
                 }
                 JobDetail job = jb.build();
+                Trigger trigger = null;
                 
                 if (jd.getActive()){
                     // controllo se ha regole cron
                     if (jd.getRole()!= null && !jd.getRole().equals("")){
-                        Trigger trigger = TriggerBuilder
-                                            .newTrigger()
-                                            .withIdentity("dummyTriggerName", "group1")
-                                            .withSchedule(
-                                            // regola cron
-                                            CronScheduleBuilder.cronSchedule(jd.getRole()))
-                                            .build();
+                        trigger = TriggerBuilder
+                                    .newTrigger()
+                                    .withIdentity("dummyTriggerName", "group1")
+                                    .withSchedule(
+                                    // regola cron
+                                    CronScheduleBuilder.cronSchedule(jd.getRole()))
+                                    .build();
                     }
                     else{
-                        Trigger trigger = newTrigger().withIdentity("trigger_" + jd.getName(), "group1").startNow()
-                                            .withSchedule(simpleSchedule()
-                                                    .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
-                                                    .repeatForever())
-                                            .build();
-                        sched.scheduleJob(job, trigger);
+                        trigger = newTrigger().withIdentity("trigger_" + jd.getName(), "group1").startNow()
+                                    .withSchedule(simpleSchedule()
+                                            .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
+                                            .repeatForever())
+                                    .build();
                     } 
+                    sched.scheduleJob(job, trigger);
                 }
                 
                 
