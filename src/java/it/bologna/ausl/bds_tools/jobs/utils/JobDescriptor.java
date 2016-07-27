@@ -15,6 +15,8 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped;
 public class JobDescriptor {
 
     private String name, schedule;
+    private String role;
+    private boolean active;
     private String classz;
     @JsonUnwrapped
     JobParams jobParams;
@@ -53,4 +55,19 @@ public class JobDescriptor {
         this.jobParams = params;
     }
 
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+    
+    public boolean getActive() {
+        return active;
+    }
+
+    public void setActive(String active) {
+        this.active = Boolean.parseBoolean(active);
+    }
 }

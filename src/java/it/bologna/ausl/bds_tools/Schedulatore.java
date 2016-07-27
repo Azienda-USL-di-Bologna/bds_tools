@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
 import static org.quartz.JobBuilder.newJob;
@@ -24,6 +25,7 @@ import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 import org.quartz.Trigger;
+import org.quartz.TriggerBuilder;
 import static org.quartz.TriggerBuilder.newTrigger;
 import org.quartz.impl.StdSchedulerFactory;
 import org.quartz.impl.matchers.GroupMatcher;
@@ -98,12 +100,29 @@ public class Schedulatore extends HttpServlet {
                     jb.usingJobData(k, jp.getParam(k));
                 }
                 JobDetail job = jb.build();
-                Trigger trigger = newTrigger().withIdentity("trigger_" + jd.getName(), "group1").startNow()
-                        .withSchedule(simpleSchedule()
-                                .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
-                                .repeatForever())
-                        .build();
-                sched.scheduleJob(job, trigger);
+                
+                if (jd.getActive()){
+                    // controllo se ha regole cron
+                    if (jd.getRole()!= null && !jd.getRole().equals("")){
+                        Trigger trigger = TriggerBuilder
+                                            .newTrigger()
+                                            .withIdentity("dummyTriggerName", "group1")
+                                            .withSchedule(
+                                            // regola cron
+                                            CronScheduleBuilder.cronSchedule(jd.getRole()))
+                                            .build();
+                    }
+                    else{
+                        Trigger trigger = newTrigger().withIdentity("trigger_" + jd.getName(), "group1").startNow()
+                                            .withSchedule(simpleSchedule()
+                                                    .withIntervalInSeconds(Integer.valueOf(jd.getSchedule()))
+                                                    .repeatForever())
+                                            .build();
+                        sched.scheduleJob(job, trigger);
+                    } 
+                }
+                
+                
             }
             sched.start();
         }
