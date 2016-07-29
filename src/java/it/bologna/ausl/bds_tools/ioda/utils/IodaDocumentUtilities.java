@@ -419,13 +419,13 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     Object collection = collections.get(GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString());
                     if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
-                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix));
+                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, false));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
                     if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString() + "...");
-                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc));
+                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc, false));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString());
@@ -444,24 +444,161 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
         return gdDoc;
     }
+    
+    
+    /**
+     * torna un oggetto GdDoc rapprestato dall'id_gddoc
+     * @param dbConn connessione al db da usare
+     * @param doc un oggetto SimpleDocument che rappresenta il GdDoc da caricare
+     * @param collections una mappa Map<String, Boolean> con indicate le collection da caricare
+     * @param prefix il prefisso dell'applicazione
+     * @return un oggetto GdDoc rapprestato dall'idOggettoOrigine e tipoOggettoOrigine presente nel SimpleDocument all'interno della IodaRequestDescriptor passata
+     * @throws java.sql.SQLException
+     * @throws it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException
+     */
+    public static GdDoc getGdDocById(Connection dbConn, String idGdDoc, Map<String, Object> collections, String prefix) throws SQLException, IodaDocumentException {
+        
+        String sqlText = 
+                "SELECT id_gddoc, " +
+                        "applicazione, " +
+                        "codice, " +
+                        "codice_registro, " +
+                        "data_gddoc, " +
+                        "data_registrazione, " +
+                        "data_ultima_modifica, " +
+                        "id_oggetto_origine, " +
+                        "nome_gddoc, " +
+                        "nome_struttura_firmatario, " +
+                        "numero_registrazione, " +
+                        "oggetto, " +
+                        "tipo_gddoc, " +
+                        "tipo_oggetto_origine, " +
+                        "stato_gd_doc, " +
+                        "url_command, " +
+                        "id_utente_creazione " +
+                        "FROM " + ApplicationParams.getGdDocsTableName() + " " +
+                        "WHERE id_gddoc = ?";
 
-    private static List<Fascicolazione> caricaFascicolazioni(Connection dbConn, SimpleDocument doc, String prefix) throws SQLException {
-        IodaFascicolazioniUtilities fascicolazioniUtilities = new IodaFascicolazioniUtilities(doc, prefix);
-        return fascicolazioniUtilities.getFascicolazioni(dbConn);
+        GdDoc gdDoc = null;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            int index = 1;
+            ps.setString(index++, idGdDoc);
+            
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+ 
+            if (result != null && result.next()) {
+                gdDoc = new GdDoc();
+                gdDoc.setApplicazione(result.getString("applicazione"));
+                gdDoc.setCodice(result.getString("codice"));
+                gdDoc.setCodiceRegistro(result.getString("codice_registro"));
+                
+                Timestamp dataGdDoc = result.getTimestamp("data_gddoc");
+                if (dataGdDoc != null)
+                    gdDoc.setData(new DateTime(dataGdDoc.getTime()));
+                
+                Timestamp dataRegistrazione = result.getTimestamp("data_registrazione");
+                if (dataRegistrazione != null)
+                    gdDoc.setDataRegistrazione(new DateTime(dataRegistrazione.getTime()));
+                
+                Timestamp dataUltimaModifica = result.getTimestamp("data_ultima_modifica");
+                if (dataUltimaModifica != null)
+                    gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime()));
+                
+
+                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                gdDoc.setNome(result.getString("nome_gddoc"));
+                gdDoc.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
+                gdDoc.setNumeroRegistrazione(result.getString("numero_registrazione"));
+                gdDoc.setOggetto(result.getString("oggetto"));
+                gdDoc.setRecord(result.getString("tipo_gddoc") == null || result.getString("tipo_gddoc").equalsIgnoreCase("r"));
+                gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
+                gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
+                gdDoc.setUrlCommand(result.getString("url_command"));
+                gdDoc.setIdUtenteCrezione(result.getString("id_utente_creazione"));
+                
+                if (result.next())
+                    throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
+
+                gdDoc.setDatiParerGdDoc(caricaDatiParerGdDoc(dbConn, idGdDoc, gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine()));
+                
+                SimpleDocument doc = new SimpleDocument(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine());
+                
+                if (collections != null){
+                    Object collection = collections.get(GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
+                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, true));
+                    }
+
+                    collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString() + "...");
+                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc, true));
+                    }
+
+                    collection = collections.get(GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString() + "...");
+                        gdDoc.setSottoDocumenti(caricaSottoDocumenti(dbConn, idGdDoc));
+                    }
+
+                    collection = collections.get(GdDoc.GdDocCollectionNames.SESSIONI_VERSAMENTO_PARER.toString());
+                    if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
+                        log.debug("carico: " + GdDoc.GdDocCollectionNames.SESSIONI_VERSAMENTO_PARER.toString() + "...");
+                        gdDoc.setSessioniVersamentoParer(caricaSessioniVersamentoParer(dbConn, idGdDoc));
+                    }
+                }
+            }
+        }
+        return gdDoc;
     }
     
-    private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc) throws SQLException {
-        String sqlText = 
+    
+    
+
+    private static List<Fascicolazione> caricaFascicolazioni(Connection dbConn, SimpleDocument doc, String prefix, boolean escludiSpeciali) throws SQLException {
+        IodaFascicolazioniUtilities fascicolazioniUtilities = new IodaFascicolazioniUtilities(doc, prefix);
+        return fascicolazioniUtilities.getFascicolazioni(dbConn, escludiSpeciali);
+    }
+    
+    private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc, boolean soloNumerate) throws SQLException {
+        
+        String sqlText = null;
+        
+        if (soloNumerate){
+           sqlText = 
                 "SELECT  numero_pubblicazione, " +
-                        "anno_pubblicazione, " +
-                        "data_dal, " +
-                        "data_al, " +
-                        "pubblicatore, " + 
-                        "esecutivita, " + 
-                        "data_defissione " +
-                        "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
-                        "WHERE id_gddoc = ? " + 
-                        "ORDER BY numero_pubblicazione";
+                "anno_pubblicazione, " +
+                "data_dal, " +
+                "data_al, " +
+                "pubblicatore, " + 
+                "esecutivita, " + 
+                "data_defissione " +
+                "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
+                "WHERE id_gddoc = ? " + 
+                "AND numero_pubblicazione IS NOT NULL " + 
+                "AND numero_pubblicazione > 0 " + 
+                "AND anno_pubblicazione IS NOT NULL " + 
+                "AND anno_pubblicazione > 0 " + 
+                "ORDER BY numero_pubblicazione"; 
+        }
+        else{
+            sqlText = 
+                "SELECT  numero_pubblicazione, " +
+                "anno_pubblicazione, " +
+                "data_dal, " +
+                "data_al, " +
+                "pubblicatore, " + 
+                "esecutivita, " + 
+                "data_defissione " +
+                "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
+                "WHERE id_gddoc = ? " + 
+                "ORDER BY numero_pubblicazione";
+        }
+        
+        
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {

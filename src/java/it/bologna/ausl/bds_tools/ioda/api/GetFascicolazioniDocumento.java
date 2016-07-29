@@ -105,7 +105,7 @@ public class GetFascicolazioniDocumento extends HttpServlet {
                 
                 fascicoliUtilities = new IodaFascicolazioniUtilities(sd, prefix);
                 
-                fascicolazioni = fascicoliUtilities.getFascicolazioni(dbConn);
+                fascicolazioni = fascicoliUtilities.getFascicolazioni(dbConn, false);
                   
 //              fascicolazioni = new Fascicolazioni("test", "test");
 //              ClassificazioneFascicolo classificazione = new ClassificazioneFascicolo("1", "categoria 1", "2", "classe 2", "3", "sottoclasse 3");

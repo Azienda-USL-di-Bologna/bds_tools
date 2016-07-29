@@ -235,6 +235,10 @@
         <param-value>gd.sessioni_versamento_parer</param-value>
     </context-param>
     <context-param>
+        <param-name>DatiParerGdDocTableName</param-name>
+        <param-value>gd.dati_parer_gddoc</param-value>
+    </context-param>
+    <context-param>
         <param-name>TitoliTableName</param-name>
         <param-value>procton.titoli</param-value>
     </context-param>
