@@ -6,31 +6,35 @@ import it.bologna.ausl.bds_tools.exceptions.VersatoreParerException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParerGdDoc;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Requestable;
-import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.masterchefclient.SendToParerParams;
+import it.bologna.ausl.riversamento.builder.ProfiloArchivistico;
+import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import javax.naming.NamingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
+import org.joda.time.Days;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -55,14 +59,20 @@ public class VersatoreParer implements Job {
     private boolean canSendPicoUscita, canSendPicoEntrata, canSendDete, canSendDeli;
     private boolean canSendRegistroGiornaliero, canSendRegistroAnnuale;
     private int limit;
+    
+    private int versione;
+    private String ambiente, ente, strutturaVersante, userID;
+    private String tipoComponenteDefault, codifica;
+    private boolean useFakeId;
+    
     private String idApplicazione, tokenApplicazione;
+    
     
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
 
         try {
-            
             // ottengo i gddoc che possono essere versati
             ArrayList<String> gdDocList = getIdGdDocDaVersate();
             
@@ -73,29 +83,53 @@ public class VersatoreParer implements Job {
                 String idSessioneVersamento = setStartSessioneVersamento();
                 if (idSessioneVersamento != null && !idSessioneVersamento.equals("")){
 
+                    boolean isVersabile = false;
+                    
+                    GdDoc gddoc = getGdDocById("`?71,[j(Fx/SXigr0-;G");
+                    
+                    Fascicolazione f = getPrimaFascicolazione(gddoc.getFascicolazioni());
+                    
+                    log.debug("Codice Fascicolo: " + f.getCodiceFascicolo());
+                    log.debug("Nome Fascicolo: " + f.getNomeFascicolo());
+                    
+                    ClassificazioneFascicolo c = f.getClassificazione();
+                    
+                    log.debug("Codice categoria: " + c.getCodiceCategoria());
+                    log.debug("Nome categoria: " + c.getNomeCategoria());
+                    log.debug("Codice classe: " + c.getCodiceClasse());
+                    log.debug("Nome classe: " + c.getNomeClasse());
+                    log.debug("Codice sotto-classe: " + c.getCodiceSottoclasse());
+                    log.debug("Nome sotto-classe: " + c.getNomeSottoclasse());
+                    
+        //c.getCodiceCategoria()
+                    
                     // ottengo l'oggetto GdDoc completo
-                    for (String idGdDoc : gdDocList) {
-                        GdDoc gddoc = getGdDocById(idGdDoc);
-                         
-                        DateTime d = getDataPrimaFascicolazione(gddoc.getFascicolazioni());
-                        log.debug("DATA PRIMA: " + d.toString());
-                        
-//                        List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
-//                        for(PubblicazioneIoda p : pubblicazioni){
-//                            log.debug("Numero pubblicazione: " + p.getNumeroPubblicazione());
-//                        }
-                        
-//                        List<Fascicolazione> array = gddoc.getFascicolazioni();
-//                        for (Fascicolazione fascicolazione : array) {
-//                            
-//                            log.debug("Nome fascicolo: " + fascicolazione.getNomeFascicolo());
-//                        }
-                    }
+//                    for (String idGdDoc : gdDocList) {
+//                        
+//                        GdDoc gddoc = getGdDocById(idGdDoc);
+//                        
+//                        // determino se il gddoc è versabile oppure no
+//                        isVersabile = isVersabile(gddoc);
+//                        
+//                        
+//                        
+//                        
+////                        List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
+////                        for(PubblicazioneIoda p : pubblicazioni){
+////                            log.debug("Numero pubblicazione: " + p.getNumeroPubblicazione());
+////                        }
+//                        
+////                        List<Fascicolazione> array = gddoc.getFascicolazioni();
+////                        for (Fascicolazione fascicolazione : array) {
+////                            
+////                            log.debug("Nome fascicolo: " + fascicolazione.getNomeFascicolo());
+////                        }
+//                    }
                     
                 }
                 
             }
-            
+
           
             //        Connection dbConn = null;
 //        PreparedStatement ps = null;
@@ -237,6 +271,161 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    private void setStopSessioneVersamento(String idSessioneVersamento){
+        
+        String res = null;
+        
+        String query = 
+            "UPDATE " + ApplicationParams.getSessioniVersamentoParerTableName() + " " +
+            "SET data_fine= date_trunc('sec', now()::timestamp) " + 
+            "WHERE id_sessione_versamento_parer = ? ";
+            
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(query)
+        ) {  
+            int index = 1;
+            log.debug("setto ora fine sessione di versamento");
+            
+            ps.setString(index++, idSessioneVersamento);
+            
+            log.debug("eseguo la query: " + ps.toString() + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("Errore inserimento data fine sessione versamento ParER");
+            if (result == 0)
+                throw new SQLException("data fine non inserita");
+        } catch (SQLException | NamingException ex) {
+            log.fatal("errore inserimento data_fine nella tabella sessioni_versamento_parer: " + ex);
+        }
+    }
+    
+    private SendToParerParams getSendToParerParams(GdDoc gdDoc){
+        log.debug("inizio funzione getSendToParerParams");
+        
+        String idUnitaDocumentaria = null;
+        int ordinePresentazione = 1;
+        
+        // determina se usare id fake dell'unità documentale oppure i reali
+        if (getUseFakeId()){
+            Random randomGenerator = new Random();
+            idUnitaDocumentaria = String.valueOf(randomGenerator.nextInt(100000000));
+        }
+        else{
+            idUnitaDocumentaria = gdDoc.getNumeroRegistrazione();
+        }
+        
+        
+        
+        
+        
+        return null;
+    }
+    
+    private ProfiloArchivistico createProfiloArchivistico(GdDoc gdDoc){
+        log.debug("creazione del profilo archivistico");
+        
+        ProfiloArchivistico res = null;
+        JSONArray jsonArrayTitoli = null;
+        // estrazione del jsonArray con i titoli
+        JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(gdDoc.getDatiParerGdDoc().getXmlSpecifico());
+        String str = (String) jsonXmlSpecifico.get("titoli");
+        
+        if (str != null && !str.equals("")){
+            jsonArrayTitoli = (JSONArray) JSONValue.parse(str);
+        }
+        
+        // prendo la prima fascicolazione
+        Fascicolazione f = getPrimaFascicolazione(gdDoc.getFascicolazioni());
+        ClassificazioneFascicolo c = f.getClassificazione();
+        
+        String classifica = null;
+        
+        if (c.getCodiceSottoclasse() != null && !c.getCodiceSottoclasse().equals("")){
+            classifica = c.getCodiceSottoclasse().replaceAll("/", ".");
+        }
+        else if (c.getCodiceClasse() != null && !c.getCodiceClasse().equals("")){
+            classifica = c.getCodiceClasse().replaceAll("/", ".");
+        }
+        else if (c.getCodiceCategoria()!= null && !c.getCodiceCategoria().equals("")){
+            classifica = c.getCodiceCategoria().replaceAll("/", ".");
+        }
+        
+        
+        
+        log.debug("Codice Fascicolo: " + f.getCodiceFascicolo());
+        log.debug("Nome Fascicolo: " + f.getNomeFascicolo());
+        
+        
+                    
+                    
+                    log.debug("Codice categoria: " + c.getCodiceCategoria());
+                    log.debug("Nome categoria: " + c.getNomeCategoria());
+                    log.debug("Codice classe: " + c.getCodiceClasse());
+                    log.debug("Nome classe: " + c.getNomeClasse());
+                    log.debug("Codice sotto-classe: " + c.getCodiceSottoclasse());
+                    log.debug("Nome sotto-classe: " + c.getNomeSottoclasse());
+        
+        return null;
+    }
+    
+    private DatiSpecifici getDatiSpecifici(GdDoc gddoc) throws UnsupportedEncodingException{
+        
+        DatiSpecifici res = null;
+        
+        JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(gddoc.getDatiParerGdDoc().getXmlSpecifico());
+        
+        // estrazione della stringa specifica dal json
+        String strDatiSpecifici = (String) jsonXmlSpecifico.get("xmlpart");
+        
+        //unmarshal nell'oggetto DatiSpecifici
+        res = DatiSpecifici.parser(strDatiSpecifici);   
+        
+        return res;
+    }
+    
+    private String getTipoDocumentoUnitaDocumentaria(GdDoc gddoc, String key){
+        
+        String res = null;
+        
+        JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(gddoc.getDatiParerGdDoc().getXmlSpecifico());
+        
+        // estrazione della stringa specifica dal json
+        String str = (String) jsonXmlSpecifico.get(key);
+        
+        switch (str) {
+            
+            case "in":
+                res = "DOCUMENTO PROTOCOLLATO IN ENTRATA";
+            break;
+            
+            case "out":
+                res = "DOCUMENTO PROTOCOLLATO IN USCITA";
+            break;
+            
+            case "Pico":
+                res = "DOCUMENTO PROTOCOLLATO";
+            break;
+            
+            case "Dete":
+                res = "DETERMINA";
+            break;
+         
+            case "Deli":
+                res = "DELIBERAZIONE";
+            break;
+            
+            case "RegistroRepertorio":
+                res = "REGISTRO GIORNALIERO";
+            break;
+            
+            default:
+                res = null;
+        }
+        
+        return res;
+    }
+    
     // restituisce un id di INDE
     private String getIndeId() throws IOException, MalformedURLException, SendHttpMessageException {
             
@@ -256,44 +445,11 @@ public class VersatoreParer implements Job {
     }
     
     private String getMovimentazione(String xmlSpecifico){
-        
         JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(xmlSpecifico);
         String movimentazione = (String) jsonXmlSpecifico.get("movimentazione");
         return movimentazione;
     }
-    
-    private boolean isGdDocVersabile(DatiParerGdDoc datiParer){
-        
-        DateTime dataRegistrazione = null;
-        
-//        String query = 
-//                "SELECT data_registrazione, " +
-//                "FROM " + ApplicationParams.getGdDocsTableName() + " " +
-//                "WHERE id_gddoc = ? ";
-//        
-//        try (
-//            Connection dbConnection = UtilityFunctions.getDBConnection();
-//            PreparedStatement ps = dbConnection.prepareStatement(query)
-//        ) {
-//            log.debug("verifica sei il gddoc è versabile");
-//            
-//            log.debug("PrepareStatment: " + ps);
-//            ResultSet resultQuery = ps.executeQuery();
-//            
-//            while (resultQuery.next()) {
-//                Timestamp dataRegistrazioneTS = resultQuery.getTimestamp("data_registrazione");
-//                if (dataRegistrazioneTS != null)
-//                    dataRegistrazione = new DateTime(dataRegistrazioneTS.getTime());
-//            }
-//            
-//            
-//        }
-//        catch(Exception ex) {
-//            throw new VersatoreParerException("Errore nel reperimento dei gddoc da inviare", ex);
-//        }
-        return false;
-    }
-    
+       
     /* crea l'oggetto GdDoc con le collection:
     * CLASSIFICAZIONI esclusi i fascicoli speciali
     * PUBBLICAZIONI solo quelle effettivamente pubblicate all'albo
@@ -315,24 +471,180 @@ public class VersatoreParer implements Job {
             
             
             gdDoc = IodaDocumentUtilities.getGdDocById(dbConnection, idGdDoc, additionalData, prefix);
+            gdDoc.setId(idGdDoc);
         }
         return gdDoc;    
     }
     
     
-    private boolean isVersabile(){
+    private boolean isVersabile(GdDoc gddoc) throws SQLException, NamingException{
         
         boolean res = false;
-        
-        
-        
+        Fascicolazione primaFascicolazione = getPrimaFascicolazione(gddoc.getFascicolazioni());
+        DateTime dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
+        switch (getMovimentazione(gddoc.getDatiParerGdDoc().getXmlSpecifico())) {
+            
+            case "in":
+                // il gddoc è ersabile se sono passati almeno 7 giorni
+                Days d = Days.daysBetween(DateTime.now(), gddoc.getDataRegistrazione());
+                int giorni = d.getDays();
+                
+                if (getCanSendPicoEntrata() && giorni > 7){
+                    if (dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+                        res = true;
+                    }
+                }
+            break;
+            
+            case "out":
+                if (getCanSendPicoUscita()){
+                    if (dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+                        res = true;
+                    }
+                }
+            break;
+            
+            case "Dete":
+                if (getCanSendDete()){
+                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+                        res = true;
+                    }
+                }
+            break;
+            
+            case "Deli":
+                if (getCanSendDeli()){
+                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+                        res = true;
+                    }
+                }
+            break;
+         
+            case "RegistroRepertorio":
+                if (getCanSendRegistroGiornaliero()){
+                    res = true;
+                }
+            break;
+            
+            default:
+                res = false;
+        }
         return res;
     }
         
-    
-    private DateTime getDataPrimaFascicolazione(List<Fascicolazione> fascicolazioni){
+    // ripiazza i segna posto con valori reali
+    private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, PubblicazioneIoda pubblicazione) throws SQLException, NamingException{
         
-        DateTime res = null;
+        // prendo xml specifico
+        String xmlSpecifico = gddoc.getDatiParerGdDoc().getXmlSpecifico();
+        
+        // pattern prescelto per la rappresentazione della data
+        String patternData = "yyyy-MM-dd";
+        
+        // gestione segnaposto pubblicazioni
+        if (pubblicazione != null){
+          
+            xmlSpecifico = xmlSpecifico.replace("[NUMEROPUBBLICAZIONE]", String.valueOf(pubblicazione.getNumeroPubblicazione()));
+            xmlSpecifico = xmlSpecifico.replace("[ANNOPUBBLICAZIONE]", String.valueOf(pubblicazione.getAnnoPubblicazione()));
+            xmlSpecifico = xmlSpecifico.replace("[INIZIOPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
+            xmlSpecifico = xmlSpecifico.replace("[FINEPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
+            xmlSpecifico = xmlSpecifico.replace("[FINEPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
+            
+            if (pubblicazione.getEsecutivita().equalsIgnoreCase("esecutiva")){
+                xmlSpecifico = xmlSpecifico.replace("[CONTROLLOREGIONALE]", "NO");
+                xmlSpecifico = xmlSpecifico.replace("[DATAESECUTIVITA]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
+            }
+            else{
+                xmlSpecifico = xmlSpecifico.replace("[CONTROLLOREGIONALE]", "SI");
+            }
+            xmlSpecifico = xmlSpecifico.replace("[PUBBESECUTIVITA]", pubblicazione.getEsecutivita());
+        }
+        
+        // gestione segnaposto fascicolazioni
+        if (dataPrimaFascicolazione != null){
+            xmlSpecifico = xmlSpecifico.replace("[DATAFASCICOLAZIONE]", toIsoDateFormatString(dataPrimaFascicolazione, patternData));
+        }
+        
+        // salvataggio su db
+        DatiParerGdDoc dpg = gddoc.getDatiParerGdDoc();      
+        dpg.setXmlSpecifico(xmlSpecifico);
+        updateDatiParerGdDoc(dpg, gddoc);
+    }
+    
+    
+    private void updateDatiParerGdDoc(DatiParerGdDoc datiParer, GdDoc gddoc) throws SQLException, NamingException{
+        
+        String sqlText = 
+                "UPDATE " + ApplicationParams.getDatiParerGdDocTableName() + " SET " +
+                "stato_versamento_proposto = coalesce(?, stato_versamento_proposto), " +
+                "stato_versamento_effettivo = coalesce(?, stato_versamento_effettivo), " +
+                "xml_specifico_parer = coalesce(?, xml_specifico_parer), " +
+                "forza_conservazione = coalesce(?, forza_conservazione), " +
+                "forza_accettazione = coalesce(?, forza_accettazione), " +
+                "forza_collegamento = coalesce(?, forza_collegamento) " +
+                "WHERE id_gddoc = ? ";
+        
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(sqlText)
+        ) {
+            int index = 1;
+            ps.setString(index++, datiParer.getStatoVersamentoProposto());
+            if (datiParer.getStatoVersamentoEffettivo() != null && !datiParer.getStatoVersamentoEffettivo().equals(""))
+                ps.setString(index++, datiParer.getStatoVersamentoEffettivo());
+            else
+                ps.setString(index++, null);
+               
+            ps.setString(index++, datiParer.getXmlSpecifico());
+
+            // forza_conservazione
+            if (datiParer.getForzaConservazione() != null && datiParer.getForzaConservazione())    
+                ps.setInt(index++, -1);
+            else
+                ps.setInt(index++, 0);
+
+            // forza_accettazione
+            if (datiParer.getForzaAccettazione()!= null && datiParer.getForzaAccettazione())    
+                ps.setInt(index++, -1);
+            else
+                ps.setInt(index++, 0);
+
+            // forza_collegamento
+            if (datiParer.getForzaCollegamento()!= null && datiParer.getForzaCollegamento())    
+                ps.setInt(index++, -1);
+            else
+                ps.setInt(index++, 0);
+
+            ps.setString(index++, gddoc.getId());
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            int rowsUpdated = ps.executeUpdate();
+            log.debug("eseguita");
+            if (rowsUpdated == 0)
+                throw new SQLException("Documento non trovato");
+            else if (rowsUpdated > 1)
+                log.fatal("troppe righe aggiornate; aggiornate " + rowsUpdated + " righe, dovrebbe essere una");
+        }
+        
+        
+    
+            
+                
+
+                
+            
+    }
+    
+    private Fascicolazione getPrimaFascicolazione(List<Fascicolazione> fascicolazioni){
+        
+        Fascicolazione res = null;
         
         if (fascicolazioni != null){
             if (fascicolazioni.size() > 0){
@@ -340,7 +652,7 @@ public class VersatoreParer implements Job {
                 // ordino in ordine crescente
                 Collections.sort(fascicolazioni);
                 
-                res = fascicolazioni.get(0).getDataFascicolazione();
+                res = fascicolazioni.get(0);
             }
             else{
                 log.debug("fascicolazioni = 0");
@@ -353,7 +665,41 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    private PubblicazioneIoda getEffettivaPubblicazione(List<PubblicazioneIoda> pubblicazioni){
+        
+        PubblicazioneIoda res = null;
+        
+        if (pubblicazioni != null){
+            if (pubblicazioni.size() > 0){
+                
+                // ordino in ordine crescente
+                Collections.sort(pubblicazioni);
+                
+                for (PubblicazioneIoda pubblicazioneIoda : pubblicazioni) {
+                    if(pubblicazioneIoda.getAnnoPubblicazione() != null && pubblicazioneIoda.getAnnoPubblicazione() != 0 
+                            && pubblicazioneIoda.getNumeroPubblicazione() != null && pubblicazioneIoda.getNumeroPubblicazione() != 0
+                            && pubblicazioneIoda.getDataDefissione() == null){
+                        res = pubblicazioneIoda;
+                        break;
+                    }
+                }
+            }
+            else{
+                log.debug("pubblicazioni = 0");
+            }
+        }
+        else{
+            log.debug("pubblicazioni = null");
+        }
+        
+        return res;
+    }
     
+    private String toIsoDateFormatString(DateTime dateTime, String pattern){
+        DateTimeFormatter dtfOut = DateTimeFormat.forPattern(pattern);
+        return dtfOut.print(dateTime);
+    }
+            
     public boolean getCanSendPicoUscita() {
         return canSendPicoUscita;
     }
@@ -424,6 +770,70 @@ public class VersatoreParer implements Job {
 
     public void setTokenApplicazione(String tokenApplicazione) {
         this.tokenApplicazione = tokenApplicazione;
+    }
+ 
+    public int getVersione() {
+        return versione;
+    }
+
+    public void setVersione(int versione) {
+        this.versione = versione;
+    }
+    
+    public String getAmbiente() {
+        return ambiente;
+    }
+
+    public void setAmbiente(String ambiente) {
+        this.ambiente = ambiente;
+    }
+    
+    public String getEnte() {
+        return ente;
+    }
+
+    public void setEnte(String ente) {
+        this.ente = ente;
+    }
+    
+    public String getStrutturaVersante() {
+        return strutturaVersante;
+    }
+
+    public void setStrutturaVersante(String strutturaVersante) {
+        this.strutturaVersante = strutturaVersante;
+    }
+ 
+    public String getUserID() {
+        return userID;
+    }
+
+    public void setUserID(String userID) {
+        this.userID = userID;
+    }
+    
+    public String getTipoComponenteDefault() {
+        return tipoComponenteDefault;
+    }
+
+    public void setTipoComponenteDefault(String tipoComponenteDefault) {
+        this.tipoComponenteDefault = tipoComponenteDefault;
+    }
+    
+    public String getCodifica() {
+        return codifica;
+    }
+
+    public void setCodifica(String codifica) {
+        this.codifica = codifica;
+    }
+    
+    public boolean getUseFakeId() {
+        return useFakeId;
+    }
+
+    public void setUseFakeId(boolean useFakeId) {
+        this.useFakeId = useFakeId;
     }
     
 }

@@ -1058,6 +1058,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             }
         }
     }
+    
+    
 
     public void deleteGdDoc(Connection dbConn) throws SQLException, IodaDocumentException{
 //        String sqlText = 
