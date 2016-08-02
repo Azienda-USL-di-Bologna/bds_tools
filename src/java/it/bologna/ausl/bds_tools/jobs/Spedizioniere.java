@@ -1,12 +1,7 @@
 package it.bologna.ausl.bds_tools.jobs;
 
-import com.mchange.v2.c3p0.impl.C3P0Defaults;
-import it.bologna.ausl.bdm.exception.BdmExeption;
-import it.bologna.ausl.bdm.exception.StorageException;
 import it.bologna.ausl.bdm.utilities.Bag;
 import it.bologna.ausl.bdm.workflows.processes.ProtocolloInUscitaProcess;
-import it.bologna.ausl.bdmclient.BdmClient;
-import it.bologna.ausl.bdmclient.BdmClientImplementation;
 import it.bologna.ausl.bdmclient.BdmClientInterface;
 import it.bologna.ausl.bdmclient.RemoteBdmClientImplementation;
 import it.bologna.ausl.bds_tools.MailSender;
@@ -43,18 +38,13 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
@@ -216,7 +206,7 @@ public class Spedizioniere implements Job{
         this.password = password;
     }
     
-     public int getTimeOutHours() {
+    public int getTimeOutHours() {
         return timeOutHours;
     }
 
