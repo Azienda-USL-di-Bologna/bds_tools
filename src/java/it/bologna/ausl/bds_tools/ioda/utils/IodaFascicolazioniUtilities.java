@@ -244,7 +244,7 @@ public class IodaFascicolazioniUtilities {
 	
         String sqlText = 
                 "SELECT f.numerazione_gerarchica, f.nome_fascicolo, fg.data_assegnazione, fg.id_utente_fascicolatore, fg.data_eliminazione, " +
-                "fg.id_utente_eliminazione, " +
+                "fg.id_utente_eliminazione, f.numero_fascicolo, f.anno_fascicolo, f.id_livello_fascicolo, " +
                 "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
                 "WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
                 "ELSE nome_fascicolo " +
@@ -269,6 +269,7 @@ public class IodaFascicolazioniUtilities {
                 int index = 1;
                 DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS");
                 String numerazioneGerarchica = res.getString(index++);
+                
                 String nomeFascicolo = res.getString(index++);
                 DateTime dataAssegnazione;
                 String dataStr = res.getString(index++);
@@ -302,9 +303,11 @@ public class IodaFascicolazioniUtilities {
                 }
                     
 
-
                 // controllo che esista idUtenteEliminatore
                 String idUtenteEliminatore = res.getString(index++);
+                int numeroFascicolo = res.getInt(index++);
+                int annoFascicolo = res.getInt(index++);
+                String idLivelloFascicolo = res.getString(index++);
                 String nomeFascicoloInterfaccia = res.getString(index++);
                 String descrizioneEliminatore = null;
                 boolean eliminato = false;
@@ -318,7 +321,9 @@ public class IodaFascicolazioniUtilities {
                 }
 
                 fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
-
+                fascicolazione.setAnno(annoFascicolo);
+                fascicolazione.setNumero(numeroFascicolo);
+                fascicolazione.setIdLivelloFascicolo(idLivelloFascicolo);
             }
         }
         return fascicolazione;

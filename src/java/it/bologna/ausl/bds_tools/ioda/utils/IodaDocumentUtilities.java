@@ -419,7 +419,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     Object collection = collections.get(GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString());
                     if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
-                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, false));
+                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, true));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
@@ -529,7 +529,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     Object collection = collections.get(GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString());
                     if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
-                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, true));
+                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, false));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());

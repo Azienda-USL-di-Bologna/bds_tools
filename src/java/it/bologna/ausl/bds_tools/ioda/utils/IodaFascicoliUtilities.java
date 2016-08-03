@@ -259,8 +259,10 @@ public class IodaFascicoliUtilities {
         
         String result;
         
-        if (!res.next())
+        if (!res.next()){
+            log.error("SQLException: titolo non trovato");
             throw new SQLException("titolo non trovato");
+        }
         else{
             result = res.getString(1) + res.getString(2);
             
@@ -293,7 +295,7 @@ public class IodaFascicoliUtilities {
                 dim--;
             }  
         }
-        return classificazioneFascicolo;
+        return classificazioneFascicolo;    
     }
 
     private String getTitolo(Connection dbConn, PreparedStatement ps, String codiceGerarchico, String codiceTitolo) throws SQLException{

@@ -16,6 +16,7 @@ import it.bologna.ausl.masterchefclient.SendToParerParams;
 import it.bologna.ausl.riversamento.builder.ProfiloArchivistico;
 import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.sql.Connection;
@@ -72,115 +73,130 @@ public class VersatoreParer implements Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
 
-        try {
-            // ottengo i gddoc che possono essere versati
-            ArrayList<String> gdDocList = getIdGdDocDaVersate();
-            
-            // se ho qualche gddoc da versare
-            if (gdDocList != null && gdDocList.size() > 0){
-            
-                // inizio sessione di versamento
-                String idSessioneVersamento = setStartSessioneVersamento();
-                if (idSessioneVersamento != null && !idSessioneVersamento.equals("")){
-
-                    boolean isVersabile = false;
-                    
-                    GdDoc gddoc = getGdDocById("`?71,[j(Fx/SXigr0-;G");
-                    
-                    Fascicolazione f = getPrimaFascicolazione(gddoc.getFascicolazioni());
-                    
-                    log.debug("Codice Fascicolo: " + f.getCodiceFascicolo());
-                    log.debug("Nome Fascicolo: " + f.getNomeFascicolo());
-                    
-                    ClassificazioneFascicolo c = f.getClassificazione();
-                    
-                    log.debug("Codice categoria: " + c.getCodiceCategoria());
-                    log.debug("Nome categoria: " + c.getNomeCategoria());
-                    log.debug("Codice classe: " + c.getCodiceClasse());
-                    log.debug("Nome classe: " + c.getNomeClasse());
-                    log.debug("Codice sotto-classe: " + c.getCodiceSottoclasse());
-                    log.debug("Nome sotto-classe: " + c.getNomeSottoclasse());
-                    
-        //c.getCodiceCategoria()
-                    
-                    // ottengo l'oggetto GdDoc completo
-//                    for (String idGdDoc : gdDocList) {
-//                        
-//                        GdDoc gddoc = getGdDocById(idGdDoc);
-//                        
-//                        // determino se il gddoc è versabile oppure no
-//                        isVersabile = isVersabile(gddoc);
-//                        
-//                        
-//                        
-//                        
-////                        List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
-////                        for(PubblicazioneIoda p : pubblicazioni){
-////                            log.debug("Numero pubblicazione: " + p.getNumeroPubblicazione());
-////                        }
-//                        
-////                        List<Fascicolazione> array = gddoc.getFascicolazioni();
-////                        for (Fascicolazione fascicolazione : array) {
-////                            
-////                            log.debug("Nome fascicolo: " + fascicolazione.getNomeFascicolo());
-////                        }
-//                    }
-                    
-                }
-                
-            }
-
-          
-            //        Connection dbConn = null;
-//        PreparedStatement ps = null;
 //        try {
-//            dbConn = UtilityFunctions.getDBConnection();
-//            log.debug("connessione db ottenuta");
+//            // ottengo i gddoc che possono essere versati
+//            ArrayList<String> gdDocList = getIdGdDocDaVersate();
+//// --------------- parte buona ------------------------------          
+//            // se ho qualche gddoc da versare
+////            if (gdDocList != null && gdDocList.size() > 0){
+////            
+////                // inizio sessione di versamento
+////                String idSessioneVersamento = setStartSessioneVersamento();
+////                if (idSessioneVersamento != null && !idSessioneVersamento.equals("")){
+////
+////                    boolean isVersabile = false;
+//         
+//// --------------- fine parte buona ------------------------------                    
+//                    
+//                    // Ji_j2A?]O6cff-_@[NiY non foglia
+//                    // `?71,[j(Fx/SXigr0-;G test generico
+//                    // G>WJlH^^1^73T?YzJo5i vecchio PU
+//                    GdDoc gddoc = getGdDocById("`?71,[j(Fx/SXigr0-;G");
+//                                      
+//                    String nomeTitolo = null, codiceTitolo = null;  
+//                    for (Fascicolazione fascicolazione : gddoc.getFascicolazioni()) {
+//                        
+//                        log.debug("Nome Fascicolo: " + fascicolazione.getNomeFascicolo());
+//                        ClassificazioneFascicolo classificazione = fascicolazione.getClassificazione();
+//                        
+//                        if (classificazione.getCodiceSottoclasse() != null && !classificazione.getCodiceSottoclasse().equals("")){
+//                            codiceTitolo = classificazione.getCodiceSottoclasse();
+//                            nomeTitolo = classificazione.getNomeSottoclasse();
+//                        }
+//                        else if (classificazione.getCodiceClasse()!= null && !classificazione.getCodiceClasse().equals("")){
+//                            codiceTitolo = classificazione.getCodiceClasse();
+//                            nomeTitolo = classificazione.getNomeClasse();
+//                        }
+//                        else if (classificazione.getCodiceCategoria()!= null && !classificazione.getCodiceCategoria().equals("")){
+//                            codiceTitolo = classificazione.getCodiceCategoria();
+//                            nomeTitolo = classificazione.getNomeCategoria();
+//                        }      
+//                        
+//                        log.debug("Codice titolo: " + codiceTitolo);
+//                        log.debug("Nome titolo: " + nomeTitolo);
+//                        log.debug("livello: " + fascicolazione.getIdLivelloFascicolo());
+//                    }
+//                    
+//                    
+//                    
+//                    // ottengo l'oggetto GdDoc completo
+////                    for (String idGdDoc : gdDocList) {
+////                        
+////                        GdDoc gddoc = getGdDocById(idGdDoc);
+////                        
+////                        // determino se il gddoc è versabile oppure no
+////                        isVersabile = isVersabile(gddoc);
+////                        
+////                        
+////                        
+////                        
+//////                        List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
+//////                        for(PubblicazioneIoda p : pubblicazioni){
+//////                            log.debug("Numero pubblicazione: " + p.getNumeroPubblicazione());
+//////                        }
+////                        
+//////                        List<Fascicolazione> array = gddoc.getFascicolazioni();
+//////                        for (Fascicolazione fascicolazione : array) {
+//////                            
+//////                            log.debug("Nome fascicolo: " + fascicolazione.getNomeFascicolo());
+//////                        }
+////                    }
+//                    
+////                }
+////                
+////            }
 //
-//            dbConn.setAutoCommit(false);
-//            log.debug("autoCommit settato a: " + dbConn.getAutoCommit());
-//
-//
-//            
-//            // se tutto è ok faccio il commit
-//            dbConn.commit();
-//        } //try
-//        catch (Throwable t) {
-//            log.fatal("Errore nel versatore parER", t);
-//            try {
-//                if (dbConn != null) {
-//                    log.info("rollback...");
-//                    dbConn.rollback();
-//                }
-//            }
-//            catch (Exception ex) {
-//                log.error("errore nel rollback", ex);
-//            }
-//            throw new JobExecutionException(t);
+//          
+//            //        Connection dbConn = null;
+////        PreparedStatement ps = null;
+////        try {
+////            dbConn = UtilityFunctions.getDBConnection();
+////            log.debug("connessione db ottenuta");
+////
+////            dbConn.setAutoCommit(false);
+////            log.debug("autoCommit settato a: " + dbConn.getAutoCommit());
+////
+////
+////            
+////            // se tutto è ok faccio il commit
+////            dbConn.commit();
+////        } //try
+////        catch (Throwable t) {
+////            log.fatal("Errore nel versatore parER", t);
+////            try {
+////                if (dbConn != null) {
+////                    log.info("rollback...");
+////                    dbConn.rollback();
+////                }
+////            }
+////            catch (Exception ex) {
+////                log.error("errore nel rollback", ex);
+////            }
+////            throw new JobExecutionException(t);
+////        }
+////        finally {
+////            if (ps != null) {
+////                try {
+////                    ps.close();
+////                } catch (Exception ex) {
+////                    log.error(ex);
+////                }
+////            }
+////            if (dbConn != null) {
+////                try {
+////                    dbConn.close();
+////                } catch (Exception ex) {
+////                    log.error(ex);
+////                }
+////            }
+//            log.debug("valore canSendPico: " + getCanSendPicoUscita());
+//            Thread.sleep(5000);
+//        }catch (Throwable t) {
+//            log.fatal("Versatore Parer: Errore ...", t);
 //        }
 //        finally {
-//            if (ps != null) {
-//                try {
-//                    ps.close();
-//                } catch (Exception ex) {
-//                    log.error(ex);
-//                }
-//            }
-//            if (dbConn != null) {
-//                try {
-//                    dbConn.close();
-//                } catch (Exception ex) {
-//                    log.error(ex);
-//                }
-//            }
-            log.debug("valore canSendPico: " + getCanSendPicoUscita());
-            Thread.sleep(5000);
-        }catch (Throwable t) {
-            log.fatal("Versatore Parer: Errore ...", t);
-        }
-        finally {
-            log.info("Job Versatore Parer finished");
-        }
+//            log.info("Job Versatore Parer finished");
+//        }
 
         log.debug("Versatore ParER Ended");
     }
@@ -234,42 +250,42 @@ public class VersatoreParer implements Job {
         return res;
     }
     
-    private String setStartSessioneVersamento(){
-        
-        String res = null;
-                
-        String query = 
-            "INSERT INTO " + ApplicationParams.getSessioniVersamentoParerTableName() + "( " +
-            "id_sessione_versamento_parer, data_inizio) " + 
-            "VALUES (?, date_trunc('sec', now()::timestamp)) ";
-            
-        try (
-            Connection dbConnection = UtilityFunctions.getDBConnection();
-            PreparedStatement ps = dbConnection.prepareStatement(query)
-        ) {         
-            log.debug("setto data e ora inizio sessione di versamento");
-            
-            // ottengo in ID di INDE
-            String idInde = getIndeId();
-            log.debug("valore id INDE: " + idInde);
-            
-            int index = 1;
-            
-            // ID di INDE
-            ps.setString(index++, idInde);
-                                    
-            log.debug("PrepareStatment: " + ps);                      
-            int rowsUpdated = ps.executeUpdate();
-            log.debug("eseguita");
-            if (rowsUpdated == 0)
-                throw new SQLException("data inizio non inserita");
-            else
-                res = idInde;
-        } catch (SQLException | NamingException | IOException | SendHttpMessageException ex) {
-            log.fatal("errore inserimento data_inizio nella tabella sessioni_versamento_parer");
-        }
-        return res;
-    }
+//    private String setStartSessioneVersamento(){
+//        
+//        String res = null;
+//                
+//        String query = 
+//            "INSERT INTO " + ApplicationParams.getSessioniVersamentoParerTableName() + "( " +
+//            "id_sessione_versamento_parer, data_inizio) " + 
+//            "VALUES (?, date_trunc('sec', now()::timestamp)) ";
+//            
+//        try (
+//            Connection dbConnection = UtilityFunctions.getDBConnection();
+//            PreparedStatement ps = dbConnection.prepareStatement(query)
+//        ) {         
+//            log.debug("setto data e ora inizio sessione di versamento");
+//            
+//            // ottengo in ID di INDE
+//            String idInde = getIndeId();
+//            log.debug("valore id INDE: " + idInde);
+//            
+//            int index = 1;
+//            
+//            // ID di INDE
+//            ps.setString(index++, idInde);
+//                                    
+//            log.debug("PrepareStatment: " + ps);                      
+//            int rowsUpdated = ps.executeUpdate();
+//            log.debug("eseguita");
+//            if (rowsUpdated == 0)
+//                throw new SQLException("data inizio non inserita");
+//            else
+//                res = idInde;
+//        } catch (SQLException | NamingException | IOException | SendHttpMessageException ex) {
+//            log.fatal("errore inserimento data_inizio nella tabella sessioni_versamento_parer");
+//        }
+//        return res;
+//    }
     
     private void setStopSessioneVersamento(String idSessioneVersamento){
         
@@ -352,19 +368,16 @@ public class VersatoreParer implements Job {
         }
         
         
-        
         log.debug("Codice Fascicolo: " + f.getCodiceFascicolo());
         log.debug("Nome Fascicolo: " + f.getNomeFascicolo());
-        
-        
+                                
                     
-                    
-                    log.debug("Codice categoria: " + c.getCodiceCategoria());
-                    log.debug("Nome categoria: " + c.getNomeCategoria());
-                    log.debug("Codice classe: " + c.getCodiceClasse());
-                    log.debug("Nome classe: " + c.getNomeClasse());
-                    log.debug("Codice sotto-classe: " + c.getCodiceSottoclasse());
-                    log.debug("Nome sotto-classe: " + c.getNomeSottoclasse());
+        log.debug("Codice categoria: " + c.getCodiceCategoria());
+        log.debug("Nome categoria: " + c.getNomeCategoria());
+        log.debug("Codice classe: " + c.getCodiceClasse());
+        log.debug("Nome classe: " + c.getNomeClasse());
+        log.debug("Codice sotto-classe: " + c.getCodiceSottoclasse());
+        log.debug("Nome sotto-classe: " + c.getNomeSottoclasse());
         
         return null;
     }
@@ -448,6 +461,19 @@ public class VersatoreParer implements Job {
         JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(xmlSpecifico);
         String movimentazione = (String) jsonXmlSpecifico.get("movimentazione");
         return movimentazione;
+    }
+    
+    private ArrayList<String> getArrayTitoliDocumento(String xmlSpecifico){
+        ArrayList<String> res = null;
+        JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(xmlSpecifico);
+        JSONArray jsonArrayTitoli = (JSONArray) JSONValue.parse((String) jsonXmlSpecifico.get("titoliDocumento"));
+        if (jsonArrayTitoli != null && !jsonArrayTitoli.equals("")){
+            res = new ArrayList<>();
+            for (int i = 0; i < jsonArrayTitoli.size(); i++) {
+                res.add((String) jsonArrayTitoli.get(i));
+            }
+        }
+        return res;
     }
        
     /* crea l'oggetto GdDoc con le collection:
