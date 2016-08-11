@@ -36,7 +36,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.naming.Context;
@@ -421,5 +424,23 @@ static {
         a.setXHTML(true);
         a.parse(rd, w);
         return w.toString();
+    }
+    
+    /**
+     * torna la differenza tra due Liste
+     *
+     * @param list1
+     * @param list2
+     * @return
+     */
+    public static <T> List<T> subtractList(List<T> list1, List<T> list2) {
+        List<T> result = new ArrayList<T>();
+        Set<T> set2 = new HashSet<T>(list2);
+        for (T t1 : list1) {
+            if (!set2.contains(t1)) {
+                result.add(t1);
+            }
+        }
+        return result;
     }
 }

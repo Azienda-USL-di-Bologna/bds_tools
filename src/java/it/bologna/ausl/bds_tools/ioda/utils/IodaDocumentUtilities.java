@@ -531,7 +531,6 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
                         gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, false));
                     }
-
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
                     if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString() + "...");
@@ -987,7 +986,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         // gestioni dati ParER
         if (gdDoc.getDatiParerGdDoc() != null){
             log.debug("dati_parer_gddoc: " + gdDoc.getDatiParerGdDoc().getJSONString());
-            updateDatiParerGdDoc(dbConn, gdDoc.getDatiParerGdDoc());
+            updateDatiParerGdDoc(dbConn, gdDoc.getDatiParerGdDoc(), null);
         }
         else{
             log.debug("dati_parer_gddoc == NULL");
@@ -1278,25 +1277,35 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         
     }
     
-    public void updateDatiParerGdDoc(Connection dbConn, DatiParerGdDoc datiParer) throws SQLException{
+    public void updateDatiParerGdDoc(Connection dbConn, DatiParerGdDoc datiParer, GdDoc gdDocEsterno) throws SQLException{
     
         boolean datiPresenti = false;
+        String idGdDoc;
         
-        // controlla se esistono già i dati pro ParER
-        String sql =
-                "SELECT id_dato_parer_gddoc " +
-                "FROM gd.dati_parer_gddoc " + 
-                "WHERE id_gddoc = ? ";
-        
-        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
-            ps.setString(1, gdDoc.getId());
-            log.debug("eseguo la query: " + ps.toString() + "...");
-            ResultSet res = ps.executeQuery();
-            log.debug("eseguita");
-            
-            if (res.next())
-                datiPresenti = true;            
+        if (gdDocEsterno == null){
+            idGdDoc = gdDoc.getId();
+           // controlla se esistono già i dati pro ParER
+            String sql =
+                    "SELECT id_dato_parer_gddoc " +
+                    "FROM gd.dati_parer_gddoc " + 
+                    "WHERE id_gddoc = ? ";
+
+            try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+                ps.setString(1, idGdDoc);
+                log.debug("eseguo la query: " + ps.toString() + "...");
+                ResultSet res = ps.executeQuery();
+                log.debug("eseguita");
+
+                if (res.next())
+                    datiPresenti = true;            
+            } 
         }
+        else{
+            idGdDoc = gdDocEsterno.getId();
+            datiPresenti = true;
+        }
+        
+        
         
         // se dati sono già presenti allora li aggiorno
         if (datiPresenti){
@@ -1353,9 +1362,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
         else{ // altrimenti effettuo l'inserimento del record
             insertDatiParerGdDoc(dbConn, datiParer);
-        }
-        
-        
+        }        
     }
     
     public static DatiParerGdDoc caricaDatiParerGdDoc(Connection dbConn, String idGdDoc, String idOggettoOrigine, String tipoOggettoOrigine) throws SQLException {
