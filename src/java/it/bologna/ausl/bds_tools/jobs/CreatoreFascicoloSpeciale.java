@@ -120,17 +120,45 @@ public class CreatoreFascicoloSpeciale implements Job{
             ps.setString(i++, "babel Codice" + idFascicolo);
             ps.setInt(i++, 0);
             ps.setInt(i++, -1);
-            Integer numeroFascicoloPadre = getNumeroFascicolo(idFascicoloPadre);
-            if (numeroFascicoloPadre ==  null) {
+            String numerazioneGerarchica = getNumerazioneGerarchica(idFascicoloPadre);
+            if (numerazioneGerarchica ==  null || numerazioneGerarchica.equals("")) {
                 ps.setString(i++, numeroFascicolo + "/" + anno);
             }else{
-                ps.setString(i++, numeroFascicoloPadre + "-" + numeroFascicolo + "/" + anno);
+                ps.setString(i++, numerazioneGerarchica + "-" + numeroFascicolo + "/" + anno);
             }
             log.debug("QUERY INSERT: " + ps);
             ps.executeUpdate();
         } catch (SQLException | NamingException ex) {
             log.error("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
         }
+    }
+    
+    private String getNumerazioneGerarchica(String idFascicolo){
+        if ( idFascicolo == null || idFascicolo.equals("")) {
+            return null;
+        }
+        String queryNumerazioneGerarchica = "SELECT numerazione_gerarchica " +
+                                                "FROM gd.fascicoligd " + 
+                                                "WHERE id_fascicolo=?;";
+        try (
+               Connection dbConnection = UtilityFunctions.getDBConnection();
+               PreparedStatement psNumerazioneGerarchica = dbConnection.prepareStatement(queryNumerazioneGerarchica);
+           ) {
+            psNumerazioneGerarchica.setString(1, idFascicolo);
+            ResultSet resNumeroFascicolo = psNumerazioneGerarchica.executeQuery();
+            while (resNumeroFascicolo.next()) {                
+                if (!resNumeroFascicolo.getString("numerazione_gerarchica").equals("")) {
+                    String numerazioneGerarchica = resNumeroFascicolo.getString("numerazione_gerarchica");
+                    String[] splitted = numerazioneGerarchica.split("/");
+                    return splitted[0];
+                }else{
+                    throw new NullPointerException("La numerazione gerarchica del fascicolo è null: " + resNumeroFascicolo.getInt("numerazione_gerarchica"));
+                }
+            }
+        } catch (SQLException | NamingException ex) {
+            log.error("Errore nel ottenimento della numerazione gerarchica del fascicolo: " + idFascicolo + " " + ex);
+        }
+        return null;
     }
     
     private String getIdStrutturaResponsabile(){

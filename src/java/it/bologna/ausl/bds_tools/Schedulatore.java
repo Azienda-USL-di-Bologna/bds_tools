@@ -5,16 +5,26 @@ import it.bologna.ausl.bds_tools.jobs.utils.JobDescriptor;
 import it.bologna.ausl.bds_tools.jobs.utils.JobList;
 import it.bologna.ausl.bds_tools.jobs.utils.JobParams;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
+import it.bologna.ausl.bds_tools.utils.ConfigParams;
+import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.Set;
+import java.util.logging.Level;
+import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import net.sf.ehcache.search.Results;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.simple.JSONObject;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
@@ -84,6 +94,9 @@ public class Schedulatore extends HttpServlet {
         if (active) {
             log.info("Inizializzazione schedulatore");
             quarzStop();
+            
+            // Ricarico i parametri del db
+            ConfigParams.initConfigParams();
 
            // URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
            // if (jobConfURL == null) {
@@ -141,72 +154,140 @@ public class Schedulatore extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
-        if (request.getParameter("reload") != null) {
-            try {
-                quarzInit();
-            } catch (SchedulerException ex) {
-                log.fatal(ex);
-            } catch (ClassNotFoundException ex) {
-                log.fatal(ex);
-                throw new ServletException("Errore ricaricando configurazione", ex);
-            }
-        }
-        if (request.getParameter("start") != null) {
-            try {
-                active = true;
-                quarzInit();
-            } catch (SchedulerException ex) {
-                log.fatal(ex);
-            } catch (ClassNotFoundException ex) {
-                log.fatal(ex);
-                throw new ServletException("Errore ricaricando configurazione", ex);
-            }
-        }
-        if (request.getParameter("stop") != null) {
-            try {
-                active = false;
-                quarzStop();
-            } catch (SchedulerException ex) {
-                log.fatal(ex);
-            }
-        }
+        response.addHeader("Access-Control-Allow-Origin", "*");
+        
+        String command = request.getParameter("schedulatore");
         PrintWriter out = response.getWriter();
-        try {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet Schedulatore</title>");
-            out.println("</head>");
-            out.println("<body>");
-            if (active) {
-                out.println("<table border='1'>");
-                try {
-                    Set<JobKey> jobKeys = sched.getJobKeys(GroupMatcher.anyJobGroup());
-                    for (JobKey jk : jobKeys) {
-                        JobDetail jobDetail = sched.getJobDetail(jk);
-                        out.println("<tr><td>" + jobDetail + "</td>");
-                        for (Trigger t : sched.getTriggersOfJob(jk)) {
-                            out.println("<td>" + t.getDescription() + " [" + t.getStartTime().toString() + "] " + t.getPreviousFireTime().toString() + " - " + t.getNextFireTime().toString() + "</td>");
-
-                        }
-                        out.println("</tr>");
-
+        
+        if (command != null && !command.equals("")) {
+            switch (command){
+                case "reload":
+                    try {
+                        quarzInit();
+                    } catch (SchedulerException ex) {
+                        log.fatal(ex);
+                    } catch (ClassNotFoundException ex) {
+                        log.fatal(ex);
+                        throw new ServletException("Errore ricaricando configurazione", ex);
                     }
-
-                } catch (SchedulerException sk) {
-                    out.println(sk);
-                }
-                out.println("</table><h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
-                out.println("<form><input type=\"hidden\" name=\"reload\" value=\"reload\"/><input type=\"submit\" value=\"Ricarica Configurazione\" /></form>");
-            } else {
-                out.println("<h1>Schedulatore non attivo</h1>");
+                    break;
+                case "start":
+                    try {
+                        active = true;
+                        quarzInit();
+                    } catch (SchedulerException ex) {
+                        log.fatal(ex);
+                    } catch (ClassNotFoundException ex) {
+                        log.fatal(ex);
+                        throw new ServletException("Errore ricaricando configurazione", ex);
+                    }
+                    break;
+                case "stop":
+                    try {
+                        active = false;
+                        quarzStop();
+                    } catch (SchedulerException ex) {
+                        log.fatal(ex);
+                    }
+                    break;
+                case "json":
+                    response.setContentType("application/json");
+                    String json = getJsonFromDb(); // ApplicationParams.getSchedulatoreConf();
+                    out.println(json);
+                    out.close();
+                    break;
+                case "status":
+                    response.setContentType("application/json");
+                    String res = "{\"active\":" + active + "}";
+                    out.println(res);
+                    out.close();
+                    break;
+                default:
+                    try {
+                        /* TODO output your page here. You may use following sample code. */
+                        out.println("<!DOCTYPE html>");
+                        out.println("<html>");
+                        out.println("<head>");
+                        out.println("<title>Servlet Schedulatore</title>");
+                        out.println("</head>");
+                        out.println("<body>");
+                        if (active) {
+                            out.println("<table border='1'>");
+                            try {
+                                Set<JobKey> jobKeys = sched.getJobKeys(GroupMatcher.anyJobGroup());
+                                for (JobKey jk : jobKeys) {
+                                    JobDetail jobDetail = sched.getJobDetail(jk);
+                                    out.println("<tr><td>" + jobDetail + "</td>");
+                                    for (Trigger t : sched.getTriggersOfJob(jk)) {
+                                        out.println("<td>" + t.getDescription() + " [" + t.getStartTime().toString() + "] " + t.getPreviousFireTime().toString() + " - " + t.getNextFireTime().toString() + "</td>");
+                                    }
+                                    out.println("</tr>");
+                                }
+                            } catch (SchedulerException sk) {
+                                out.println(sk);
+                            }
+                            out.println("</table><h1>Servlet Schedulatore at " + request.getContextPath() + "</h1>");
+                            out.println("<form><input type=\"hidden\" name=\"reload\" value=\"reload\"/><input type=\"submit\" value=\"Ricarica Configurazione\" /></form>");
+                        } else {
+                            out.println("<h1>Schedulatore non attivo</h1>");
+                        }
+                        out.println("</body>");
+                        out.println("</html>");
+                    } finally {
+                        out.close();
+                    }
+                    break;          
             }
-            out.println("</body>");
-            out.println("</html>");
-        } finally {
-            out.close();
+        } 
+        
+        String service = request.getParameter("service");
+        log.debug("SERVICE: " + service);
+        if (service != null && !service.equals("")) {
+            String json = request.getParameter("json");
+            log.debug("JSON: " + json);
+            if (json != null && !json.equals("")) {
+                String status = request.getParameter("status");
+                log.debug("STATUS: " + status);
+                if (status != null && !status.equals("")) {
+                    String queryUpdateStatus =  "UPDATE " + ApplicationParams.getParametriPubbliciTableName() + " " +
+                                                "SET val_parametro=? " +
+                                                "WHERE nome_parametro=?;";
+                    try (
+                        Connection dbConnection = UtilityFunctions.getDBConnection();
+                        PreparedStatement ps = dbConnection.prepareStatement(queryUpdateStatus)
+                    ) {
+                        int i = 1;
+                        ps.setString(i++, json);
+                        ps.setString(i++, "schedulatoreConfJson");
+                        log.debug("QUERY: " + ps);
+                        ps.executeUpdate();
+                    } catch (SQLException | NamingException ex) {
+                        log.error("Eccezione nell'update dello status del servizio " + service + " in " + status, ex);
+                    }
+                }
+            }
         }
+    }
+    
+    private String getJsonFromDb(){
+        String queryUpdateStatus =  "SELECT val_parametro " + 
+                                    "FROM " + ApplicationParams.getParametriPubbliciTableName() + " " +
+                                    "WHERE nome_parametro=?;";
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(queryUpdateStatus)
+        ) {
+            int i = 1;
+            ps.setString(i++, "schedulatoreConfJson");
+            log.debug("QUERY: " + ps);
+            ResultSet res = ps.executeQuery();
+            while (res.next()) {                
+                return res.getString("val_parametro");
+            }
+        } catch (SQLException | NamingException ex) {
+            log.error("Eccezione nel caricamento del schedulatoreConfJson");
+        }
+        return null;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">

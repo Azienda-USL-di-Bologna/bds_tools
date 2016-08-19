@@ -504,10 +504,13 @@
         <servlet-name>GetGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/</url-pattern>
     </servlet-mapping>
-    <!--<context-param>
+    
+    <!--
+        <context-param>
             <param-name>schedulatore.active</param-name>
             <param-value>true</param-value>
-        </context-param>-->
+        </context-param>
+    -->    
 
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
