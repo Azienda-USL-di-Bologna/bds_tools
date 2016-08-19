@@ -2,11 +2,14 @@ package it.bologna.ausl.bds_tools.ioda.utils;
 
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
+import it.bologna.ausl.ioda.iodaobjectlibrary.BagProfiloArchivistico;
 import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazioni;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SimpleDocument;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.riversamento.builder.ProfiloArchivistico;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
@@ -325,6 +328,166 @@ public class IodaFascicolazioniUtilities {
             }
         }
         return fascicolazione;
+    }
+    
+    public BagProfiloArchivistico getGerarchiaFascicolo(Connection dbConn, String numerazioneGerarchica) throws SQLException{
+        
+        BagProfiloArchivistico res = null;
+       
+        String idLivelloFascicolo = null;
+        String idTitolo = null;
+        String idFascicolo = null;
+        String  idFascicoloPadre = null;
+        String nomeFascicolo = null;
+        int numeroFascicolo;
+        int annoFascicolo;
+        
+        // determinazione livello fascicolo
+        String sqlLivelloFascicolo = 
+                "SELECT id_fascicolo, id_fascicolo_padre, id_livello_fascicolo, id_titolo, " + 
+                "nome_fascicolo, numero_fascicolo, anno_fascicolo " + 
+                "FROM " + getFascicoliTable() + " f " +
+                "WHERE numerazione_gerarchica = ? ";
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlLivelloFascicolo)) {
+            ps.setString(1, numerazioneGerarchica);
+            log.debug("eseguo la query: " + ps.toString() + " ...");
+            ResultSet r = ps.executeQuery();
+
+            if (!r.next())
+                throw new SQLException("fascicolazione non trovata");
+            else{
+                int index = 1;
+                idFascicolo = r.getString(index++);
+                idFascicoloPadre = r.getString(index++);
+                idLivelloFascicolo = r.getString(index++);
+                idTitolo = r.getString(index++);
+                nomeFascicolo = r.getString(index++);
+                numeroFascicolo = r.getInt(index++);
+                annoFascicolo = r.getInt(index++);
+            }
+        }
+        
+        if (idLivelloFascicolo != null){
+            log.debug("idLivelloFascicolo != null");
+            log.debug("valore: "+idLivelloFascicolo);
+            res = new BagProfiloArchivistico();
+            
+            switch(idLivelloFascicolo.trim()){
+                
+                case "1":
+                    log.debug("case 1");
+                    String sqlTextL1 = 
+                            "SELECT distinct codice_gerarchico || codice_titolo " +
+                            "FROM " + getTitoliTable() + " t " +
+                            "WHERE t.id_titolo = ? ";
+                    try (PreparedStatement ps = dbConn.prepareStatement(sqlTextL1)) {
+                        ps.setString(1, idTitolo);
+                        log.debug("eseguo la query: " + ps.toString() + " ...");
+                        ResultSet resL1 = ps.executeQuery();
+
+                        if (!resL1.next())
+                            throw new SQLException("titolo non trovato");
+                        else{
+                            int index = 1;
+                            String classifica = resL1.getString(index++);
+                            classifica = classifica.replaceAll("-", "/");
+                            res.setClassificaFascicolo(classifica);
+                            res.setAnnoFascicolo(annoFascicolo);
+                            res.setNomeFascicolo(nomeFascicolo);
+                            res.setNumeroFasciolo(numeroFascicolo);
+                            res.setLevel(1);
+                        }
+                    }
+                break;
+                
+                case "2":
+                    log.debug("case 2");
+                    String sqlTextL2 = 
+                            "SELECT distinct codice_gerarchico || codice_titolo, " +
+                            "f.anno_fascicolo, f.numero_fascicolo, f.nome_fascicolo " +
+                            "FROM " + getTitoliTable() + " t, " + getFascicoliTable() + " f " + 
+                            "WHERE f.id_fascicolo = ? " + 
+                            "AND t.id_titolo = (SELECT fg.id_titolo " +
+                                                    "FROM gd.fascicoligd fg " +
+                                                    "WHERE fg.id_fascicolo = ?) ";
+                    try (PreparedStatement ps = dbConn.prepareStatement(sqlTextL2)) {
+                        ps.setString(1, idFascicoloPadre);
+                        ps.setString(2, idFascicoloPadre);
+                        log.debug("eseguo la query: " + ps.toString() + " ...");
+                        ResultSet resL1 = ps.executeQuery();
+
+                        if (!resL1.next())
+                            throw new SQLException("titolo non trovato");
+                        else{
+                            int index = 1;
+                            String classifica = resL1.getString(index++);
+                            int anno =  resL1.getInt(index++);
+                            int numero =  resL1.getInt(index++);
+                            String nome = resL1.getString(index++);
+                            classifica = classifica.replaceAll("-", "/");
+                            res.setClassificaFascicolo(classifica);
+                            res.setAnnoFascicolo(anno);
+                            res.setNomeFascicolo(nome);
+                            res.setNumeroFasciolo(numero);
+                            res.setNomeSottoFascicolo(nomeFascicolo);
+                            res.setNumeroSottoFascicolo(numeroFascicolo);
+                            res.setLevel(2);
+                        }
+                    }
+                break;
+                
+                case "3":
+                    log.debug("case 3");
+                    String sqlTextL3 = 
+                            "SELECT DISTINCT codice_gerarchico || codice_titolo, " + 
+                            "ff.anno_fascicolo, ff.numero_fascicolo, ff.nome_fascicolo, " + 
+                            "f.numero_fascicolo, f.nome_fascicolo " +
+                            "FROM " + getTitoliTable() + " t, " + getFascicoliTable() + " f, " + getFascicoliTable() + " ff " +
+                            "WHERE f.id_fascicolo = ? " + 
+                            "AND f.id_fascicolo_padre = ff.id_fascicolo " + 
+                            "AND t.id_titolo = (SELECT fgg.id_titolo " + 
+                                                "FROM " + getFascicoliTable() + " fg, " + getFascicoliTable() + " fgg " +
+                                                "WHERE fg.id_fascicolo = ? " + 
+                                                "AND fg.id_fascicolo_padre = fgg.id_fascicolo)";
+	
+                    try (PreparedStatement ps = dbConn.prepareStatement(sqlTextL3)) {
+                        ps.setString(1, idFascicoloPadre);
+                        ps.setString(2, idFascicoloPadre);
+                        log.debug("eseguo la query: " + ps.toString() + " ...");
+                        ResultSet resL1 = ps.executeQuery();
+
+                        if (!resL1.next())
+                            throw new SQLException("titolo non trovato");
+                        else{
+                            int index = 1;
+                            String classifica = resL1.getString(index++);
+                            int annoF =  resL1.getInt(index++);
+                            int numeroF =  resL1.getInt(index++);
+                            String nomeF = resL1.getString(index++);
+                            int numeroS = resL1.getInt(index++);
+                            String nomeS = resL1.getString(index++);
+                            
+                            classifica = classifica.replaceAll("-", "/");
+                            res.setClassificaFascicolo(classifica);
+                            
+                            res.setAnnoFascicolo(annoF);
+                            res.setNomeFascicolo(nomeF);
+                            res.setNumeroFasciolo(numeroF);
+                            
+                            res.setNomeSottoFascicolo(nomeS);
+                            res.setNumeroSottoFascicolo(numeroS);
+                            
+                            res.setNomeInserto(nomeFascicolo);
+                            res.setNumeroInserto(numeroFascicolo);
+                            res.setLevel(3);
+                        }
+                    }
+                break;  
+            }
+        }
+        
+        return res;    
     }
     
     
