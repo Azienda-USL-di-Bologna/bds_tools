@@ -1,6 +1,14 @@
 $(document).ready(function(){
+  urlPage = document.URL;
+  //console.log('URL: ', urlPage);
+  var splittedUrl = urlPage.split('/');
+//  for (urlPart of splittedUrl) {
+//    console.log(urlPart);
+//  }
   var allServices = ''; // Contiene il json di TUTTI i servizi dell'ultima chiamata ajax effettuata
-  var servletUrl = 'http://localhost:8084/bds_tools/Schedulatore';
+  // 'http://localhost:8084/bds_tools/Schedulatore';  IN LOCALE
+  var servletUrl = 'http://' + splittedUrl[2]+ '/bds_tools/Schedulatore';
+//  console.log(servletUrl);
 
   // Funzione che ritorna l'icona del servizio dando in input il nome del servizio
   function getGlyphicon(service, personalClasses){

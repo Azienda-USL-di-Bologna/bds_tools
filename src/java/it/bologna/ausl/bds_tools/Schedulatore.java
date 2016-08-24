@@ -192,7 +192,7 @@ public class Schedulatore extends HttpServlet {
                     break;
                 case "json":
                     response.setContentType("application/json");
-                    String json = getJsonFromDb(); // ApplicationParams.getSchedulatoreConf();
+                    String json = ApplicationParams.getSchedulatoreConf();
                     out.println(json);
                     out.close();
                     break;
@@ -261,6 +261,7 @@ public class Schedulatore extends HttpServlet {
                         ps.setString(i++, "schedulatoreConfJson");
                         log.debug("QUERY: " + ps);
                         ps.executeUpdate();
+                        ConfigParams.initConfigParams();
                     } catch (SQLException | NamingException ex) {
                         log.error("Eccezione nell'update dello status del servizio " + service + " in " + status, ex);
                     }

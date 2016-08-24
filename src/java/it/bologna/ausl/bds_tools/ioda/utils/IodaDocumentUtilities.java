@@ -364,7 +364,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "tipo_oggetto_origine, " +
                         "stato_gd_doc, " +
                         "url_command, " +
-                        "id_utente_creazione " +
+                        "id_utente_creazione, " +
+                        "tipologia_documentale " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
                         "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ?";
 
@@ -408,7 +409,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
                 gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
                 gdDoc.setUrlCommand(result.getString("url_command"));
-                gdDoc.setIdUtenteCrezione(result.getString("id_utente_creazione"));
+                gdDoc.setIdUtenteCreazione(result.getString("id_utente_creazione"));
+                gdDoc.setTipologiaDocumentale(result.getString("tipologia_documentale"));
                 
                 if (result.next())
                     throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
@@ -475,7 +477,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "tipo_oggetto_origine, " +
                         "stato_gd_doc, " +
                         "url_command, " +
-                        "id_utente_creazione " +
+                        "id_utente_creazione, " +
+                        "tipologia_documentale " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " " +
                         "WHERE id_gddoc = ?";
 
@@ -516,7 +519,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
                 gdDoc.setVisibile(result.getInt("stato_gd_doc") != 0);
                 gdDoc.setUrlCommand(result.getString("url_command"));
-                gdDoc.setIdUtenteCrezione(result.getString("id_utente_creazione"));
+                gdDoc.setIdUtenteCreazione(result.getString("id_utente_creazione"));
+                gdDoc.setTipologiaDocumentale(result.getString("tipologia_documentale"));
                 
                 if (result.next())
                     throw new IodaDocumentException("trovato più di un GdDoc, questo non dovrebbe accadere");
@@ -724,7 +728,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "anno_registrazione, oggetto, " +
                         "id_oggetto_origine, tipo_oggetto_origine, " +
                         "codice, nome_struttura_firmatario, applicazione, " +
-                        "url_command, id_utente_creazione) " +
+                        "url_command, id_utente_creazione, tipologia_documentale) " +
                         "VALUES (" +
                         "?, ?, ?, " +
                         "?, ?, " +
@@ -733,7 +737,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "?, ?, " +
                         "?, ?, " +
                         "?, ?, ?, " +
-                        "?, ?)";
+                        "?, ?, ?)";
         
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
@@ -820,6 +824,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             // Vecchio categoria_origine ora id_utente_creazione
             ps.setString(index++, gdDoc.getIdUtenteCreazione());
             
+            // tipologia_documentale
+            ps.setString(index++, gdDoc.getTipologiaDocumentale());
             
 
             String query = ps.toString();
@@ -880,7 +886,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "nome_struttura_firmatario = coalesce(?, nome_struttura_firmatario), " +
                 "applicazione = coalesce(?, applicazione), " +
                 "url_command = coalesce(?, url_command), " +
-                "id_utente_creazione = coalesce(?, id_utente_creazione) " + 
+                "id_utente_creazione = coalesce(?, id_utente_creazione), " +
+                "tipologia_documentale = coalesce(?, tipologia_documentale) " +
                 "WHERE id_oggetto_origine = ? AND tipo_oggetto_origine = ? " +
                 "returning id_gddoc, guid_gddoc";
 
@@ -965,12 +972,17 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             
             // Vecchio categoria_origine ora id_utente_creazione
             ps.setString(index++, gdDoc.getIdUtenteCreazione());
+            
+            // tipologia_documentale
+            ps.setString(index++, gdDoc.getTipologiaDocumentale());
 
             // id_oggetto_origine
             ps.setString(index++, gdDoc.getIdOggettoOrigine());
 
             // tipo_oggetto_origine
             ps.setString(index++, gdDoc.getTipoOggettoOrigine());
+            
+            
             
             
 
