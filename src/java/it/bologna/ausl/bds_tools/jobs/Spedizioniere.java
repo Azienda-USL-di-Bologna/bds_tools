@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools.jobs;
 
+import groovy.xml.dom.DOMCategory;
 import it.bologna.ausl.bdm.utilities.Bag;
 import it.bologna.ausl.bdm.workflows.processes.ProtocolloInUscitaProcess;
 import it.bologna.ausl.bdmclient.BdmClientInterface;
@@ -45,6 +46,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import javax.mail.MessagingException;
 import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
@@ -512,32 +515,33 @@ public class Spedizioniere implements Job{
                                             } else if (resOfSottoDocumenti.getString("uuid_mongo_firmato") == null && resOfSottoDocumenti.getString("tipo_sottodocumento").equals("testo")) { // Lettera firmata non presente allertare babelAlert
                                                 log.debug("Lettera non firmata!");
                                                 if (!documentiIncriminati.contains(res.getString("id_oggetto_origine"))) {
-                                                    // Metadata
-                                                    String[] to = new String[1];
-                                                    if (ConfigParams.getAmbiente().toLowerCase().equals("test")) {  // Se in ambiente di test spedisci solo a Fayssel
-                                                        to[0] = "f.sabir@nextsw.it";
-                                                    }else{
-                                                        to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
-                                                    }
-                                                    String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
-                                                    String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
-                                                    int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
-                                                    // Email
+//                                                    // Metadata
+//                                                    String[] to = new String[1];
+//                                                    if (ConfigParams.getAmbiente().toLowerCase().equals("test")) {  // Se in ambiente di test spedisci solo a Fayssel
+//                                                        to[0] = "f.sabir@nextsw.it";
+//                                                    }else{
+//                                                        to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
+//                                                    }
+//                                                    String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
+//                                                    String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
+//                                                    int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
+//                                                    // Email
                                                     String subject = "SPEDIZIONIERE | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Tentativo di invio documento con lettera non firmata";
-                                                    String messageBody = "Dati del documento:<br/>";
-                                                    messageBody += "id: " + res.getString("id") +"<br/>";
-                                                    messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
-                                                    messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
-                                                    messageBody += "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
-                                                    messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
-                                                    messageBody += "Ambiente: " + ConfigParams.getAmbiente();
-                                                    MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
-                                                    try {
-                                                        mailSender.send();
-                                                    } catch (Exception e) {
-                                                        log.debug("Errore nell'invio della mail a babelAlert!");
-                                                        throw new SpedizioniereException("Documento con lettera non firmata!");
-                                                    }
+                                                    sendMail(res, subject, new SpedizioniereException("Documento con lettera non firmata!"));
+//                                                    String messageBody = "Dati del documento:<br/>";
+//                                                    messageBody += "id: " + res.getString("id") +"<br/>";
+//                                                    messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
+//                                                    messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
+//                                                    messageBody += "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
+//                                                    messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
+//                                                    messageBody += "Ambiente: " + ConfigParams.getAmbiente();
+//                                                    MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
+//                                                    try {
+//                                                        mailSender.send();
+//                                                    } catch (Exception e) {
+//                                                        log.debug("Errore nell'invio della mail a babelAlert!");
+//                                                        throw new SpedizioniereException("Documento con lettera non firmata!");
+//                                                    }
                                                     documentiIncriminati.add(res.getString("id_oggetto_origine"));
                                                 }                                         
                                                 throw new SpedizioniereException("Documento con lettera non firmata! I membri di babelAlert sono stati avvisati via mail.");
@@ -702,10 +706,55 @@ public class Spedizioniere implements Job{
             catch(Exception ex) {
                 try {
                     setMessaggioErrore("Errore nella costruzione della mail", res.getLong("id"));
+                    String subject = "Build Mail Error | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Errore nella costruzione della mail";
+                    sendMail(res, subject, ex);
                 } catch (SQLException e) {
                     log.debug("Errore update messaggio_errore: ", e);
                 }
                 throw new SpedizioniereException("Errore nella costruzione dell'oggetto mail", ex);
+            }
+        }
+        
+        private void sendMail(ResultSet res, String subject, Exception exception){
+            log.debug("Dentro send mail");
+            if (ConfigParams.getAzienda().equals("105") && ConfigParams.getAmbiente().toLowerCase().equals("test")) {
+                return;
+            }
+            try {
+                // Metadata
+                String[] to = new String[1];
+                log.debug("setting to...");
+                if (ConfigParams.getAmbiente().toLowerCase().equals("test")) {  // Se in ambiente di test spedisci solo a Fayssel
+//                    to = new String[2];
+                    to[0] = "f.sabir@nextsw.it";
+//                    to[1] = "c.fiesoli@nsi.it";
+                }else{
+                    to[0] = ApplicationParams.getOtherPublicParam("EmailsAddressesAlert");
+                }
+                log.debug("To setted!");
+                log.debug("Getting from...");
+                String from = ApplicationParams.getOtherPublicParam("EmailsAlertFrom");
+                log.debug("Getting host...");
+                String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
+                log.debug("Getting port...");
+                int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
+                // Email
+                //String subject = "SPEDIZIONIERE | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Tentativo di invio documento con lettera non firmata";
+                log.debug("Composing message...");
+                String messageBody = "Dati del documento:<br/>";
+                messageBody += "id: " + res.getString("id") +"<br/>";
+                messageBody += "id_oggetto_origine: " + res.getString("id_oggetto_origine") + "<br/>";
+                messageBody += "tipo_oggetto_origine: " + res.getString("tipo_oggetto_origine") + "<br/>";
+                messageBody += "id_applicazione: " + res.getString("id_applicazione") + "<br/>";
+                messageBody += "Azienda: " + ConfigParams.getAzienda() + "<br/>";
+                messageBody += "Ambiente: " + ConfigParams.getAmbiente() + "<br/><br/><br/>";
+                messageBody += "Error log: <br/>";
+                messageBody += exception.toString();
+                log.debug("Sending message...");
+                MailSender mailSender = new MailSender(to, from, host, subject, messageBody, port);
+                mailSender.send();
+            } catch (SQLException | MessagingException ex) {
+                log.debug("Eccezione nell'invio dell'email d'errore agli sviluppatori: " + ex);
             }
         }
         
@@ -746,7 +795,7 @@ public class Spedizioniere implements Job{
             String query =  "SELECT " +
                             "id, id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine, verifica_timestamp, descrizione_oggetto " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                            "WHERE id%? = ? AND stato=?::bds_tools.stati_spedizione FOR UPDATE";
+                            "WHERE id%? = ? AND (stato=?::bds_tools.stati_spedizione OR stato=?::bds_tools.stati_spedizione) AND da_ritentare = ? FOR UPDATE";
             try (
                 Connection conn = UtilityFunctions.getDBConnection();
                 PreparedStatement ps = conn.prepareStatement(query)
@@ -754,6 +803,8 @@ public class Spedizioniere implements Job{
                 ps.setInt(1, threadsTotal);
                 ps.setInt(2, threadSerial);
                 ps.setString(3, StatiSpedizione.SPEDITO.toString());
+                ps.setString(4, StatiSpedizione.CONSEGNATO.toString());
+                ps.setInt(5, -1);
                 ResultSet res = ps.executeQuery();
                 while(res.next()){
                     try {
@@ -1047,7 +1098,7 @@ public class Spedizioniere implements Job{
                                         // QUERY DI AGGIORNAMENTO DEGLI STATI DA CONFIRMED -> CONSEGNATO 
                                         //                                    DA ACCEPTED -> PRESA IN CARICO
                                         String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                                        "SET stato=?::bds_tools.stati_spedizione, verifica_timestamp=now() " +
+                                                        "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ?, verifica_timestamp=now() " +
                                                         "WHERE id = ?";
                                         try (
                                             Connection conn = UtilityFunctions.getDBConnection();
@@ -1058,7 +1109,12 @@ public class Spedizioniere implements Job{
                                             }else{
                                                 psquery.setString(1, StatiSpedizione.CONSEGNATO.toString());
                                             }
-                                            psquery.setLong(2, id);
+                                            if (spedizioniereRecepit.getTipo() == TipoRicevuta.AVVENUTA_CONSEGNA) {
+                                                psquery.setInt(2, 0);
+                                            }else{
+                                                psquery.setInt(2, -1);
+                                            }
+                                            psquery.setLong(3, id);
                                             log.debug("Query: " + psquery);
                                             psquery.executeUpdate();
                                         } catch (Exception ex) {
@@ -1083,14 +1139,15 @@ public class Spedizioniere implements Job{
                             if(ggDiff >= getExpired()){ 
                                 // QUERY DI AGGIORNAMENTO DEGLI STATI SU DB da CONFIRMED -> CONSEGNATO 
                                 String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                                "SET stato=?::bds_tools.stati_spedizione, verifica_timestamp=now() " +
+                                                "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ?, verifica_timestamp=now() " +
                                                 "WHERE id = ?";
                                 try (
                                     Connection conn = UtilityFunctions.getDBConnection();
                                     PreparedStatement ps = conn.prepareStatement(query)
                                 ) {
                                     ps.setString(1, StatiSpedizione.CONSEGNATO.toString());
-                                    ps.setLong(2, id);
+                                    ps.setInt(2, 0);
+                                    ps.setLong(3, id);
                                     log.debug("Query: " + ps);
                                     ps.executeUpdate();
                                 } catch (NamingException ex) {
