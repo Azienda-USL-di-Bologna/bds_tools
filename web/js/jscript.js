@@ -10,7 +10,7 @@ $(document).ready(function(){
   var servletUrl = 'http://' + splittedUrl[2]+ '/bds_tools/Schedulatore';
 //  console.log(servletUrl);
 
-  // Funzione che ritorna l'icona del servizio dando in input il nome del servizio
+// Funzione che ritorna l'icona del servizio dando in input il nome del servizio
   function getGlyphicon(service, personalClasses){
     var glyphicon = '';
     switch (service) {
@@ -80,7 +80,7 @@ $(document).ready(function(){
                               message +
                             '</div>';
     $('#bodyId').append(formattedMessage);
-    //setTimeout(function(){hideTemporaryMessage()}, 5000);
+    setTimeout(function(){hideTemporaryMessage()}, 5000);
   }
 
   // Funzione nasconde il messaggio temporaneo
@@ -199,6 +199,7 @@ $(document).ready(function(){
       if (service.name === serviceName) {
         $('#mainContent').text(''); // Svuoto il div prima di ricaricarlo
         $('#mainContent').append(formatDetailService(service));
+        attacheFunctionsToButtons(service);
         break;
       }
     }
@@ -223,6 +224,8 @@ $(document).ready(function(){
     var serviceRole =  service.role ? service.role : '-';
     var serviceActive = service.active ? service.active : '-';
     var serviceClass = service.class ? service.class : '-';
+    var serviceUtilities = getFormattedUtilities(service);
+    console.log(serviceUtilities);
     var htmlMiddle = '<div class="fillWidth padding15">' +
                         '<div class="row margin0">' +
                           '<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6 marginTop15">' +
@@ -239,6 +242,8 @@ $(document).ready(function(){
                           '</div>' +
                           '<div class="clearBoth fillWidth textAlignCenter padding15">Params</div>' +
                           tableWrapper +
+                          '<div class="fillWidth textAlignCenter padding15">Utilities</div>' +
+                          serviceUtilities +
                         '</div>' +
                       '</div>';
     var box = '<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 boxShadow colorBlack borderRadius whiteBackground padding0 marginTop50">' +
@@ -308,6 +313,72 @@ $(document).ready(function(){
     } else {
       return htmlParams;
     }
+  }
+
+  function getFormattedUtilities(service){
+    var htmlUtilities = null;
+    switch (service.name) {
+      case 'VersatoreParer':
+        htmlUtilities = '<div class="fillWidth">' +
+                          '<button id="showGuiInputGuid" type="button" class="btn btn-primary col-lg-2 col-md-3 col-sm-4 col-xs-6">Versa ora!</button>' +
+                        '</div>';
+        break;
+        default:
+          console.log(service);
+          break;
+      
+    }
+    return htmlUtilities;
+  }
+
+  function attacheFunctionsToButtons(sevice){
+    switch (service.name) {
+      case 'VersatoreParer':
+        var innerBox =  '<textarea id="guidList" class="form-control" rows="3"></textarea>' +
+                        '<button id="fireVersatoreParer" type="button" class="btn btn-primary">Versa</button>';
+        $('#showGuiInputGuid').click(function(){
+            var box = formatPopUp('col-lg-6 col-md-6 col-sm-8 col-xs-10', innerBox);
+            $('#mainContent').append(box);
+            $('#fireVersatoreParer').click(function(){
+                var content = $('#guidList').val();
+                console.log(content);
+                fireService(service.name, content)
+            });
+          });
+          
+        break;
+    }
+  }
+
+  function formatPopUp(classes, popUpContent){
+    var box = '<div id="wrapperButtons" class="snsBox fillParent">' +
+                '<div class="innerSnsBox fillParent">' +
+                  '<div class="displayInlineBlock floatNone padding0 borderRadius boxShadow whiteBackground colorBlack '+ classes +'">' +
+                    popUpContent +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+    return box;
+  }
+
+  function fireService(serviceName, content){
+      console.log(serviceName + ' ' + content);
+    $.ajax({
+      method: 'POST',
+      url: servletUrl,
+      data: {
+              'schedulatore': 'fireService',
+              'service': serviceName,
+              'content': content
+            },
+      success: function(data){
+        showTemporaryMessage('Versamento effettuato con successo!');
+      },
+      error: function(jqXHR, textStatus, errorThrown){
+        showTemporaryMessage('Versamento Fallito!</br>Consultare i log per maggiori informazioni.');
+        console.error(jqXHR, textStatus, errorThrown);
+      }
+    });
   }
 
   function getFormattedButtons(active){
@@ -437,3 +508,4 @@ $(document).ready(function(){
 
   showAllServices();
 });
+

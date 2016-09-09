@@ -203,8 +203,18 @@ public class Schedulatore extends HttpServlet {
                     out.close();
                     break;
                 case "fireService":
+                    log.debug("In fireService");
                     String serviceName = request.getParameter("service");
-                    
+                    String content = request.getParameter("content"); // contiene i guid
+                    log.debug("SERVIZIO: " + serviceName);
+                    log.debug("GUID: " + content);
+                    if (serviceName != null && !serviceName.equals("") && content != null && !content.equals("")) {
+                        try {
+                            fireNow(serviceName);
+                        } catch (SchedulerException ex) {
+                            log.debug("Eccezione nel lanciare il servizio!" + ex);
+                        }
+                    }
                     break;
                 default:
                     try {
