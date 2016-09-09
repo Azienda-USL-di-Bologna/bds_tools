@@ -202,6 +202,10 @@ public class Schedulatore extends HttpServlet {
                     out.println(res);
                     out.close();
                     break;
+                case "fireService":
+                    String serviceName = request.getParameter("service");
+                    
+                    break;
                 default:
                     try {
                         /* TODO output your page here. You may use following sample code. */
