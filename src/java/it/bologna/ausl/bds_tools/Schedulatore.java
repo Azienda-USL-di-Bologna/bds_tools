@@ -290,6 +290,15 @@ public class Schedulatore extends HttpServlet {
         }
         return null;
     }
+    
+    //trigger a job
+    public void fireNow(String jobName)
+            throws SchedulerException {
+
+            JobKey jobKey = new JobKey(jobName);
+            sched.triggerJob(jobKey);
+
+    }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
     /**
