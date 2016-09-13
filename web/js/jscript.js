@@ -10,7 +10,7 @@ $(document).ready(function(){
   var servletUrl = 'http://' + splittedUrl[2]+ '/bds_tools/Schedulatore';
 //  console.log(servletUrl);
 
-// Funzione che ritorna l'icona del servizio dando in input il nome del servizio
+  // Funzione che ritorna l'icona del servizio dando in input il nome del servizio
     function getGlyphicon(service, personalClasses){
       var glyphicon = '';
       switch (service) {
@@ -335,7 +335,10 @@ $(document).ready(function(){
       switch (service.name) {
         case 'VersatoreParer':
           var innerBox =  '<textarea id="guidList" class="form-control borderRadius" placeholder="Inserire qui i guid in formato JSON. Esempio: [&quot;id_gddoc1&quot;,&quot;id_gddoc2&quot;]" rows="10"></textarea>' +
-                          '<button id="fireVersatoreParer" type="button" class="btn btn-link noDecoretionOnHover fillWidth">Versa</button>';
+                          '<div class="row">' +
+                            '<button id="fireVersatoreParer" type="button" class="btn btn-link noDecoretionOnHover col-lg-6 col-md-6 col-sm-6 col-xs-6">Versa</button>' +
+                            '<button id="closeVersatoreParer" type="button" class="btn btn-link noDecoretionOnHover col-lg-6 col-md-6 col-sm-6 col-xs-6">Annulla</button>' +
+                          '</div>';
           $('#showGuiInputGuid').click(function(){
               var box = formatPopUp('col-lg-6 col-md-6 col-sm-8 col-xs-10', innerBox);
               showPopUp(box);
@@ -347,6 +350,10 @@ $(document).ready(function(){
                   var content = $('#guidList').val();
                   console.log(content);
                   fireService(service.name, content)
+              });
+              $('#closeVersatoreParer').click(function(event){
+                  event.stopPropagation();
+                  hidePopUp();
               });
             });
 
@@ -369,7 +376,7 @@ $(document).ready(function(){
       $('body').attr('style', 'position:fixed');
       $('#mainContent').append(box);
       var element = document.getElementById('wrapperButtons');
-      $('#wrapperButtons').click(function(){
+      $('#wrapperButtons').click(function(event){
         if ($(event.currentTarget).attr('id') === 'wrapperButtons') {
           hidePopUp();
         }
