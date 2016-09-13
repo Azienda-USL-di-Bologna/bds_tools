@@ -130,8 +130,7 @@ body{
   left: 0;
   right: 0;
   display: table;
-  background-color: black;
-  opacity: 0.8;
+  background-color: rgba(0, 0, 0, 0.8);
 }
 .innerSnsBox{
   display: table-cell;
@@ -183,6 +182,9 @@ body{
 .borderTopNBottom{
   border-top: 1px solid rgba(0,0,0,.12);
   border-bottom: 1px solid rgba(0,0,0,.12);
+}
+.noDecoretionOnHover:hover{
+  text-decoration: none;
 }
 /*
 #externalTopDiv{
