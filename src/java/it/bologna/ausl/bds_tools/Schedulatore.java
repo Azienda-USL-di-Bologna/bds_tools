@@ -29,6 +29,7 @@ import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
 import static org.quartz.JobBuilder.newJob;
+import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
@@ -39,6 +40,7 @@ import org.quartz.TriggerBuilder;
 import static org.quartz.TriggerBuilder.newTrigger;
 import org.quartz.impl.StdSchedulerFactory;
 import org.quartz.impl.matchers.GroupMatcher;
+import static org.quartz.JobBuilder.newJob;
 
 /**
  *
@@ -210,7 +212,7 @@ public class Schedulatore extends HttpServlet {
                     log.debug("GUID: " + content);
                     if (serviceName != null && !serviceName.equals("") && content != null && !content.equals("")) {
                         try {
-                            fireNow(serviceName);
+                            executeNow(serviceName, content);
                         } catch (SchedulerException ex) {
                             log.debug("Eccezione nel lanciare il servizio!" + ex);
                         }
@@ -305,12 +307,54 @@ public class Schedulatore extends HttpServlet {
         return null;
     }
     
-    //trigger a job
-    public void fireNow(String jobName)
-            throws SchedulerException {
+    //lancio a volere un servizio
+    public void executeNow(String jobName, String content) throws SchedulerException {
 
-            JobKey jobKey = new JobKey(jobName);
-            sched.triggerJob(jobKey);
+        try {
+            // Ricarico i parametri del db
+            ConfigParams.initConfigParams();
+            String jobString = ApplicationParams.getSchedulatoreConf();
+            ObjectMapper mapper = new ObjectMapper();
+            JobList jobList = mapper.readValue(jobString, JobList.class);
+            for (JobDescriptor jd : jobList.getJobs()) {
+                if (jd.getName().equals(jobName)){
+                    if (jd.getActive()){
+                        JobParams jp = jd.getJobParams();
+                        JobKey jobKey = new JobKey(jobName);
+
+                        JobBuilder jobBuilder =  JobBuilder.newJob((Class< ? extends Job>)
+                                Class.forName(this.getClass().getPackage().getName() + "." + JOB_PACKAGE_SUFFIX + "." + jd.getClassz()));
+
+                        for (String k : jp.getParamNames()) {
+                            jobBuilder.usingJobData(k, jp.getParam(k));
+                        }
+
+                        // questo job non ha trigger ed è lanciato solo a piacimento
+                        JobDetail jobDetail = jobBuilder.withIdentity(jobKey).storeDurably().build();
+
+                        JobDataMap jobDataMap = jobDetail.getJobDataMap();
+                        jobDataMap.put(jobName, content);
+
+                        //registrazione del job allo schedulatore
+                        sched.addJob(jobDetail, true);
+
+                        //lancia subito il servizio
+                        sched.triggerJob(jobKey, jobDetail.getJobDataMap());
+                    }
+                    else{
+                        log.debug("serivizio non attivo");
+                    }
+                }
+            }
+        } catch (IOException | ClassNotFoundException ex) {
+            log.error(ex);
+        }
+
+        
+        
+        
+        
+            
 
     }
 

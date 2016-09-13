@@ -1,6 +1,5 @@
 package it.bologna.ausl.bds_tools.jobs;
 
-import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.exceptions.VersatoreParerException;
@@ -9,9 +8,7 @@ import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.BagProfiloArchivistico;
-import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParerGdDoc;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDocSessioneVersamento;
@@ -31,7 +28,6 @@ import it.bologna.ausl.riversamento.builder.ProfiloArchivistico;
 import it.bologna.ausl.riversamento.builder.UnitaDocumentariaBuilder;
 import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.sql.Connection;
@@ -41,12 +37,12 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.logging.Level;
 import javax.naming.NamingException;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
@@ -61,6 +57,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
+import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
@@ -95,9 +92,29 @@ public class VersatoreParer implements Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
 
+        // estraggo se ci sono i dati passati al servizio quando lo lancio manualmente
+        JobDataMap dataMap = context.getJobDetail().getJobDataMap();
+        String content = dataMap.getString("VersatoreParer");  
+        
+        log.debug("contenuto: " + content);
+        
+        log.debug("ambiente: " + getAmbiente());
+        
         try {
             // ottengo i gddoc che possono essere versati
-            ArrayList<String> gdDocList = getIdGdDocDaVersate();
+            ArrayList<String> gdDocList = null;
+            
+            
+            if (content != null && !content.equals("")){
+                gdDocList = getIdGdDocFromString(content);
+            }
+            else{
+                // sono nella modalità schedulata
+                gdDocList = getIdGdDocDaVersate();
+            }
+            
+            
+            
       
             // se ho qualche gddoc da versare
             if (gdDocList != null && gdDocList.size() > 0){
@@ -247,6 +264,14 @@ public class VersatoreParer implements Job {
         log.debug("Versatore ParER Ended");
     }
     
+    private ArrayList getIdGdDocFromString(String str){        
+        JSONArray jsonResultArray=(JSONArray)JSONValue.parse(str);
+        ArrayList<String> result=new ArrayList<>();
+        jsonResultArray.stream().forEach((object) -> {
+            result.add((String) object);
+        });
+        return result;
+    }
     
     private ArrayList<String> getIdGdDocDaVersate() throws SQLException, NamingException, VersatoreParerException{
         
