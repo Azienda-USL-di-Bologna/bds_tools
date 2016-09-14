@@ -1,9 +1,9 @@
 $(document).ready(function(){
   urlPage = document.URL;
-  //console.log('URL: ', urlPage);
+//  console.log('URL: ', urlPage);
   var splittedUrl = urlPage.split('/');
 //  for (urlPart of splittedUrl) {
-//    console.log(urlPart);
+//    console.log(splittedUrl);
 //  }
   var allServices = ''; // Contiene il json di TUTTI i servizi dell'ultima chiamata ajax effettuata
   // 'http://localhost:8084/bds_tools/Schedulatore';  IN LOCALE
@@ -390,7 +390,8 @@ $(document).ready(function(){
     }
 
     function fireService(serviceName, content){
-      console.log(serviceName + ' ' + content);
+      console.log('serviceName: ' + serviceName + ' content: ' + content + 'url: ' + servletUrl);
+      
       if (content) {
         $.ajax({
           method: 'POST',
@@ -401,6 +402,7 @@ $(document).ready(function(){
                   'content': content
                 },
           success: function(data){
+            console.log(data);
             hidePopUp();
             showTemporaryMessage('Versamento effettuato con successo!');
           },

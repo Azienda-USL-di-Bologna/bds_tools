@@ -505,7 +505,7 @@
         <url-pattern>/ioda/api/document/</url-pattern>
     </servlet-mapping>
     
-    <!--    <context-param>
+    <!--  <context-param>
             <param-name>schedulatore.active</param-name>
             <param-value>true</param-value>
         </context-param>  -->

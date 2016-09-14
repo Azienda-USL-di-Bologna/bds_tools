@@ -15,20 +15,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.Set;
-import java.util.logging.Level;
 import javax.naming.NamingException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import net.sf.ehcache.search.Results;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.simple.JSONObject;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
-import static org.quartz.JobBuilder.newJob;
 import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
@@ -137,8 +133,6 @@ public class Schedulatore extends HttpServlet {
                     } 
                     sched.scheduleJob(job, trigger);
                 }
-                
-                
             }
             sched.start();
         }
@@ -161,9 +155,18 @@ public class Schedulatore extends HttpServlet {
         String command = request.getParameter("schedulatore");
         PrintWriter out = response.getWriter();
         
+        //String esito =  "inizio processRequest";
+        
+        //log.debug("inizio processRequest");
+        
+        //log.debug("valore_command: " + command);
+        //esito += "valore_command: " + command;
+        
         if (command != null && !command.equals("")) {
             switch (command){
                 case "reload":
+                    //esito += " reload";
+                    log.debug("case reload");
                     try {
                         quarzInit();
                     } catch (SchedulerException ex) {
@@ -174,6 +177,8 @@ public class Schedulatore extends HttpServlet {
                     }
                     break;
                 case "start":
+                    //esito += " start";
+                    log.debug("case start");
                     try {
                         active = true;
                         quarzInit();
@@ -185,6 +190,8 @@ public class Schedulatore extends HttpServlet {
                     }
                     break;
                 case "stop":
+                    //esito += " stop";
+                    log.debug("case stop");
                     try {
                         active = false;
                         quarzStop();
@@ -193,32 +200,41 @@ public class Schedulatore extends HttpServlet {
                     }
                     break;
                 case "json":
+                    //esito += " json";
+                    log.debug("case json");
                     response.setContentType("application/json");
                     String json = ApplicationParams.getSchedulatoreConf();
                     out.println(json);
                     out.close();
                     break;
                 case "status":
+                    //esito += " status";
+                    log.debug("case status");
                     response.setContentType("application/json");
                     String res = "{\"active\":" + active + "}";
                     out.println(res);
                     out.close();
                     break;
                 case "fireService":
-                    log.debug("In fireService");
+                    //esito += "fireService";
+                    log.debug("case fireService");
                     String serviceName = request.getParameter("service");
                     String content = request.getParameter("content"); // contiene i guid
-                    log.debug("SERVIZIO: " + serviceName);
-                    log.debug("GUID: " + content);
+                    log.debug("serviceName: " + serviceName);
+                    log.debug("content: " + content);
                     if (serviceName != null && !serviceName.equals("") && content != null && !content.equals("")) {
                         try {
+                            //esito += " pre executeNow";
                             executeNow(serviceName, content);
+                            //esito += " post executeNow";
                         } catch (SchedulerException ex) {
                             log.debug("Eccezione nel lanciare il servizio!" + ex);
                         }
                     }
                     break;
                 default:
+                    log.debug("case default");
+                    //esito += " default";
                     try {
                         /* TODO output your page here. You may use following sample code. */
                         out.println("<!DOCTYPE html>");
@@ -256,6 +272,8 @@ public class Schedulatore extends HttpServlet {
             }
         } 
         
+        
+        
         String service = request.getParameter("service");
         log.debug("SERVICE: " + service);
         if (service != null && !service.equals("")) {
@@ -284,6 +302,7 @@ public class Schedulatore extends HttpServlet {
                 }
             }
         }
+        //out.println(esito);
     }
     
     private String getJsonFromDb(){
@@ -312,7 +331,9 @@ public class Schedulatore extends HttpServlet {
 
         try {
             // Ricarico i parametri del db
+            log.info("executeNow: inizio funzione");
             ConfigParams.initConfigParams();
+            log.debug("executeNow: lettura parametri json");
             String jobString = ApplicationParams.getSchedulatoreConf();
             ObjectMapper mapper = new ObjectMapper();
             JobList jobList = mapper.readValue(jobString, JobList.class);
@@ -321,25 +342,24 @@ public class Schedulatore extends HttpServlet {
                     if (jd.getActive()){
                         JobParams jp = jd.getJobParams();
                         JobKey jobKey = new JobKey(jobName);
-
                         JobBuilder jobBuilder =  JobBuilder.newJob((Class< ? extends Job>)
                                 Class.forName(this.getClass().getPackage().getName() + "." + JOB_PACKAGE_SUFFIX + "." + jd.getClassz()));
 
                         for (String k : jp.getParamNames()) {
                             jobBuilder.usingJobData(k, jp.getParam(k));
                         }
-
                         // questo job non ha trigger ed è lanciato solo a piacimento
                         JobDetail jobDetail = jobBuilder.withIdentity(jobKey).storeDurably().build();
 
+                        log.debug("executeNow: settaggio dati sulla mappa da passare al servizio");
+                        
                         JobDataMap jobDataMap = jobDetail.getJobDataMap();
                         jobDataMap.put(jobName, content);
-
                         //registrazione del job allo schedulatore
                         sched.addJob(jobDetail, true);
-
                         //lancia subito il servizio
-                        sched.triggerJob(jobKey, jobDetail.getJobDataMap());
+                        log.debug("executeNow: lancio del servizio");
+                        sched.triggerJob(jobKey, jobDetail.getJobDataMap());  
                     }
                     else{
                         log.debug("serivizio non attivo");
