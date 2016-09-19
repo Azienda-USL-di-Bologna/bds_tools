@@ -289,7 +289,7 @@ public class Schedulatore extends HttpServlet {
                             try {
                                 quarzInit();
                             } catch (SchedulerException | ClassNotFoundException ex) {
-                                java.util.logging.Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+                                log.error("Errore nel ricaricamento dei parametri:" + ex);
                             }
                         } catch (SQLException | NamingException ex) {
                             log.error("Eccezione nell'update dello status del servizio " + service + " in " + status, ex);
