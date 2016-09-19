@@ -76,7 +76,7 @@ body{
 }
 .temporaryMessage{
   position: absolute;
-  right: 15;
+  right: 15px;
   top: 67px;
   border-radius: 3px;
   box-shadow: 1px 1px 6px rgba(185, 183, 183, 0.2);
@@ -185,6 +185,10 @@ body{
 }
 .noDecoretionOnHover:hover{
   text-decoration: none;
+}
+.dashboardIconStyle{
+  position: absolute;
+  top: 13px;
 }
 /*
 #externalTopDiv{

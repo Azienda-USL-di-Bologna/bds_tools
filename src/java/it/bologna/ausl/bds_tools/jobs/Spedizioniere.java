@@ -280,6 +280,7 @@ public class Spedizioniere implements Job{
                 try {
                     log.debug("=============Lancio ControlloConsegna==============");
                     if(metodiSincronizzati.check()){
+                        log.debug("Controllo consegna starting now...");
                         controlloConsegna();
                     }
                     log.debug("=============Fine ControlloConsegna==============");
@@ -792,6 +793,7 @@ public class Spedizioniere implements Job{
         }
         
         private void controlloConsegna() throws SpedizioniereException{
+            log.debug("Started!");
             String query =  "SELECT " +
                             "id, id_spedizione_pecgw, id_oggetto_origine, tipo_oggetto_origine, verifica_timestamp, descrizione_oggetto " +
                             "FROM " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -805,6 +807,7 @@ public class Spedizioniere implements Job{
                 ps.setString(3, StatiSpedizione.SPEDITO.toString());
                 ps.setString(4, StatiSpedizione.CONSEGNATO.toString());
                 ps.setInt(5, -1);
+                log.debug("Query controllo consegna: " + ps);
                 ResultSet res = ps.executeQuery();
                 while(res.next()){
                     try {
@@ -980,13 +983,18 @@ public class Spedizioniere implements Job{
             }
         }
         
-        private void controllaRicevuta(ResultSet res, boolean controlloSpedizione) throws SpedizioniereException{
+        private void controllaRicevuta(ResultSet res, boolean controlloSpedizione) throws SpedizioniereException{ 
             log.debug("Dentro controllaRicevuta");
-            SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
-            
             try {
+                log.debug("Extracting id mail to check...");
                 long id = res.getLong("id");
+                log.debug("Id mail extracted: " + id);
+                log.debug("Creating spedizioniere client...");
+                SpedizioniereClient spc = new SpedizioniereClient(getSpedizioniereUrl(), getUsername(), getPassword());
+                log.debug("Created!");
+                log.debug("Extracting id spedizione pecgw...");
                 String idMsg = String.valueOf(res.getInt("id_spedizione_pecgw"));
+                log.debug("Extracted!");
                 log.debug("richiesta stato mail...");
                 SpedizioniereStatus spStatus = spc.getStatus(idMsg);
                 log.debug("stato mail ricevuto: " + spStatus.getStatus().name());
@@ -1494,9 +1502,13 @@ public class Spedizioniere implements Job{
                     log.debug("Controllo consegna giorni differenza: " + giorni);
                     if (giorni != null) {
 
-                        if(giorni >= 1){ // Se il controlloSpedizione() è stato effettuato almeno un giorno fa 
+                        if(giorni >= 1){ // Se il controlloSpedizione() è stato effettuato almeno un giorno fa
+                            log.debug("Controllo consegna will start soon...");
+                            log.debug("Setting data inizio...");
                             setDataInizio();
+                            log.debug("done!");
                             canStartControllo = true; // Setto la variabile a true così i successivi thread partono senza effettuare il check
+                            log.debug("Returning true...");
                             return true; // Ritorno true per far eseguire controlloSpedizione() al primo thread
                         }else{
                             canStartControllo = false;
@@ -1508,10 +1520,14 @@ public class Spedizioniere implements Job{
                 }
                 else{
                     log.debug("dataInizio == null");
+                    log.debug("The service will start for the first time...");
                     // Se la dataInizio è uguale a null la setto e ritorno true per far partire controlloSpedizione() al primo thread 
                     // e setto canControllo per per i successivi
+                    log.debug("Setting data inizio...");
                     setDataInizio();
+                    log.debug("done!");
                     canStartControllo = true;
+                    log.debug("Returning true...");
                     return true;
                 }
             }

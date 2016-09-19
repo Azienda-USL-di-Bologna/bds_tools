@@ -89,7 +89,7 @@ $(document).ready(function(){
       messageWrapper.parentNode.removeChild(messageWrapper);
     }
 
-    function showAllServices() {
+    function showAllServices(oldJson, counter) {
       $.ajax({
         method: 'POST',
         url: servletUrl,
@@ -97,13 +97,20 @@ $(document).ready(function(){
         success: function(data){
           if (data) {
             if (data.jobs) {
-              allServices = data;
-              $('#mainContent').text(''); // Svuoto il div prima di ricaricarlo
-              for (var i = 0; i < data.jobs.length; i++) {
-                  $('#mainContent').append(formatService(data.jobs[i]));
-                  addOnclickToShowDetaiService(data.jobs[i].name);
-                  addOnclickChangeServiceStatus(i);
+              if (oldJson) {
+                if (oldJson === data) {
+                  if (counter <= 3) {
+                    setTimeout(function(){showAllServices(data, counter++)}, 1000);
+                  }else {
+                    showTemporaryMessage('Deve essersi verificato un errore lato server:<br/>Il Json ritornato dal server è uguale a quello attuale.');
+                  }
+                }else {
+                  attachToTheWall(data);
+                }
+              }else {
+                attachToTheWall(data);
               }
+
               // $('#PulitoreMongoDownload').click(function(){showDetailService('PulitoreMongoDownload')});
               // $('#AzzeratoreUidEmailScaricate').click(function(){showDetailService('AzzeratoreUidEmailScaricate')});
               // $('#PulitoreCestinoMongo').click(function(){showDetailService('PulitoreCestinoMongo')});
@@ -115,9 +122,27 @@ $(document).ready(function(){
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
-          console.error(jqXHR, textStatus, errorThrown);
+          if (!counter) {
+            counter = 2;
+          }
+          if (counter <= 3) {
+            setTimeout(function(){showAllServices(oldJson, counter++)}, 1000);
+          }else {
+            console.error(jqXHR, textStatus, errorThrown);
+            showTemporaryMessage('Si è verificato un errore nella chiamata al server.<br>Guardare la console dei log per maggiori informazioni.');
+          }
         }
       });
+    }
+
+    function attachToTheWall(data){
+      allServices = data;
+      $('#mainContent').text(''); // Svuoto il div prima di ricaricarlo
+      for (var i = 0; i < data.jobs.length; i++) {
+          $('#mainContent').append(formatService(data.jobs[i]));
+          addOnclickToShowDetaiService(data.jobs[i].name);
+          addOnclickChangeServiceStatus(i);
+      }
     }
 
     function addOnclickToShowDetaiService(serviceName){
@@ -141,7 +166,6 @@ $(document).ready(function(){
               $('#mainContent').text(''); // Svuoto il div prima di ricaricarlo
               var atLeastOne = false;
               for (var i = 0; i < data.jobs.length; i++) {
-                console.log(data.jobs[i].active + ' - ' + status);
                 if (data.jobs[i].active === status) { // Active è stringa status è stringa
                   atLeastOne = true;
                   $('#mainContent').append(formatService(data.jobs[i]));
@@ -225,7 +249,7 @@ $(document).ready(function(){
       var serviceActive = service.active ? service.active : '-';
       var serviceClass = service.class ? service.class : '-';
       var serviceUtilities = getFormattedUtilities(service);
-      console.log(serviceUtilities);
+      var serviceUtilities = serviceUtilities ? serviceUtilities : '<div class="fillWidth textAlignCenter">This service has no utilities</div>';
       var htmlMiddle = '<div class="fillWidth padding15">' +
                           '<div class="row margin0">' +
                             '<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6 marginTop15">' +
@@ -246,9 +270,11 @@ $(document).ready(function(){
                             serviceUtilities +
                           '</div>' +
                         '</div>';
-      var box = '<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 boxShadow colorBlack borderRadius whiteBackground padding0 marginTop50">' +
-                  htmlTop +
-                  htmlMiddle +
+      var box = '<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 padding15">' +
+                  '<div class="fillParent boxShadow colorBlack borderRadius whiteBackground padding0">' +
+                    htmlTop +
+                    htmlMiddle +
+                  '</div>' +
                 '</div>';
       return box;
     }
@@ -323,10 +349,6 @@ $(document).ready(function(){
                             '<button id="showGuiInputGuid" type="button" class="btn btn-primary col-lg-2 col-md-3 col-sm-4 col-xs-6">Versa ora!</button>' +
                           '</div>';
           break;
-          default:
-            console.log(service);
-            break;
-
       }
       return htmlUtilities;
     }
@@ -348,7 +370,6 @@ $(document).ready(function(){
               $('#fireVersatoreParer').click(function(event){
                   event.stopPropagation();
                   var content = $('#guidList').val();
-                  console.log(content);
                   fireService(service.name, content)
               });
               $('#closeVersatoreParer').click(function(event){
@@ -390,7 +411,6 @@ $(document).ready(function(){
     }
 
     function fireService(serviceName, content){
-      console.log(serviceName + ' ' + content);
       if (content) {
         $.ajax({
           method: 'POST',
@@ -415,7 +435,6 @@ $(document).ready(function(){
     }
 
     function getFormattedButtons(active){
-      console.log('In');
       var options = '';
       if (active) {
         options = '<a href="#">' +
@@ -513,7 +532,6 @@ $(document).ready(function(){
       //     break;
       //   }
       // }
-      console.log(allServices);
       var jsonToString = JSON.stringify(allServices, null, '\t');
       $.ajax({
         method: 'POST',
@@ -523,8 +541,9 @@ $(document).ready(function(){
                 json: jsonToString,
                 status: newStatus
               },
-        success: function(data){
-          showAllServices();
+        success: function(){
+          // showTemporaryMessage('Lo stato del servizio è stato cambiato con successo!<br>Aggiornare la pagina per avere lo stato attuale dei servizi.');
+          showAllServices(allServices, 1);
         },
         error: function(jqXHR, textStatus, errorThrown){
           console.error(jqXHR, textStatus, errorThrown);
@@ -532,6 +551,7 @@ $(document).ready(function(){
       });
     }
 
+    $('#dashboardIcon').click(function(){showAllServices()});
     $('#allServices').click(function(){showAllServices()});
     $('#activeServices').click(function(){showActiveServices(true)});
     $('#stoppedServices').click(function(){showActiveServices(false)});

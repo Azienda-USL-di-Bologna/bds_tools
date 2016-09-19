@@ -93,12 +93,20 @@ public class Schedulatore extends HttpServlet {
     }
 
     private void quarzInit() throws SchedulerException, IOException, ClassNotFoundException {
+        log.info("QuartzInit called!");
         if (active) {
             log.info("Inizializzazione schedulatore");
             quarzStop();
             
-            // Ricarico i parametri del db
+            log.info("Before configParams...");
+            try {
+                // Ricarico i parametri del db
+                ApplicationParams.initApplicationParams(getServletContext());
+            } catch (SQLException | NamingException | ServletException ex) {
+                log.error("Eccezione nel ricaricamento di ApplicationParams: " + ex);
+            }
             ConfigParams.initConfigParams();
+            log.info("After configParams");
 
            // URL jobConfURL = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getPackage().getName().replace(".", "/") + "/" + CONF_PACKAGE_SUFFIX + "/" + CONF_FILE_NAME);
            // if (jobConfURL == null) {
@@ -156,7 +164,7 @@ public class Schedulatore extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
-        //response.addHeader("Access-Control-Allow-Origin", "*");
+        //response.addHeader("Access-Control-Allow-Origin", "*"); 
         
         String command = request.getParameter("schedulatore");
         PrintWriter out = response.getWriter();
@@ -164,8 +172,11 @@ public class Schedulatore extends HttpServlet {
         if (command != null && !command.equals("")) {
             switch (command){
                 case "reload":
+                    log.info("Case reload!");
                     try {
+                        log.info("Before quartzInit!");
                         quarzInit();
+                        log.info("After quartzInit!");
                     } catch (SchedulerException ex) {
                         log.fatal(ex);
                     } catch (ClassNotFoundException ex) {
@@ -194,8 +205,7 @@ public class Schedulatore extends HttpServlet {
                     break;
                 case "json":
                     response.setContentType("application/json");
-                    String json = ApplicationParams.getSchedulatoreConf();
-                    out.println(json);
+                    out.println(ApplicationParams.getSchedulatoreConf());
                     out.close();
                     break;
                 case "status":
@@ -252,38 +262,42 @@ public class Schedulatore extends HttpServlet {
                     } finally {
                         out.close();
                     }
-                    break;          
+                    break;
             }
-        } 
-        
-        String service = request.getParameter("service");
-        log.debug("SERVICE: " + service);
-        if (service != null && !service.equals("")) {
-            String json = request.getParameter("json");
-            log.debug("JSON: " + json);
-            if (json != null && !json.equals("")) {
-                String status = request.getParameter("status");
-                log.debug("STATUS: " + status);
-                if (status != null && !status.equals("")) {
-                    String queryUpdateStatus =  "UPDATE " + ApplicationParams.getParametriPubbliciTableName() + " " +
-                                                "SET val_parametro=? " +
-                                                "WHERE nome_parametro=?;";
-                    try (
-                        Connection dbConnection = UtilityFunctions.getDBConnection();
-                        PreparedStatement ps = dbConnection.prepareStatement(queryUpdateStatus)
-                    ) {
-                        int i = 1;
-                        ps.setString(i++, json);
-                        ps.setString(i++, "schedulatoreConfJson");
-                        log.debug("QUERY: " + ps);
-                        ps.executeUpdate();
-                        ConfigParams.initConfigParams();
-                    } catch (SQLException | NamingException ex) {
-                        log.error("Eccezione nell'update dello status del servizio " + service + " in " + status, ex);
+        }else{
+            String service = request.getParameter("service");
+            log.debug("SERVICE: " + service);
+            if (service != null && !service.equals("")) {
+                String json = request.getParameter("json");
+                log.debug("JSON: " + json);
+                if (json != null && !json.equals("")) {
+                    String status = request.getParameter("status");
+                    log.debug("STATUS: " + status);
+                    if (status != null && !status.equals("")) {
+                        String queryUpdateStatus =  "UPDATE " + ApplicationParams.getParametriPubbliciTableName() + " " +
+                                                    "SET val_parametro=? " +
+                                                    "WHERE nome_parametro=?;";
+                        try (
+                            Connection dbConnection = UtilityFunctions.getDBConnection();
+                            PreparedStatement ps = dbConnection.prepareStatement(queryUpdateStatus)
+                        ) {
+                            int i = 1;
+                            ps.setString(i++, json);
+                            ps.setString(i++, "schedulatoreConfJson");
+                            log.debug("QUERY: " + ps);
+                            ps.executeUpdate();
+                            try {
+                                quarzInit();
+                            } catch (SchedulerException | ClassNotFoundException ex) {
+                                java.util.logging.Logger.getLogger(Schedulatore.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        } catch (SQLException | NamingException ex) {
+                            log.error("Eccezione nell'update dello status del servizio " + service + " in " + status, ex);
+                        }
                     }
                 }
             }
-        }
+        } 
     }
     
     private String getJsonFromDb(){
