@@ -37,7 +37,6 @@ import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -102,8 +101,7 @@ public class VersatoreParer implements Job {
         
         try {
             // ottengo i gddoc che possono essere versati
-            ArrayList<String> gdDocList = null;
-            
+            ArrayList<String> gdDocList = null;  
             
             if (content != null && !content.equals("")){
                 gdDocList = getIdGdDocFromString(content);
@@ -113,9 +111,6 @@ public class VersatoreParer implements Job {
                 gdDocList = getIdGdDocDaVersate();
             }
             
-            
-            
-      
             // se ho qualche gddoc da versare
             if (gdDocList != null && gdDocList.size() > 0){
             
@@ -145,110 +140,135 @@ public class VersatoreParer implements Job {
                     for (String idGdDoc : gdDocList) {                        
                         GdDoc gddoc = getGdDocById(idGdDoc);
                         
-                        // determino se il gddoc è versabile oppure no
-                        isVersabile = isVersabile(gddoc);
-                        
-                        if (isVersabile){
-                            // calcolo i dati
+                        // se c'è un errore lo segnamo comunque
+                        try{
+                            // determino se il gddoc è versabile oppure no
+                            isVersabile = isVersabile(gddoc);
+
+                            if (isVersabile){
+                                // calcolo i dati
+                                GdDocSessioneVersamento gdSessioneVersamento = new GdDocSessioneVersamento();
+                                DatiParerGdDoc datiparer = gddoc.getDatiParerGdDoc();
+
+                                gdSessioneVersamento.setIdSessioneVersamento(idSessioneVersamento);
+                                gdSessioneVersamento.setGuidSessioneVersamento(guidSessioneVersamento);
+                                gdSessioneVersamento.setIdGdDoc(idGdDoc);
+
+                                try{
+                                    SendToParerParams sendToParerParams = getSendToParerParams(gddoc);
+                                    log.debug("sendToParerParams creati");
+                                    String xmlVersato = sendToParerParams.getXmlDocument();
+                                    String codiceErrore, descrizioneErrore, rapportoVersamento;
+
+                                    gdSessioneVersamento.setXmlVersato(xmlVersato);
+
+                                    // lancio del mestiere
+                                    String retQueue = "notifica_errore" + "_" + ApplicationParams.getAppId() + "_sendToParerRetQueue_" + ApplicationParams.getServerId();
+                                    log.debug("Creazione Worker..");
+                                    WorkerData wd = new WorkerData(ApplicationParams.getAppId(), "1", retQueue);
+                                    log.debug("Worker creato");
+                                    wd.addNewJob("1", null, sendToParerParams);
+
+                                    RedisClient redisClient = new RedisClient(ApplicationParams.getRedisHost(), null);
+                                    log.debug("Aggiungo Worker a redis..");
+                                    redisClient.put(wd.getStringForRedis(), ApplicationParams.getRedisInQueue());
+                                    log.debug("Worker aggiunto su redis");
+
+                                    String extractedValue = redisClient.bpop(retQueue, 86400);
+
+                                    // se extractedValue = null è scaduto il timeout
+                                    WorkerResponse workerResponse = new WorkerResponse(extractedValue);
+                                    SendToParerErrorDetails castedErrorDetails = null;
+
+                                    ErrorDetails errorDetail = workerResponse.getErrorDetails();
+
+                                    if(errorDetail != null){
+                                        castedErrorDetails = (SendToParerErrorDetails) errorDetail;
+
+                                        codiceErrore = castedErrorDetails.getErrorCode();
+                                        descrizioneErrore = castedErrorDetails.getErrorMessage();
+                                        rapportoVersamento = castedErrorDetails.getParerResponse();
+
+                                        log.error("errore versamento id_gddoc: " + gddoc.getId() +
+                                                " con codice: " + codiceErrore + 
+                                                " messaggio: " + descrizioneErrore);
+
+                                        gdSessioneVersamento.setRapportoVersamento(rapportoVersamento);
+                                        gdSessioneVersamento.setCodiceErrore(codiceErrore);
+                                        if (codiceErrore.equals("SERVIZIO")){
+                                            gdSessioneVersamento.setDescrizioneErrore("Riscontrato un problema nel servizio. Il documento sarà versato nella prossima sessione di versamento");
+                                            gdSessioneVersamento.setEsito("SERVIZIO");
+
+                                            datiparer.setStatoVersamentoProposto("da_versare");
+                                            datiparer.setStatoVersamentoEffettivo("non_versare");
+                                        }
+                                        else{
+                                            gdSessioneVersamento.setDescrizioneErrore(descrizioneErrore);
+                                            gdSessioneVersamento.setEsito("ERRORE");
+
+                                            datiparer.setStatoVersamentoProposto("errore_versamento");
+                                            datiparer.setStatoVersamentoEffettivo("errore_versamento");
+                                        }
+                                    }
+
+                                    if (!workerResponse.getStatus().equals("OK")){
+                                        log.error("workerResponse.getStatus() != OK");
+                                    }
+                                    else{
+                                        log.debug("workerResponse.getStatus() == OK");
+                                        SendToParerResult castedResult = null;
+                                        WorkerResult workerResult = workerResponse.getResult(0);
+
+                                        if (workerResult.getRes() != null){
+                                            castedResult = (SendToParerResult) workerResult.getRes();
+                                            gdSessioneVersamento.setRapportoVersamento(castedResult.getParerResponse());
+                                        }
+
+                                        gdSessioneVersamento.setEsito("OK");
+                                        gdSessioneVersamento.setCodiceErrore(null);
+                                        gdSessioneVersamento.setDescrizioneErrore(null);
+
+                                        datiparer.setStatoVersamentoProposto("versato");
+                                        datiparer.setStatoVersamentoEffettivo("versato");
+                                    }
+                                    saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
+                                }
+                                catch(Exception e){
+                                    log.error("errore nel versamento: " + e);
+                                    
+                                    // imposto gli stati di errore
+                                    gdSessioneVersamento.setEsito("ERRORE");
+                                    gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
+                                    gdSessioneVersamento.setDescrizioneErrore(e.toString());
+
+                                    datiparer.setStatoVersamentoProposto("errore_versamento");
+                                    datiparer.setStatoVersamentoEffettivo("errore_versamento");
+                                    
+                                    // persist
+                                    saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
+                                }
+                            }
+                        }
+                        catch(Exception ex){
+                            log.error("errore nel versamento con idGdDoc: " +gddoc.getId()+ " eccezione: "+ ex);
+                            
                             GdDocSessioneVersamento gdSessioneVersamento = new GdDocSessioneVersamento();
                             DatiParerGdDoc datiparer = gddoc.getDatiParerGdDoc();
                             
+                            // imposto gli stati di errore
                             gdSessioneVersamento.setIdSessioneVersamento(idSessioneVersamento);
                             gdSessioneVersamento.setGuidSessioneVersamento(guidSessioneVersamento);
-                            gdSessioneVersamento.setIdGdDoc(idGdDoc);
+                            gdSessioneVersamento.setIdGdDoc(gddoc.getId());
                             
-                            try{
-                                
-                                
-                                SendToParerParams sendToParerParams = getSendToParerParams(gddoc);
-                                log.debug("sendToParerParams creati");
-                                String xmlVersato = sendToParerParams.getXmlDocument();
-                                String codiceErrore, descrizioneErrore, rapportoVersamento;
-                                
-                                gdSessioneVersamento.setXmlVersato(xmlVersato);
-                                
-                                // lancio del mestiere
-                                String retQueue = "notifica_errore" + "_" + ApplicationParams.getAppId() + "_sendToParerRetQueue_" + ApplicationParams.getServerId();
-                                log.debug("Creazione Worker..");
-                                WorkerData wd = new WorkerData(ApplicationParams.getAppId(), "1", retQueue);
-                                log.debug("Worker creato");
-                                wd.addNewJob("1", null, sendToParerParams);
-                                
-                                RedisClient redisClient = new RedisClient(ApplicationParams.getRedisHost(), null);
-                                log.debug("Aggiungo Worker a redis..");
-                                redisClient.put(wd.getStringForRedis(), ApplicationParams.getRedisInQueue());
-                                log.debug("Worker aggiunto su redis");
-                                
-                                String extractedValue = redisClient.bpop(retQueue, 86400);
-                                
-                                // se extractedValue = null è scaduto il timeout
-                                WorkerResponse workerResponse = new WorkerResponse(extractedValue);
-                                SendToParerErrorDetails castedErrorDetails = null;
-                                
-                                ErrorDetails errorDetail = workerResponse.getErrorDetails();
-                                
-                                if(errorDetail != null){
-                                    castedErrorDetails = (SendToParerErrorDetails) errorDetail;
-                                    
-                                    codiceErrore = castedErrorDetails.getErrorCode();
-                                    descrizioneErrore = castedErrorDetails.getErrorMessage();
-                                    rapportoVersamento = castedErrorDetails.getParerResponse();
-                                    
-                                    log.error("errore versamento id_gddoc: " + gddoc.getId() +
-                                            " con codice: " + codiceErrore + 
-                                            " messaggio: " + descrizioneErrore);
-                                    
-                                    gdSessioneVersamento.setRapportoVersamento(rapportoVersamento);
-                                    gdSessioneVersamento.setCodiceErrore(codiceErrore);
-                                    if (codiceErrore.equals("SERVIZIO")){
-                                        gdSessioneVersamento.setDescrizioneErrore("Riscontrato un problema nel servizio. Il documento sarà versato nella prossima sessione di versamento");
-                                        gdSessioneVersamento.setEsito("SERVIZIO");
-                                        
-                                        datiparer.setStatoVersamentoProposto("da_versare");
-                                        datiparer.setStatoVersamentoEffettivo("non_versare");
-                                    }
-                                    else{
-                                        gdSessioneVersamento.setDescrizioneErrore(descrizioneErrore);
-                                        gdSessioneVersamento.setEsito("ERRORE");
-                                       
-                                        datiparer.setStatoVersamentoProposto("errore_versamento");
-                                        datiparer.setStatoVersamentoEffettivo("errore_versamento");
-                                    }
-                                }
-                                
-                                if (!workerResponse.getStatus().equals("OK")){
-                                    log.error("workerResponse.getStatus() != OK");
-                                }
-                                else{
-                                    log.debug("workerResponse.getStatus() == OK");
-                                    SendToParerResult castedResult = null;
-                                    WorkerResult workerResult = workerResponse.getResult(0);
-                                    
-                                    if (workerResult.getRes() != null){
-                                        castedResult = (SendToParerResult) workerResult.getRes();
-                                        gdSessioneVersamento.setRapportoVersamento(castedResult.getParerResponse());
-                                    }
-                                    
-                                    gdSessioneVersamento.setEsito("OK");
-                                    gdSessioneVersamento.setCodiceErrore(null);
-                                    gdSessioneVersamento.setDescrizioneErrore(null);
-                                    
-                                    datiparer.setStatoVersamentoProposto("versato");
-                                    datiparer.setStatoVersamentoEffettivo("versato");
-                                }
-                                saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
-                            }
-                            catch(Exception e){
-                                log.error("errore nel versamento: " + e);
-                                gdSessioneVersamento.setEsito("ERRORE");
-                                gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
-                                gdSessioneVersamento.setDescrizioneErrore(e.toString());
-                                
-                                datiparer.setStatoVersamentoProposto("errore_versamento");
-                                datiparer.setStatoVersamentoEffettivo("errore_versamento");
-                                saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
-                            }
-                        }
+                            gdSessioneVersamento.setEsito("ERRORE");
+                            gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
+                            gdSessioneVersamento.setDescrizioneErrore(ex.getMessage());
+                            datiparer.setStatoVersamentoProposto("errore_versamento");
+                            datiparer.setStatoVersamentoEffettivo("errore_versamento");
+                            
+                            // persist
+                            saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
+                        } 
                     }
                 }
                 setStopSessioneVersamento(idSessioneVersamento);
@@ -1072,7 +1092,7 @@ public class VersatoreParer implements Job {
         switch (getStringFromJsonObject(gddoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
             
             case "in":
-                // il gddoc è ersabile se sono passati almeno 7 giorni
+                // il gddoc è versabile se sono passati almeno 7 giorni
                 Days d = Days.daysBetween(DateTime.now(), gddoc.getDataRegistrazione());
                 int giorni = d.getDays();
                 
