@@ -76,6 +76,7 @@ public class VersatoreParer implements Job {
  
     private boolean canSendPicoUscita, canSendPicoEntrata, canSendDete, canSendDeli;
     private boolean canSendRegistroGiornaliero, canSendRegistroAnnuale;
+    private boolean canSendRgPico, canSendRgDete, canSendRgDeli;
     private int limit;
     
     private String versione;
@@ -1135,7 +1136,19 @@ public class VersatoreParer implements Job {
          
             case "RegistroRepertorio":
                 if (getCanSendRegistroGiornaliero()){
-                    res = true;
+                    
+                    if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
+                        res = true;
+                    }
+                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
+                        res = true;
+                    }
+                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
+                        res = true;
+                    }
+                    else {
+                        res = false;
+                    }
                 }
             break;
             
@@ -1342,6 +1355,30 @@ public class VersatoreParer implements Job {
 
     public void setCanSendRegistroAnnuale(boolean canSendRegistroAnnuale) {
         this.canSendRegistroAnnuale = canSendRegistroAnnuale;
+    }
+
+    public boolean getCanSendRgPico() {
+        return canSendRgPico;
+    }
+
+    public void setCanSendRgPico(boolean canSendRgPico) {
+        this.canSendRgPico = canSendRgPico;
+    }
+
+    public boolean getCanSendRgDete() {
+        return canSendRgDete;
+    }
+
+    public void setCanSendRgDete(boolean canSendRgDete) {
+        this.canSendRgDete = canSendRgDete;
+    }
+
+    public boolean getCanSendRgDeli() {
+        return canSendRgDeli;
+    }
+
+    public void setCanSendRgDeli(boolean canSendRgDeli) {
+        this.canSendRgDeli = canSendRgDeli;
     }
     
     public int getLimit() {
