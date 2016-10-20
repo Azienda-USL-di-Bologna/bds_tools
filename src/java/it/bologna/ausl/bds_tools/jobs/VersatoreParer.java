@@ -294,19 +294,64 @@ public class VersatoreParer implements Job {
         return result;
     }
     
+    private String getCodiciAbilitati(){
+        String res = "";
+        ArrayList<String> codici = new ArrayList<>();
+        
+        if (getCanSendDeli()){
+            codici.add("'DELI'");
+        }
+        
+        if (getCanSendDete()){
+            codici.add("'DETE'");
+        }
+        
+        if (getCanSendPicoEntrata() || getCanSendPicoUscita()){
+            codici.add("'PG'");
+        }
+        
+        if (getCanSendRgDeli()){
+            codici.add("'RGDELI'");
+        }
+        
+        if (getCanSendRgPico()){
+            codici.add("'RGPICO'");
+        }
+        
+        if (getCanSendRgDete()){
+            codici.add("'RGDETE'");
+        }
+        
+        if (codici.size() > 0){
+            res = codici.get(0);
+            for (int i = 1; i < codici.size(); i++) {
+                res = res + "," + codici.get(i);
+            }
+        }
+        else{
+            res = "''";
+        }
+        
+        return res;
+    }
+    
     private ArrayList<String> getIdGdDocDaVersate() throws SQLException, NamingException, VersatoreParerException{
         
         String query = null;
         ArrayList<String> res = new ArrayList<>();
         
+        
+        
         if (getLimit() > 0){
             query = 
-                "SELECT id_gddoc " +
-                "FROM " + ApplicationParams.getDatiParerGdDocTableName() + " " +
-                "WHERE (stato_versamento_effettivo = 'non_versare' or stato_versamento_effettivo = 'errore_versamento') " + 
-                "AND xml_specifico_parer IS NOT NULL and xml_specifico_parer !=  '' " + 
-                "and (stato_versamento_proposto = 'da_versare' or stato_versamento_proposto = 'da_aggiornare') " + 
-                "limit " + getLimit();
+                "SELECT dp.id_gddoc " +
+                "FROM " + ApplicationParams.getDatiParerGdDocTableName() + " dp, " + ApplicationParams.getGdDocsTableName() + " g " +
+                "WHERE dp.id_gddoc = g.id_gddoc " + 
+                "AND (dp.stato_versamento_effettivo = 'non_versare' or dp.stato_versamento_effettivo = 'errore_versamento') " + 
+                "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " + 
+                "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
+                "AND g.codice_registro in (" + getCodiciAbilitati() +")" + 
+                "LIMIT " + getLimit();
         }
         else if(!getDateFrom().equals("") && getDateTo().equals("")){
             query =
@@ -316,6 +361,7 @@ public class VersatoreParer implements Job {
                 "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " +  
                 "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
                 "AND g.id_gddoc = dp.id_gddoc " + 
+                "AND g.codice_registro in (" + getCodiciAbilitati() +")" + 
                 "AND g.data_registrazione > '" + getDateFrom() +"' ";
         }
         else if(!getDateFrom().equals("") && !getDateTo().equals("")){
@@ -326,16 +372,19 @@ public class VersatoreParer implements Job {
                 "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " +  
                 "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
                 "AND g.id_gddoc = dp.id_gddoc " + 
+                "AND g.codice_registro in (" + getCodiciAbilitati() +")" + 
                 "AND g.data_registrazione > '" + getDateFrom() + "' " + 
                 "AND g.data_registrazione < '" + getDateTo() + "' ";
         }
         else{
             query = 
-                "SELECT id_gddoc " +
-                "FROM " + ApplicationParams.getDatiParerGdDocTableName() + " " +
-                "WHERE (stato_versamento_effettivo = 'non_versare' or stato_versamento_effettivo = 'errore_versamento') " + 
-                "and xml_specifico_parer IS NOT NULL and xml_specifico_parer !=  '' " + 
-                "and (stato_versamento_proposto = 'da_versare' or stato_versamento_proposto = 'da_aggiornare') ";
+                "SELECT dp.id_gddoc " +
+                "FROM " + ApplicationParams.getDatiParerGdDocTableName() + " dp, " + ApplicationParams.getGdDocsTableName() + " g " +
+                "WHERE dp.id_gddoc = g.id_gddoc " + 
+                "AND (dp.stato_versamento_effettivo = 'non_versare' or dp.stato_versamento_effettivo = 'errore_versamento') " + 
+                "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " + 
+                "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
+                "AND g.codice_registro in (" + getCodiciAbilitati() +") ";
         }      
         
         try (
