@@ -387,6 +387,8 @@ public class VersatoreParer implements Job {
                 "AND g.codice_registro in (" + getCodiciAbilitati() +") ";
         }      
         
+        log.debug("eseguo la query: " + query);
+        
         try (
             Connection dbConnection = UtilityFunctions.getDBConnection();
             PreparedStatement ps = dbConnection.prepareStatement(query)
