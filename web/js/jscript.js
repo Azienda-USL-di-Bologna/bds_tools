@@ -311,6 +311,9 @@ $(document).ready(function(){
                         '<tr><td>canSendDete</td><td>' + service.params.canSendDete + '</td></tr>' +
                         '<tr><td>canSendDeli</td><td>' + service.params.canSendDeli + '</td></tr>' +
                         '<tr><td>canSendRegistroGiornaliero</td><td>' + service.params.canSendRegistroGiornaliero + '</td></tr>' +
+                        '<tr><td>canSendRgPico</td><td>' + service.params.canSendRgPico + '</td></tr>' +
+                        '<tr><td>canSendRgDete</td><td>' + service.params.canSendRgDete + '</td></tr>' +
+                        '<tr><td>canSendRgDeli</td><td>' + service.params.canSendRgDeli + '</td></tr>' +
                         '<tr><td>canSendRegistroAnnuale</td><td>' + service.params.canSendRegistroAnnuale + '</td></tr>' +
                         '<tr><td>limit</td><td>' + service.params.limit + '</td></tr>' +
                         '<tr><td>versione</td><td>' + service.params.versione + '</td></tr>' +
