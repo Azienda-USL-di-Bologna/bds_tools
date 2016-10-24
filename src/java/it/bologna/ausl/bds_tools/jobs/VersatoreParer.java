@@ -1138,8 +1138,17 @@ public class VersatoreParer implements Job {
     private boolean isVersabile(GdDoc gddoc) throws SQLException, NamingException{
         
         boolean res = false;
-        Fascicolazione primaFascicolazione = ordinaFascicolazioni(gddoc.getFascicolazioni()).get(0);
-        DateTime dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
+        Fascicolazione primaFascicolazione = null;
+        DateTime dataPrimaFascicolazione = null;
+        try{
+            primaFascicolazione = ordinaFascicolazioni(gddoc.getFascicolazioni()).get(0);
+            dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
+        }
+        catch(Exception ex){
+            log.error(ex);
+            dataPrimaFascicolazione = null;
+        }
+        
         
         switch (getStringFromJsonObject(gddoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
             
@@ -1312,9 +1321,14 @@ public class VersatoreParer implements Job {
             if (fascicolazioni.size() > 0){
                 
                 // ordino in ordine crescente
-                Collections.sort(fascicolazioni);
-                
-                res = fascicolazioni;
+                try{
+                    Collections.sort(fascicolazioni);
+                    res = fascicolazioni;
+                }
+                catch(Exception ex){
+                    log.error("errore nella funzione di Collection.sort(): " + ex);
+                    res = null;
+                }
             }
             else{
                 log.debug("fascicolazioni = 0");
