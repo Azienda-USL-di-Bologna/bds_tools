@@ -1154,7 +1154,7 @@ public class VersatoreParer implements Job {
             
             case "in":
                 // il gddoc è versabile se sono passati almeno 7 giorni
-                Days d = Days.daysBetween(DateTime.now(), gddoc.getDataRegistrazione());
+                Days d = Days.daysBetween(gddoc.getDataRegistrazione(), DateTime.now());
                 int giorni = d.getDays();
                 
                 if (getCanSendPicoEntrata() && giorni > 7){
