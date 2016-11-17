@@ -13,9 +13,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.naming.NamingException;
 import org.apache.logging.log4j.LogManager;
 import org.quartz.DisallowConcurrentExecution;
@@ -29,20 +26,20 @@ import org.quartz.JobExecutionException;
  */
 @DisallowConcurrentExecution
 public class CreatoreFascicoloSpeciale implements Job{
-    private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(Spedizioniere.class);
-    private String fascicoloSpecialeAtti;
-    private String fascicoloSpecialeRegistri;
-    private String fascicoloSpecialeDete;
-    private String fascicoloSpecialeDeli;
-    private String idUtenteResponsabileFascicoloSpeciale;
-    private String idVicarioFascicoloSpeciale;
-    private String idClassificazioneFascicoloSpeciale;
+    private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(CreatoreFascicoloSpeciale.class);
+    private final String fascicoloSpecialeAtti;
+    private final String fascicoloSpecialeRegistri;
+    private final String fascicoloSpecialeDete;
+    private final String fascicoloSpecialeDeli;
+    private final String idUtenteResponsabileFascicoloSpeciale;
+    private final String idVicarioFascicoloSpeciale;
+    private final String idClassificazioneFascicoloSpeciale;    
+    private final String registroGgProtocollo;
+    private final String registroGgDeliberazioni;
+    private final String registroGgDeterminazioni;
+    private final String registriAnnuali;
+    private final Integer anno;
     private String idStrutturaUtenteResponsabile;
-    private String registroGgProtocollo;
-    private String registroGgDeliberazioni;
-    private String registroGgDeterminazioni;
-    private String registriAnnuali;
-    private Integer anno;
 
     public CreatoreFascicoloSpeciale() {
         log.debug("=========================== Inizializzazione Servizio Creazione Fascicoli Speciali ===========================");

@@ -263,6 +263,14 @@
         <param-value>gd.pubblicazioni_albo</param-value>
     </context-param>
     <context-param>
+        <param-name>MetadatiTrasparenzaTableName</param-name>
+        <param-value>bds_tools.metadati_trasparenza</param-value>
+    </context-param>
+    <context-param>
+        <param-name>TipiProvveddimentoTableName</param-name>
+        <param-value>bds_tools.tipi_provvedimento</param-value>
+    </context-param>
+    <context-param>
         <param-name>SpedizioniPecGlobaleTableName</param-name>
         <param-value>bds_tools.spedizioni_pec_globale</param-value>
     </context-param>

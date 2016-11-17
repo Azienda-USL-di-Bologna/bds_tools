@@ -52,6 +52,8 @@ public class ApplicationParams {
     private static String aggiornamentiParerTableName;
     private static String parametriPubbliciTableName;
     private static String pubblicazioniAlboTableName;
+    private static String metadatiTrasparenzaTableName;
+    private static String tipiProvveddimentoTableName;
 //    private static String pubblicazioniAlboQueryInsertPubblicazione;
 //    private static String pubblicazioniAlboQueryUpdatePubblicazione;
 
@@ -106,6 +108,8 @@ public class ApplicationParams {
         parametriPubbliciTableName = context.getInitParameter("ParametersTableName");
         serviziTableName = context.getInitParameter("ServiziTableName");
         pubblicazioniAlboTableName = context.getInitParameter("PubblicazioniAlboTableName");
+        metadatiTrasparenzaTableName = context.getInitParameter("MetadatiTrasparenzaTableName");
+        tipiProvveddimentoTableName = context.getInitParameter("TipiProvveddimentoTableName");
 //        pubblicazioniAlboQueryInsertPubblicazione = context.getInitParameter("PubblicazioniAlboQueryInsertPubblicazione");
 //        pubblicazioniAlboQueryUpdatePubblicazione = context.getInitParameter("PubblicazioniAlboQueryUpdatePubblicazione");
         
@@ -292,6 +296,16 @@ public class ApplicationParams {
     public static String getPubblicazioniAlboTableName() {
         return pubblicazioniAlboTableName;
     }
+
+    public static String getMetadatiTrasparenzaTableName() {
+        return metadatiTrasparenzaTableName;
+    }
+
+    public static String getTipiProvveddimentoTableName() {
+        return tipiProvveddimentoTableName;
+    }
+
+
 //
 //    public static String getPubblicazioniAlboQueryInsertPubblicazione() {
 //        return pubblicazioniAlboQueryInsertPubblicazione;

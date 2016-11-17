@@ -10,12 +10,12 @@ import java.sql.SQLException;
  * @author gdm
  */
 public class Registro {
-    public String codiceRegistro;
-    public String descrizione;
-    public String principale;
-    public String tipoDocumento;
-    public String descPubbAlbo;
-    public String sequenzaAssociata;
+    private String codiceRegistro;
+    private String descrizione;
+    private String principale;
+    private String tipoDocumento;
+    private String descPubbAlbo;
+    private String sequenzaAssociata;
 
     public Registro() {
     }

@@ -169,8 +169,8 @@ private final List<String> uuidsToDelete = new ArrayList<>();
     public void insertPubblicazione(Connection dbConn, PubblicazioneIoda pubblicazione) throws SQLException {
         String sqlText = 
                 "INSERT INTO " + ApplicationParams.getPubblicazioniAlboTableName() + "(" +
-                "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc, pubblicatore, esecutivita, data_defissione, data_esecutivita, esecutiva) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "numero_pubblicazione, anno_pubblicazione, data_dal, data_al, id_gddoc, pubblicatore, esecutivita, data_defissione, data_esecutivita, esecutiva, tipologia, pubblica_solo_se_pubblicato_albo) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
             if (pubblicazione.getNumeroPubblicazione() != null)
@@ -207,8 +207,12 @@ private final List<String> uuidsToDelete = new ArrayList<>();
 
             ps.setInt(index++, pubblicazione.isEsecutiva() ? -1: 0);
 
+            ps.setString(index++, pubblicazione.getTipologia().name());
+
+            ps.setInt(index++, pubblicazione.isPubblicaSoloSePubblicatoAlbo() ? -1: 0);
+
             String query = ps.toString();
-            
+
             Savepoint savepoint = null;
             if (!dbConn.getAutoCommit()) {
                 log.debug("creazione savepoint...");
@@ -237,7 +241,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             }
         }
     }
-    
+
     public void deleteFascicolazioni(Connection dbConn) throws SQLException {
         String sqlText = 
                 "DELETE FROM " + getFascicoliGdDocTable() + " " + 
@@ -252,7 +256,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
             int result = ps.executeUpdate();
         }
     }
-    
+
     public void deleteFascicolazione(Connection dbConn, Fascicolazione fascicolazione) throws SQLException {
     String sqlText = 
                 "DELETE FROM " + getFascicoliGdDocTable() + " " + 
@@ -427,7 +431,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
                     if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString() + "...");
-                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc, false));
+                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc, gdDoc.getIdOggettoOrigine(), false));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString());
@@ -538,7 +542,7 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
                     if (collection != null && ((String)collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString() + "...");
-                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc, true));
+                        gdDoc.setPubblicazioni(caricaPubblicazioni(dbConn, idGdDoc, gdDoc.getIdOggettoOrigine().replaceFirst(prefix, ""), true));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.SOTTODOCUMENTI.toString());
@@ -566,11 +570,11 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         return fascicolazioniUtilities.getFascicolazioni(dbConn, escludiSpeciali);
     }
     
-    private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc, boolean soloNumerate) throws SQLException {
+    private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc, String idOggettoOrigine, boolean soloNumerate) throws SQLException {
         
-        String sqlText = null;
+        String sqlText;
         
-        if (soloNumerate){
+        if (soloNumerate) {
            sqlText = 
                 "SELECT  numero_pubblicazione, " +
                 "anno_pubblicazione, " +
@@ -578,16 +582,19 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "data_al, " +
                 "pubblicatore, " + 
                 "esecutivita, " + 
-                "data_defissione " +
-                "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
-                "WHERE id_gddoc = ? " + 
-                "AND numero_pubblicazione IS NOT NULL " + 
-                "AND numero_pubblicazione > 0 " + 
-                "AND anno_pubblicazione IS NOT NULL " + 
-                "AND anno_pubblicazione > 0 " + 
-                "ORDER BY numero_pubblicazione"; 
+                "esecutiva, " + 
+                "data_defissione, " +
+                "tipologia, " + 
+                "pubblica_solo_se_pubblicato_albo," +
+                "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p " +
+                "WHERE p.id_gddoc = ? " + 
+                "AND p.numero_pubblicazione IS NOT NULL " + 
+                "AND p.numero_pubblicazione > 0 " + 
+                "AND p.anno_pubblicazione IS NOT NULL " + 
+                "AND p.anno_pubblicazione > 0 " + 
+                "ORDER BY p.numero_pubblicazione"; 
         }
-        else{
+        else {
             sqlText = 
                 "SELECT  numero_pubblicazione, " +
                 "anno_pubblicazione, " +
@@ -595,13 +602,14 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 "data_al, " +
                 "pubblicatore, " + 
                 "esecutivita, " + 
-                "data_defissione " +
+                "esecutiva, " + 
+                "data_defissione, " +
+                "tipologia, " +
+                "pubblica_solo_se_pubblicato_albo" +
                 "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " " +
                 "WHERE id_gddoc = ? " + 
                 "ORDER BY numero_pubblicazione";
         }
-        
-        
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
@@ -616,13 +624,33 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                 p.setDataDal(new DateTime(res.getDate("data_dal").getTime()));
                 p.setNumeroPubblicazione(res.getLong("numero_pubblicazione"));
                 p.setPubblicatore(res.getString("pubblicatore"));
+                p.setEsecutiva((res.getInt("esecutiva") != 0));
                 p.setEsecutivita(res.getString("esecutivita"));
+                p.setTipologia(PubblicazioneIoda.Tipologia.valueOf(res.getString("tipologia")));
+                p.setPubblicaSoloSePubblicatoAlbo((res.getInt("pubblica_solo_se_pubblicato_albo") != 0));
                 Timestamp dataDefissione = res.getTimestamp("data_defissione");
                 if (dataDefissione != null)
                     p.setDataDefissione(new DateTime(dataDefissione.getTime()));
+                
+                String sqlTipoProvvedimentoText = 
+                "SELECT t.descrizione " +
+                "FROM " + ApplicationParams.getMetadatiTrasparenzaTableName() + " m " +
+                "JOIN " + ApplicationParams.getTipiProvveddimentoTableName() + " t " +
+                "ON m.id_tipo_provvedimento = t.id_tipo_provvedimento " +
+                "WHERE m.guid_oggetto = ?";
+                try (PreparedStatement psTipoProvvedimento = dbConn.prepareStatement(sqlTipoProvvedimentoText)) {
+                    psTipoProvvedimento.setString(1, idOggettoOrigine);
+
+                    log.debug("eseguo la query: " + psTipoProvvedimento.toString() + "...");
+                    ResultSet resTipoProvvedimento = psTipoProvvedimento.executeQuery();
+                    while (resTipoProvvedimento.next()) {
+                        p.setTipoProvvedimentoTrasparenza(res.getString("descrizione"));
+                    }
+                }
                 pubblicazioni.add(p);
             }
         }
+
         return pubblicazioni;
     }
 
@@ -854,8 +882,17 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     insertSottoDocumento(dbConn, sottoDocumento);
                 }
             }
-            return gdDoc.getGuid();
+
+            
+            // inserimento Pubblicazioni
+            List<PubblicazioneIoda> pubblicazioni = gdDoc.getPubblicazioni();
+            if (pubblicazioni != null && !pubblicazioni.isEmpty()) {
+                for (PubblicazioneIoda pubblicazione : pubblicazioni) {
+                    insertPubblicazione(dbConn, pubblicazione);
+                }
+            } 
         }
+        return gdDoc.getGuid();
     }
 
     /**
@@ -1056,16 +1093,21 @@ private final List<String> uuidsToDelete = new ArrayList<>();
         }
         
         // inserimento Pubblicazioni
-        // le pullicazioni non possono essere cancellate
+        // le pubblicazioni non possono essere cancellate
         List<PubblicazioneIoda> pubblicazioni = gdDoc.getPubblicazioni();
         if (pubblicazioni != null && !pubblicazioni.isEmpty()) {
             for (PubblicazioneIoda pubblicazione : pubblicazioni) {
-                if (pubblicazione.getTipoOperazione() == Document.DocumentOperationType.INSERT)
-                    insertPubblicazione(dbConn, pubblicazione);
-                else if (pubblicazione.getTipoOperazione() == Document.DocumentOperationType.UPDATE)
-                    throw new IodaDocumentException("operazione non ancora implementata");
-                else
+                if (null == pubblicazione.getTipoOperazione())
                     throw new IodaDocumentException("operazione non consentita");
+                else switch (pubblicazione.getTipoOperazione()) {
+                    case INSERT:
+                        insertPubblicazione(dbConn, pubblicazione);
+                        break;
+                    case UPDATE:
+                        throw new IodaDocumentException("operazione non ancora implementata");
+                    default:
+                        throw new IodaDocumentException("operazione non consentita");
+                }
             }
         }
     }
@@ -1906,17 +1948,21 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                         "g.oggetto, " +
                         "g.tipo_oggetto_origine, " +
                         "g.stato_gd_doc, " + 
-                        "json_agg(row_to_json(p.*)) AS pubblicazioni " +
+                        "json_agg(row_to_json(p.*) order by p.id) AS pubblicazioni, " +
+                        "t.descrizione " +
                         "FROM " + ApplicationParams.getGdDocsTableName() + " g " +
                         "INNER JOIN " + ApplicationParams.getPubblicazioniAlboTableName() + " p on g.id_gddoc = p.id_gddoc  " +
+                	"INNER JOIN " + ApplicationParams.getAuthenticationTable() + " a on g.applicazione = a.id_applicazione " +
+                        "INNER JOIN " + ApplicationParams.getMetadatiTrasparenzaTableName() + " m on a.prefix || m.guid_oggetto = g.id_oggetto_origine " +
+                        "INNER JOIN " + ApplicationParams.getTipiProvveddimentoTableName() + " t on t.id_tipo_provvedimento = m.id_tipo_provvedimento " +
                         "WHERE p.numero_pubblicazione IS NULL " +
                         "AND p.anno_pubblicazione IS NULL " +
                         "AND g.numero_registrazione IS NOT NULL " +
                         "AND g.tipo_gddoc = ? " +
                         "GROUP BY g.id_gddoc, g.applicazione, g.codice, g.codice_registro, g.data_gddoc, g.data_registrazione, g.data_ultima_modifica, " +
                         "g.id_oggetto_origine, g.nome_gddoc, g.nome_struttura_firmatario, g.numero_registrazione, g.oggetto, g.tipo_gddoc, g.tipo_oggetto_origine, " +
-                        "g.stato_gd_doc, p.id " +
-                        "ORDER BY p.id ";
+                        "g.stato_gd_doc, t.descrizione " +
+                        "ORDER BY min(p.id)";
 
         PreparedStatement s = null;
 
@@ -1956,14 +2002,23 @@ private final List<String> uuidsToDelete = new ArrayList<>();
                     pubblicazione.setId((Long) pubblicazioneJson.get("id"));
                     pubblicazione.setNumeroPubblicazione((Long) pubblicazioneJson.get("numero_pubblicazione"));
                     pubblicazione.setAnnoPubblicazione((Integer) pubblicazioneJson.get("anno_pubblicazione"));
-                    pubblicazione.setDataDal(DateTime.parse((String) pubblicazioneJson.get("data_dal")));
-                    pubblicazione.setDataAl(DateTime.parse((String) pubblicazioneJson.get("data_al")));
-                    String data_esecutivita = (String) pubblicazioneJson.get("data_esecutivita");
-                    if (data_esecutivita != null && !data_esecutivita.isEmpty())
-                        pubblicazione.setDataEsecutivita(DateTime.parse(data_esecutivita));
+                    String dataDal = (String) pubblicazioneJson.get("data_dal");
+                    if (dataDal != null && !dataDal.isEmpty())
+                        pubblicazione.setDataDal(DateTime.parse(dataDal));
+                    String dataAl = (String) pubblicazioneJson.get("data_al");
+                    if (dataAl != null && !dataAl.isEmpty())
+                        pubblicazione.setDataAl(DateTime.parse(dataAl));
+                    String dataEsecutivita = (String) pubblicazioneJson.get("data_esecutivita");
+                    if (dataEsecutivita != null && !dataEsecutivita.isEmpty())
+                        pubblicazione.setDataEsecutivita(DateTime.parse(dataEsecutivita));
                     pubblicazione.setEsecutivita((String) pubblicazioneJson.get("esecutivita"));
                     pubblicazione.setEsecutiva(((Long) pubblicazioneJson.get("esecutiva")) != 0);
                     pubblicazione.setPubblicatore((String) pubblicazioneJson.get("pubblicatore"));
+                    pubblicazione.setTipologia(PubblicazioneIoda.Tipologia.valueOf((String) pubblicazioneJson.get("tipologia")));
+                    pubblicazione.setPubblicaSoloSePubblicatoAlbo(((Long) pubblicazioneJson.get("pubblica_solo_se_pubblicato_albo")) != 0);
+                    
+                    pubblicazione.setTipoProvvedimentoTrasparenza(result.getString("descrizione"));
+                    
                     //Aggiungo la pubblicazione appena creata
                     pubblicazioniList.add(pubblicazione);
                 }
