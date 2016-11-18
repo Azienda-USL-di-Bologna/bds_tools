@@ -31,13 +31,15 @@ import org.apache.logging.log4j.Logger;
  * @author gdm
  */
 @MultipartConfig(
-            fileSizeThreshold   = 1024 * 1024 * 10,  // 10 MB
-//            maxFileSize         = 1024 * 1024 * 10, // 10 MB
-//            maxRequestSize      = 1024 * 1024 * 15, // 15 MB
-            location            = ""
+        fileSizeThreshold = 1024 * 1024 * 10, // 10 MB
+        //            maxFileSize         = 1024 * 1024 * 10, // 10 MB
+        //            maxRequestSize      = 1024 * 1024 * 15, // 15 MB
+        location = ""
 )
 public class GetGdDoc extends HttpServlet {
-private static final Logger log = LogManager.getLogger(GetGdDoc.class);
+
+    private static final Logger log = LogManager.getLogger(GetGdDoc.class);
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -49,15 +51,15 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
-    request.setCharacterEncoding("utf-8");
-    // configuro il logger per la console
+        request.setCharacterEncoding("utf-8");
+        // configuro il logger per la console
 //    BasicConfigurator.configure();
-    log.info("--------------------------------");
-    log.info("Avvio servlet: " + getClass().getSimpleName());
-    log.info("--------------------------------");
-    Connection dbConn = null;
-    GdDoc gdDoc;
-        try { 
+        log.info("--------------------------------");
+        log.info("Avvio servlet: " + getClass().getSimpleName());
+        log.info("--------------------------------");
+        Connection dbConn = null;
+        GdDoc gdDoc;
+        try {
             // leggo i parametri dalla richiesta
             IodaRequestDescriptor iodaRequest;
             try (InputStream is = request.getInputStream()) {
@@ -66,13 +68,12 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
                     return;
                 }
                 iodaRequest = IodaRequestDescriptor.parse(is);
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 log.error("formato json della richiesta errato: " + ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "formato json della richiesta errato: " + ex);
                 return;
             }
-            
+
             // dati per l'autenticazione
             String idapplicazione = iodaRequest.getIdApplicazione();
             String tokenapplicazione = iodaRequest.getTokenApplicazione();
@@ -80,9 +81,8 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
             // ottengo una connessione al db
             try {
                 dbConn = UtilityFunctions.getDBConnection();
-            }
-            catch (SQLException sQLException) {
-                String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();    
+            } catch (SQLException sQLException) {
+                String message = "Problemi nella connesione al Data Base. Indicare i parametri corretti nei file di configurazione dell'applicazione" + "\n" + sQLException.getMessage();
                 log.error(message);
                 throw new ServletException(message);
             }
@@ -91,19 +91,17 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
             String prefix;
             try {
                 prefix = UtilityFunctions.checkAuthentication(dbConn, idapplicazione, tokenapplicazione);
-            }
-            catch (NotAuthorizedException ex) {
+            } catch (NotAuthorizedException ex) {
                 try {
                     dbConn.close();
-                }
-                catch (Exception subEx) {
+                } catch (Exception subEx) {
                 }
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
-            
+
             try {
-                SimpleDocument doc = Requestable.parse(((Document)iodaRequest.getObject()).getJSONString(), SimpleDocument.class);
+                SimpleDocument doc = Requestable.parse(((Document) iodaRequest.getObject()).getJSONString(), SimpleDocument.class);
                 if (doc == null) {
                     throw new IodaDocumentException("json descrittivo del documento mancante");
                 }
@@ -111,28 +109,25 @@ private static final Logger log = LogManager.getLogger(GetGdDoc.class);
 //                if (additionalData == null || additionalData.isEmpty())
 //                    throw new IodaDocumentException("AdditionalData mancanti");
                 gdDoc = IodaDocumentUtilities.getGdDoc(dbConn, doc, additionalData, prefix);
-                if (gdDoc == null)
+                if (gdDoc == null) {
                     throw new ServletException("GdDoc non trovato");
-            }
-            catch (IodaDocumentException ex) {
+                }
+            } catch (IodaDocumentException ex) {
                 log.error(ex);
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, ex.getMessage());
                 return;
-            }
-            finally {
+            } finally {
                 try {
                     dbConn.close();
-                }
-                catch (Exception subEx) {
+                } catch (Exception subEx) {
+                    log.error(subEx);
                 }
             }
-        }
-        catch (Exception ex) {
-            log.error(ex);
+        } catch (Exception ex) {
+            log.error("errore", ex);
             throw new ServletException(ex);
         }
-        
-        
+
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
             out.print(gdDoc.getJSONString());

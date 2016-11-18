@@ -25,7 +25,7 @@
     <Loggers>
         <Root level="debug">
             <!--<AppenderRef ref="FILEGDM" />-->
-            <!--<AppenderRef ref="Console" />-->
+<!--            <AppenderRef ref="Console" />-->
             <AppenderRef ref="RollFile" />
         </Root>
     </Loggers>
