@@ -96,9 +96,13 @@ public class VersatoreParer implements Job {
         JobDataMap dataMap = context.getJobDetail().getJobDataMap();
         String content = dataMap.getString("VersatoreParer");  
         
-        log.debug("contenuto: " + content);
-        
+        log.debug("contenuto come versamento - a volere - : " + content);
         log.debug("ambiente: " + getAmbiente());
+        
+        // setto parametri di sessione versamento
+        Map<String, String> idGuidINDE = setStartSessioneVersamento();
+        String idSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_ID_PARAM_NAME);
+        String guidSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_GUID_PARAM_NAME);
         
         try {
             // ottengo i gddoc che possono essere versati
@@ -116,13 +120,12 @@ public class VersatoreParer implements Job {
             if (gdDocList != null && gdDocList.size() > 0){
             
                 // inizio sessione di versamento
-                Map<String, String> idGuidINDE = setStartSessioneVersamento();
-                String idSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_ID_PARAM_NAME);
-                String guidSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_GUID_PARAM_NAME);
+//                Map<String, String> idGuidINDE = setStartSessioneVersamento();
+//                String idSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_ID_PARAM_NAME);
+//                String guidSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_GUID_PARAM_NAME);
                 if (idSessioneVersamento != null && !idSessioneVersamento.equals("")){
 
-                    boolean isVersabile = false;
-                    
+                    boolean isVersabile = false;         
 // --------------- per test --------------------         
 //
 //                    // Ji_j2A?]O6cff-_@[NiY non foglia
@@ -133,15 +136,32 @@ public class VersatoreParer implements Job {
 //                    
 //                    //GdDoc gddoc = getGdDocById("`?71,[j(Fx/SXigr0-;G");
 //                    GdDoc gddoc = getGdDocById("Z{)wiNrQ<w^j)vWZVYP,");
-// --------------- fine per test --------------------         
-                    
-                    log.debug("gddoc da versare: " + gdDocList.size());
+// --------------- fine per test --------------------                            
+                    log.debug("numero di gddoc da versare: " + gdDocList.size());
 
                     // ottengo l'oggetto GdDoc completo
-                    for (String idGdDoc : gdDocList) {                        
-                        GdDoc gddoc = getGdDocById(idGdDoc);
+                    for (String idGdDoc : gdDocList) {
                         
-                        // se c'è un errore lo segnamo comunque
+                        GdDoc gddoc = null;
+                                
+                        try{
+                            gddoc = getGdDocById(idGdDoc);
+                        }
+                        catch(Exception e){
+                            // se fallisce la costruzione del gddoc allora lo segno sugli errori versamento e salto al prossimo da versare
+                            log.error("fallita ricostruzione del gddoc con ID: " + idGdDoc);
+                            GdDocSessioneVersamento gdSessioneVersamento = new GdDocSessioneVersamento();
+                            gdSessioneVersamento.setIdSessioneVersamento(idSessioneVersamento);
+                            gdSessioneVersamento.setGuidSessioneVersamento(guidSessioneVersamento);
+                            gdSessioneVersamento.setIdGdDoc(idGdDoc);
+                            gdSessioneVersamento.setXmlVersato(null);
+                            gdSessioneVersamento.setEsito("ERRORE");
+                            gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
+                            gdSessioneVersamento.setDescrizioneErrore("fallita ricostruzione del gddoc con errore: " + e.toString());
+                            saveVersamento(gdSessioneVersamento, idGdDoc);
+                            continue;
+                        }
+                        
                         try{
                             // determino se il gddoc è versabile oppure no
                             isVersabile = isVersabile(gddoc);
@@ -272,17 +292,17 @@ public class VersatoreParer implements Job {
                         } 
                     }
                 }
-                setStopSessioneVersamento(idSessioneVersamento);
+                //setStopSessioneVersamento(idSessioneVersamento);
                 log.debug("fine sessione di versamento");
             }
         }catch (Throwable t) {
             log.fatal("Versatore Parer: Errore ...", t);
         }
         finally {
+            setStopSessioneVersamento(idSessioneVersamento);
             log.info("Job Versatore Parer finished");
+            log.debug("Versatore ParER Ended");
         }
-
-        log.debug("Versatore ParER Ended");
     }
     
     private ArrayList getIdGdDocFromString(String str){        
@@ -450,7 +470,7 @@ public class VersatoreParer implements Job {
             ps.setString(index++, guidInde);
             
                                     
-            log.debug("PrepareStatment: " + ps);                      
+            //log.debug("PrepareStatment: " + ps);                      
             int rowsUpdated = ps.executeUpdate();
             log.debug("eseguita");
             if (rowsUpdated == 0){
@@ -462,6 +482,55 @@ public class VersatoreParer implements Job {
             
             dbConnection.commit();
             
+        } catch (SQLException | NamingException | IOException | SendHttpMessageException ex) {
+            log.fatal("errore: " + ex);
+        }
+    }
+    
+    private void saveVersamento(GdDocSessioneVersamento g, String idGdDoc){
+                
+        String query = 
+                "INSERT INTO " + ApplicationParams.getGdDocSessioniVersamentoParerTableName() + "( " +
+                "id_gddoc_versamento, id_gddoc, id_sessione_versamento_parer, " + 
+                "xml_versato, esito, codice_errore, descrizione_errore, " + 
+                "rapporto_versamento, guid_gddoc_versamento) " +
+                "VALUES (?, ?, ?, " + 
+                "?, ?, ?, ?, " + 
+                "?, ?)";
+        
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(query)
+        ) {
+            dbConnection.setAutoCommit(false);
+            log.debug("salvataggio di un gddoc_sessione_versamento");
+            // ottengo in ID di INDE
+            String idInde = getIndeId().get(INDE_DOCUMENT_ID_PARAM_NAME);
+            String guidInde = getIndeId().get(INDE_DOCUMENT_GUID_PARAM_NAME);
+            log.debug("valore id INDE: " + idInde);
+            
+            int index = 1;
+            
+            // ID di INDE
+            ps.setString(index++, idInde);
+            ps.setString(index++, idGdDoc);
+            ps.setString(index++, g.getIdSessioneVersamento());
+            ps.setString(index++, g.getXmlVersato());
+            ps.setString(index++, g.getEsito());
+            ps.setString(index++, g.getCodiceErrore());
+            ps.setString(index++, g.getDescrizioneErrore());
+            ps.setString(index++, g.getRapportoVersamento());
+            ps.setString(index++, guidInde);
+            
+                                    
+            //log.debug("PrepareStatment: " + ps);                      
+            int rowsUpdated = ps.executeUpdate();
+            log.debug("eseguita");
+            if (rowsUpdated == 0){
+                dbConnection.rollback();
+                throw new SQLException("record di gddoc_sessione_versamento non inserito");
+            }
+            dbConnection.commit();            
         } catch (SQLException | NamingException | IOException | SendHttpMessageException ex) {
             log.fatal("errore: " + ex);
         }
@@ -1127,7 +1196,6 @@ public class VersatoreParer implements Job {
             HashMap<String, Object> additionalData = new HashMap <String, Object>(); 
             additionalData.put("FASCICOLAZIONI", "LOAD");
             additionalData.put("PUBBLICAZIONI", "LOAD");
-            
             
             gdDoc = IodaDocumentUtilities.getGdDocById(dbConnection, idGdDoc, additionalData, prefix);
             gdDoc.setId(idGdDoc);
