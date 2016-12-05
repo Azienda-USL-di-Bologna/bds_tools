@@ -1,5 +1,6 @@
 package it.bologna.ausl.bds_tools.ioda.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
@@ -15,11 +16,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONValue;
 
 
 public class IodaFascicoliUtilities {
@@ -140,8 +148,9 @@ public class IodaFascicoliUtilities {
             String titolo = results.getString(index++);
             String idFascicoloImportato = results.getString(index++);
             DateTime dataChiusura = null;
-            if(results.getString(index++)!= null){
-                dataChiusura = DateTime.parse(results.getString(index++), formatter);
+            String tmp = results.getString(index++);
+            if(tmp != null){
+                dataChiusura = DateTime.parse(tmp, formatter);
             }
             String noteImportazione = results.getString(index++);                           
             int accesso = results.getInt(index++);
@@ -180,6 +189,109 @@ public class IodaFascicoliUtilities {
         return res;
     }
 
+    public HashMap<String, String> getFascicoliPregressi(Connection dbConn, PreparedStatement ps) throws SQLException, JsonProcessingException{
+        HashMap<String, Fascicolo> fascicoliMap = getFascicoliPregressi(dbConn, ps, researcher.getSearchString(), researcher.getIdUtente());
+        HashMap<String, String> res = new HashMap<>();
+        
+        for (Map.Entry<String, Fascicolo> entry : fascicoliMap.entrySet()){
+            res.put(entry.getKey(), entry.getValue().getJSONString());
+        }
+        
+        return res;
+    }
+    
+    private HashMap<String, Fascicolo> getFascicoliPregressi(Connection dbConn, PreparedStatement ps, String str, String idUtente) throws SQLException{
+        
+        JSONArray jsonArray = (JSONArray) JSONValue.parse(str);
+        List<String> list = new ArrayList<>();
+        for(int i = 0; i < jsonArray.size(); i++){
+            list.add((String)jsonArray.get(i));
+        }
+        String idList = "'" + StringUtils.join(list, "','") + "'";
+        
+        HashMap<String, Fascicolo> res = new HashMap<>();
+        
+        String sqlText = "SELECT distinct(f.id_fascicolo), f.id_livello_fascicolo, " +
+            "   CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
+            "		WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " + 
+            "		ELSE nome_fascicolo " + 
+            "        END as nome_fascicolo_interfaccia, " + 
+            "        f.numero_fascicolo, " + 
+            "        f.nome_fascicolo,f.anno_fascicolo, f.id_utente_creazione, f.data_creazione, " + 
+            "        f.numerazione_gerarchica, f.id_utente_responsabile, uResp.nome, uResp.cognome, " + 
+            "        f.stato_fascicolo, f.id_utente_responsabile_proposto, f.id_fascicolo_padre, " + 
+            "        f.id_titolo, f.speciale, t.codice_gerarchico || '' || t.codice_titolo || ' ' || t.titolo as titolo, " + 
+            "        f.id_fascicolo_importato, f.data_chiusura, f.note_importazione " + 
+            "FROM gd.fascicoligd f " + 
+            "	LEFT join procton.titoli t ON t.id_titolo = f.id_titolo " + 
+            "	JOIN procton.utenti uResp ON uResp.id_utente=f.id_utente_responsabile " + 
+            "	JOIN procton.utenti uCrea ON f.id_utente_creazione=uCrea.id_utente " + 
+            "WHERE 1=1  " + 
+            "	AND f.id_fascicolo_importato in ( " + idList + " ) ";
+        
+        ps = dbConn.prepareStatement(sqlText);
+        
+        ResultSet results = ps.executeQuery();
+        
+        while (results.next()) {
+            int index = 1;
+            String idFascicolo = results.getString(index++);
+            String idLivelloFascicolo = results.getString(index++);
+            String nomeFascicoloInterfaccia = results.getString(index++);
+            int numeroFascicolo = results.getInt(index++);
+            String nomeFascicolo = results.getString(index++);
+            int annoFascicolo = results.getInt(index++);
+            String idUtenteCreazione = results.getString(index++);
+            
+            DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd");
+            DateTimeFormatter formatterWithHHmmss = DateTimeFormat.forPattern("yyyy-MM-dd H:mm:ss");
+            
+            DateTime dataCreazione = DateTime.parse(results.getString(index++), formatter);
+            String numerazioneGerarchica = results.getString(index++);
+            String idUtenteResponsabile = results.getString(index++);
+            String nomeUtenteResponsabile = results.getString(index++);
+            String cognomeUtenteResponsabile = results.getString(index++);
+            String statoFascicolo = results.getString(index++);
+            String idUtenteResponsabileProposto = results.getString(index++);
+            String idFascicoloPadre = results.getString(index++);
+            String idTitolo = results.getString(index++);
+            int speciale = results.getInt(index++);
+            String titolo = results.getString(index++);
+            String idFascicoloImportato = results.getString(index++);
+            DateTime dataChiusura = null;
+            String tmp = results.getString(index++);
+            if(tmp != null){
+                dataChiusura = DateTime.parse(tmp, formatterWithHHmmss);
+            }
+            String noteImportazione = results.getString(index++);                           
+            
+            String descrizioneUtenteResponsabile = nomeUtenteResponsabile + " " + cognomeUtenteResponsabile;
+            Fascicolo f = new Fascicolo();
+            f.setCodiceFascicolo(numerazioneGerarchica);
+            f.setNumeroFascicolo(numeroFascicolo);
+            f.setNomeFascicolo(nomeFascicolo);
+            f.setNomeFascicoloInterfaccia(nomeFascicoloInterfaccia);
+            f.setIdUtenteResponsabile(idUtenteResponsabile);
+            f.setDescrizioneUtenteResponsabile(descrizioneUtenteResponsabile);
+            f.setDataCreazione(dataCreazione);
+            f.setAnnoFascicolo(annoFascicolo);
+            f.setIdLivelloFascicolo(idLivelloFascicolo);
+            f.setIdUtenteCreazione(idUtenteCreazione);
+            f.setStatoFascicolo(statoFascicolo);
+            f.setSpeciale(speciale);
+            f.setTitolo(titolo);
+            f.setIdUtenteResponsabileProposto(idUtenteResponsabileProposto);
+            f.setIdFascicoloImportato(idFascicoloImportato);    
+            f.setDataChiusura(dataChiusura);                    
+            f.setNoteImportazione(noteImportazione);            
+            f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
+            
+            res.put(idFascicoloImportato, f);
+        }
+               
+        return res;
+    }
+    
     public Fascicoli getFascicoloSpeciale(Connection dbConn, PreparedStatement ps) throws SQLException {
         
         String sqlText =    "SELECT id_fascicolo, numerazione_gerarchica, " +

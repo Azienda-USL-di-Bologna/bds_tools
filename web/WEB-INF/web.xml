@@ -73,6 +73,10 @@
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicoli</servlet-class>
     </servlet>
     <servlet>
+        <servlet-name>GetFascicoliPregressi</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicoliPregressi</servlet-class>
+    </servlet>
+    <servlet>
         <servlet-name>UpdateGdDoc</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateGdDoc</servlet-class>
     </servlet>
@@ -491,6 +495,10 @@
     <servlet-mapping>
         <servlet-name>GetFascicoli</servlet-name>
         <url-pattern>/ioda/api/fascicolo/getFascicoli</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GetFascicoliPregressi</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/getFascicoliPregressi</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>UpdateGdDoc</servlet-name>
