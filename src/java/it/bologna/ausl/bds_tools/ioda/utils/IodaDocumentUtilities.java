@@ -2004,7 +2004,7 @@ public class IodaDocumentUtilities {
                 + "INNER JOIN " + ApplicationParams.getPubblicazioniAlboTableName() + " p on g.id_gddoc = p.id_gddoc  "
                 + "INNER JOIN " + ApplicationParams.getAuthenticationTable() + " a on g.applicazione = a.id_applicazione "
                 + "INNER JOIN " + ApplicationParams.getMetadatiTrasparenzaTableName() + " m on a.prefix || m.guid_oggetto = g.id_oggetto_origine "
-                + "INNER JOIN " + ApplicationParams.getTipiProvveddimentoTableName() + " t on t.id_tipo_provvedimento = m.id_tipo_provvedimento "
+                + "LEFT JOIN " + ApplicationParams.getTipiProvveddimentoTableName() + " t on t.id_tipo_provvedimento = m.id_tipo_provvedimento "
                 + "WHERE p.numero_pubblicazione IS NULL "
                 + "AND p.anno_pubblicazione IS NULL "
                 + "AND g.numero_registrazione IS NOT NULL "
