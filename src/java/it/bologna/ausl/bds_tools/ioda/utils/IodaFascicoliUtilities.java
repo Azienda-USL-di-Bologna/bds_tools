@@ -5,6 +5,7 @@ import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.ioda.iodaobjectlibrary.ClassificazioneFascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
+import it.bologna.ausl.ioda.iodaobjectlibrary.FascicoliPregressiMap;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.FascicoliSpecialiResearcher;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Search;
@@ -189,18 +190,11 @@ public class IodaFascicoliUtilities {
         return res;
     }
 
-    public HashMap<String, String> getFascicoliPregressi(Connection dbConn, PreparedStatement ps) throws SQLException, JsonProcessingException{
-        HashMap<String, Fascicolo> fascicoliMap = getFascicoliPregressi(dbConn, ps, researcher.getSearchString(), researcher.getIdUtente());
-        HashMap<String, String> res = new HashMap<>();
-        
-        for (Map.Entry<String, Fascicolo> entry : fascicoliMap.entrySet()){
-            res.put(entry.getKey(), entry.getValue().getJSONString());
-        }
-        
-        return res;
+    public FascicoliPregressiMap getFascicoliPregressi(Connection dbConn, PreparedStatement ps) throws SQLException, JsonProcessingException{
+        return getFascicoliPregressi(dbConn, ps, researcher.getSearchString(), researcher.getIdUtente());
     }
     
-    private HashMap<String, Fascicolo> getFascicoliPregressi(Connection dbConn, PreparedStatement ps, String str, String idUtente) throws SQLException{
+    private FascicoliPregressiMap getFascicoliPregressi(Connection dbConn, PreparedStatement ps, String str, String idUtente) throws SQLException{
         
         JSONArray jsonArray = (JSONArray) JSONValue.parse(str);
         List<String> list = new ArrayList<>();
@@ -209,7 +203,7 @@ public class IodaFascicoliUtilities {
         }
         String idList = "'" + StringUtils.join(list, "','") + "'";
         
-        HashMap<String, Fascicolo> res = new HashMap<>();
+        FascicoliPregressiMap res = new FascicoliPregressiMap();
         
         String sqlText = "SELECT distinct(f.id_fascicolo), f.id_livello_fascicolo, " +
             "   CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
@@ -286,7 +280,7 @@ public class IodaFascicoliUtilities {
             f.setNoteImportazione(noteImportazione);            
             f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
             
-            res.put(idFascicoloImportato, f);
+            res.addFascicolo(idFascicoloImportato, f);
         }
                
         return res;

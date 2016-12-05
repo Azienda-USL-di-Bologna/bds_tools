@@ -1,9 +1,12 @@
 package it.bologna.ausl.bds_tools.ioda.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicoliUtilities;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicoli;
+import it.bologna.ausl.ioda.iodaobjectlibrary.FascicoliPregressiMap;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
 import it.bologna.ausl.ioda.iodaobjectlibrary.IodaRequestDescriptor;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Researcher;
@@ -16,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimeZone;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -46,7 +50,7 @@ public class GetFascicoliPregressi extends HttpServlet{
         Connection dbConn = null;
         PreparedStatement ps = null;
         
-        Map<String, String> fascicoliMap = null;
+        FascicoliPregressiMap fascicoliMap = null;
         
         IodaFascicoliUtilities fascicoliUtilities;
         
@@ -103,8 +107,6 @@ public class GetFascicoliPregressi extends HttpServlet{
             try{
                 Researcher researcher = (Researcher) iodaReq.getObject();
                 
-                fascicoliMap = new HashMap<>();
-                
                 fascicoliUtilities = new IodaFascicoliUtilities(request, researcher);
                 
                 fascicoliMap = fascicoliUtilities.getFascicoliPregressi(dbConn, ps);
@@ -120,8 +122,9 @@ public class GetFascicoliPregressi extends HttpServlet{
         }
 
         response.setContentType(Detector.MEDIA_TYPE_APPLICATION_JSON.toString());
+
         try (PrintWriter out = response.getWriter()) {
-            out.print(fascicoliMap);
+            out.print(fascicoliMap.getJSONString());
         }
     }
 
