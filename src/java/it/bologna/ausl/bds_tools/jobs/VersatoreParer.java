@@ -1421,7 +1421,7 @@ public class VersatoreParer implements Job {
                 for (PubblicazioneIoda pubblicazioneIoda : pubblicazioni) {
                     if(pubblicazioneIoda.getAnnoPubblicazione() != null && pubblicazioneIoda.getAnnoPubblicazione() != 0 
                             && pubblicazioneIoda.getNumeroPubblicazione() != null && pubblicazioneIoda.getNumeroPubblicazione() != 0
-                            && pubblicazioneIoda.getDataDefissione() == null){
+                            && pubblicazioneIoda.getDataDefissione() == null && pubblicazioneIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO){
                         res = pubblicazioneIoda;
                         break;
                     }

@@ -28,6 +28,10 @@ public class PulitoreCestinoMongo implements Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        
+//        if(true)
+//            return;
+        
         log.debug("Pulitore Cestino di mongo Started");
         MongoWrapper mw;
         try {
