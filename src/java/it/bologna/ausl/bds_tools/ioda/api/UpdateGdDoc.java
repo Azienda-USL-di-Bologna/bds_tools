@@ -135,7 +135,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                             if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
                                 gdDoc.setCodiceRegistro(ApplicationParams.getDefaultSequenceName());
                             }
-                            numeroAndAnno = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), gdDoc.getGuid(), gdDoc.getCodiceRegistro());
+                            numeroAndAnno = iodaUtilities.registraDocumento(dbConn, ps, gdDoc.getGuid(), gdDoc.getCodiceRegistro());
                         }
                         
                         numero = numeroAndAnno;

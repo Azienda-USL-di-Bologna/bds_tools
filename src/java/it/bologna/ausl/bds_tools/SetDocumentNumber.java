@@ -106,7 +106,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 return;
             }
 
-            String number = setNumber(dbConn, getServletContext(), iddocumento, nomesequenza);
+            String number = setNumber(dbConn, iddocumento, nomesequenza);
 
             response.setContentType("text/plain");
             try (PrintWriter out = response.getWriter()) {
@@ -141,7 +141,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
         }
     }   
     
-    public static String setNumber(Connection dbConn, ServletContext context, String idDocumento, String nomesequenza) throws ServletException, SQLException {
+    public static String setNumber(Connection dbConn, String idDocumento, String nomesequenza) throws ServletException, SQLException {
 
         String res = null;
         String updateNumberFunctionName = ApplicationParams.getUpdateNumberFunctionNameTemplate();

@@ -5,6 +5,7 @@
  */
 package it.bologna.ausl.bds_tools.jobs;
 
+import it.bologna.ausl.bds_tools.SetDocumentNumber;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import java.sql.Connection;
@@ -13,7 +14,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Calendar;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.naming.Context;
 import javax.naming.NamingException;
+import javax.servlet.ServletException;
 import org.apache.logging.log4j.LogManager;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -40,6 +45,7 @@ public class CreatoreFascicoloSpeciale implements Job{
     private final String registriAnnuali;
     private final Integer anno;
     private String idStrutturaUtenteResponsabile;
+    private String sequenceName;
 
     public CreatoreFascicoloSpeciale() {
         log.debug("=========================== Inizializzazione Servizio Creazione Fascicoli Speciali ===========================");
@@ -61,11 +67,20 @@ public class CreatoreFascicoloSpeciale implements Job{
         log.debug("=========================== Fine Inizializzazione Servizio Creazione Fascicoli Speciali ===========================");
     }
 
+    public String getSequenceName() {
+        return sequenceName;
+    }
+
+    public void setSequenceName(String sequenceName) {
+        this.sequenceName = sequenceName;
+    }
+
     public void create() throws Exception{
         idStrutturaUtenteResponsabile = getIdStrutturaResponsabile();
         // Fascicolo: Atti dell'azienda
         String idFascicoloSpecialeAtti = "FascicoloSpecial" + anno;
-        createFascicoloSpeciale(idFascicoloSpecialeAtti, 1, "1", fascicoloSpecialeAtti, null);
+        // il numero fascicolo è a 0 perchè verra sovrascritto dalla storeprocidure che stacca i numeri e li assegna
+        createFascicoloSpeciale(idFascicoloSpecialeAtti, 0, "1", fascicoloSpecialeAtti, null);
         // Sottofascicoli: Registri, Determinazioni, Deliberazioni
         createFascicoloSpeciale("Special2016" + anno, 1, "2", fascicoloSpecialeRegistri, idFascicoloSpecialeAtti);
         createFascicoloSpeciale("SFSpecialeDeter" + anno, 2, "2", fascicoloSpecialeDete, idFascicoloSpecialeAtti);
@@ -89,11 +104,11 @@ public class CreatoreFascicoloSpeciale implements Job{
                                             "id_struttura, id_titolo, id_utente_responsabile, " +
                                             "id_utente_creazione, id_utente_responsabile_vicario, " +
                                             "data_creazione, data_responsabilita, id_tipo_fascicolo, codice_fascicolo, " +
-                                            "eredita_permessi, speciale, numerazione_gerarchica) " +
+                                            "eredita_permessi, speciale, guid_fascicolo, numerazione_gerarchica) " +
                                             "VALUES (?, ?, ?, ?, ?, " +
                                                         "?, ?, ?, ?, " +
                                                         "?, ?, ?, ?, ?, " +
-                                                        "?, ?, ?, ?, ?);";
+                                                        "?, ?, ?, ?, ?, ?);";
         try (
                Connection dbConnection = UtilityFunctions.getDBConnection();
                PreparedStatement ps = dbConnection.prepareStatement(queryCreateFascicolo);
@@ -101,7 +116,12 @@ public class CreatoreFascicoloSpeciale implements Job{
             int i = 1;
             ps.setString(i++, idFascicolo);
             ps.setString(i++, nomeFascicoloSpeciale);
-            ps.setInt(i++, numeroFascicolo);
+            // Nel caso sia il fascicolo "Atti" verra chiamata poi la funzione che stacchera e gli assegnera il numero
+            if (idFascicoloPadre == null) {
+                ps.setInt(i++, 0);
+            }else{
+                ps.setInt(i++, numeroFascicolo);
+            }
             ps.setInt(i++, anno);
             ps.setString(i++, "a"); // "a" indica stato aperto
             ps.setString(i++, livelloFascicolo);
@@ -117,16 +137,24 @@ public class CreatoreFascicoloSpeciale implements Job{
             ps.setString(i++, "babel Codice" + idFascicolo);
             ps.setInt(i++, 0);
             ps.setInt(i++, -1);
+            ps.setString(i++, "guid" + idFascicolo);
             String numerazioneGerarchica = getNumerazioneGerarchica(idFascicoloPadre);
+            // Caso fascicolo atti dell'azienda stacco il numero
             if (numerazioneGerarchica ==  null || numerazioneGerarchica.equals("")) {
                 ps.setString(i++, numeroFascicolo + "/" + anno);
+                log.debug("QUERY INSERT: " + ps);
+                ps.executeUpdate();
+                String idFascicoloCreato = getIdFascicolo("1/" + anno);
+                SetDocumentNumber.setNumber(dbConnection, idFascicoloCreato, sequenceName);
             }else{
                 ps.setString(i++, numerazioneGerarchica + "-" + numeroFascicolo + "/" + anno);
+                log.debug("QUERY INSERT: " + ps);
+                ps.executeUpdate();
             }
-            log.debug("QUERY INSERT: " + ps);
-            ps.executeUpdate();
         } catch (SQLException | NamingException ex) {
             log.error("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
+        } catch (ServletException ex) {
+            log.error("Errore nell'assegnamento del numero al fascicolo: " + nomeFascicoloSpeciale, ex);
         }
     }
     
@@ -255,6 +283,7 @@ public class CreatoreFascicoloSpeciale implements Job{
                 create(); 
                 log.debug("=========================== Fine Creazione Fascicoli Spaeciali ===========================");
             }else{
+//                log.debug("=========================== " + sequenceName + " ===========================");
                 log.debug("=========================== I fascicoli speciali sono già presenti per l'anno corrente ===========================");
             }
         } catch (Exception ex) {

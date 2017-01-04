@@ -129,8 +129,7 @@ private static final Logger log = LogManager.getLogger(InsertGdDoc.class);
                     if (gdDoc.getCodiceRegistro() == null || gdDoc.getCodiceRegistro().equals("")) {
                         gdDoc.setCodiceRegistro(ApplicationParams.getDefaultSequenceName());
                     }
-                    String numeroAndAnno = iodaUtilities.registraDocumento(dbConn, ps, getServletContext(), guid, gdDoc.getCodiceRegistro());
-                    
+                    String numeroAndAnno = iodaUtilities.registraDocumento(dbConn, ps, guid, gdDoc.getCodiceRegistro());
                     numero = numeroAndAnno;
                     // TODO:da sistemare
                     if (numero != null && numeroAndAnno.contains("/")) {

@@ -1979,9 +1979,9 @@ public class IodaDocumentUtilities {
         }
     }
 
-    public String registraDocumento(Connection dbConn, PreparedStatement ps, ServletContext context, String guid, String codiceRegistro) throws ServletException, SQLException {
+    public String registraDocumento(Connection dbConn, PreparedStatement ps, String guid, String codiceRegistro) throws ServletException, SQLException {
         Registro r = Registro.getRegistro(codiceRegistro, dbConn);
-        return SetDocumentNumber.setNumber(dbConn, context, guid, r.getSequenzaAssociata());
+        return SetDocumentNumber.setNumber(dbConn, guid, r.getSequenzaAssociata());
     }
 
     public static ArrayList<GdDoc> getGdDocsDaPubblicare(Connection dbConn) throws SQLException {

@@ -452,9 +452,11 @@ public class Spedizioniere implements Job{
                         outputStream.close();
                         */
                         File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
-                        tmpFile.deleteOnExit();
+                        //tmpFile.deleteOnExit();
                         try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
                             IOUtils.copy(is, outputStream);
+                        }finally{
+                            is.close();
                         }
                         log.debug("Nome allegato: " + attachment.getName());
                         log.debug("Mimetype allegato: " + attachment.getMimetype());
@@ -527,7 +529,7 @@ public class Spedizioniere implements Job{
 //                                                    String host = ApplicationParams.getOtherPublicParam("mailServerSmtpUrl");
 //                                                    int port = Integer.valueOf(ApplicationParams.getOtherPublicParam("mailServerSmtpPort"));
 //                                                    // Email
-                                                    String subject = "SPEDIZIONIERE | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Tentativo di invio documento con lettera non firmata";
+                                                    String subject = "SPEDIZIONIERE | " + ConfigParams.getAmbiente() + "/" + ConfigParams.getAzienda() + " - Tentativo di invio documento con lettera non firmata";
                                                     sendMail(res, subject, new SpedizioniereException("Documento con lettera non firmata!"));
 //                                                    String messageBody = "Dati del documento:<br/>";
 //                                                    messageBody += "id: " + res.getString("id") +"<br/>";
@@ -563,9 +565,11 @@ public class Spedizioniere implements Job{
 
                                             log.debug("Creazione tmpFile");
                                             File tmpFile = File.createTempFile("spedizioniere_", ".tmp");
-                                            tmpFile.deleteOnExit();
+                                            //tmpFile.deleteOnExit();
                                             try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
                                                 IOUtils.copy(is, outputStream);
+                                            }finally{
+                                                is.close();
                                             }
                                             log.debug("mimeType: " + mimeType);
                                             log.debug("calcolo estensione...");
@@ -584,11 +588,13 @@ public class Spedizioniere implements Job{
 
                                                     log.debug("Creazione tmpFile");
                                                     tmpFile = File.createTempFile("spedizioniere_", ".tmp");
-                                                    tmpFile.deleteOnExit();
+                                                    //tmpFile.deleteOnExit();
                                                     try (OutputStream outputStream = new FileOutputStream(tmpFile)) {
                                                         IOUtils.copy(is, outputStream);
                                                     } catch (IOException ex) {
                                                         log.debug("Eccezione nel creare file temporaneo per l'attachment", ex);
+                                                    }finally{
+                                                        is.close();
                                                     }
                                                     log.debug("mimeType: " + mimeType);
                                                     log.debug("calcolo estensione...");
@@ -654,8 +660,7 @@ public class Spedizioniere implements Job{
                     catch(Exception ex){
                         log.debug("eccezione nell'update di presa_in_carico: ", ex);
                     }
-                }
-                catch(IllegalArgumentException ex){
+                }catch(IllegalArgumentException ex){
                     // errori della famiglia 400
                     log.debug("Eccezione nell'ottenimento del messageId dal percgw: " + ex);
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
@@ -675,8 +680,7 @@ public class Spedizioniere implements Job{
                     catch(Exception e) {
                         log.debug("eccezione nell'update su eccezione della famiglia 400: ", e);
                     }
-                }
-                catch(Exception ex) {
+                }catch(Exception ex) {
                     try {
                         setMessaggioErrore("Errore nell'invio della mail", res.getLong("id"));
                     }
@@ -702,12 +706,16 @@ public class Spedizioniere implements Job{
                     catch(Exception e){
                         log.debug("eccezione nell'update su eccezione della funzione spedisci(): ", e);
                     }
+                }finally{
+                    for (SpedizioniereAttachment attachment : attachments) {
+                        attachment.getFile().delete();
+                    }
                 }
             }
             catch(Exception ex) {
                 try {
                     setMessaggioErrore("Errore nella costruzione della mail", res.getLong("id"));
-                    String subject = "Build Mail Error | " + ConfigParams.getAzienda() + "/" + ConfigParams.getAmbiente() + " - Errore nella costruzione della mail";
+                    String subject = "Build Mail Error | " + ConfigParams.getAmbiente() + "/" + ConfigParams.getAzienda() + " - Errore nella costruzione della mail";
                     sendMail(res, subject, ex);
                 } catch (SQLException e) {
                     log.debug("Errore update messaggio_errore: ", e);
