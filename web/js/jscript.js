@@ -7,7 +7,7 @@ $(document).ready(function(){
 //  }
   var allServices = ''; // Contiene il json di TUTTI i servizi dell'ultima chiamata ajax effettuata
   // 'http://localhost:8084/bds_tools/Schedulatore';  IN LOCALE
-  var servletUrl = 'http://' + splittedUrl[2]+ '/bds_tools/Schedulatore';
+  var servletUrl = 'https://' + splittedUrl[2]+ '/bds_tools/Schedulatore';
 //  console.log(servletUrl);
 
   // Funzione che ritorna l'icona del servizio dando in input il nome del servizio
