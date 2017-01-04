@@ -148,6 +148,9 @@ public class Spedizioniere implements Job{
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
     
+//        if(true)
+//            return;
+        
         log.info("Job Spedizioniere started");
         
         if (canStartProcess()){

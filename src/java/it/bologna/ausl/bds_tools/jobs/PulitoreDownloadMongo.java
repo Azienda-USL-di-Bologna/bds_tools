@@ -32,6 +32,10 @@ public class PulitoreDownloadMongo implements Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Pulitore mongo Started");
         MongoWrapper mw;
+        
+//        if(true)
+//            return;
+        
         try {
             mw = new MongoWrapper(connectUri);
             //Trovo i file piu' vecchi di 24 h

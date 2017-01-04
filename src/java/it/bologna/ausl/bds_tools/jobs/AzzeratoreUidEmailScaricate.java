@@ -28,6 +28,10 @@ public class AzzeratoreUidEmailScaricate implements Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        
+//        if(true)
+//            return;
+        
         log.info("Job AzzeratoreUidEmailScaricate started");
         try {
             Class.forName(driver);

@@ -51,6 +51,9 @@ public class PubblicatoreAlbo implements Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Pubblicatore Albo Started");
 
+//        if(true)
+//            return;
+        
         Connection dbConn = null;
         PreparedStatement ps = null;
         try {

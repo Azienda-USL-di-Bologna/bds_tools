@@ -277,6 +277,10 @@ public class CreatoreFascicoloSpeciale implements Job{
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        
+//        if(true)
+//            return;
+        
         try {
             if (!alreadyExist()) {
                 log.debug("=========================== Avvio Creazione Fascicoli Spaeciali ===========================");
