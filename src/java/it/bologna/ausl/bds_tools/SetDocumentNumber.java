@@ -106,8 +106,10 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 return;
             }
 
+            dbConn.setAutoCommit(false);
             String number = setNumber(dbConn, iddocumento, nomesequenza);
-
+            dbConn.commit();
+            
             response.setContentType("text/plain");
             try (PrintWriter out = response.getWriter()) {
                 out.print(number);
@@ -122,8 +124,8 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
             try {
                 if (dbConn != null && dbConn.getAutoCommit() == false)
                     dbConn.rollback();
-                if (dbConn != null)
-                    dbConn.close();
+//                if (dbConn != null)
+//                    dbConn.close();
             }
             catch (SQLException sQLException) {
                 log.fatal("Errore nel rollback dell'operazione", sQLException);
@@ -154,7 +156,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
         }
 
         // compongo la query
-        dbConn.setAutoCommit(false);
+        //dbConn.setAutoCommit(false);
         String sqlText = "select * from " + updateNumberFunctionName + "(?, ?)";
         PreparedStatement ps = dbConn.prepareStatement(sqlText);
         ps.setString(1, idDocumento);
@@ -178,7 +180,7 @@ private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(
                 
                 if (res == null || res.equals(""))
                     throw new SQLException("errore nella numerazione");
-                dbConn.commit();
+                //dbConn.commit();
             }
         }
         finally {
