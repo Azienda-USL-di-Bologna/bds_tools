@@ -76,7 +76,7 @@ public class CreatoreFascicoloSpeciale implements Job{
         this.sequenceName = sequenceName;
     }
 
-    public void create() throws NullPointerException, SQLException, ServletException{
+    private void create() throws NullPointerException, SQLException, ServletException{
         idStrutturaUtenteResponsabile = getIdStrutturaResponsabile();
         // Fascicolo: Atti dell'azienda
         String idFascicoloSpecialeAtti = "FascicoloSpecial" + anno;
