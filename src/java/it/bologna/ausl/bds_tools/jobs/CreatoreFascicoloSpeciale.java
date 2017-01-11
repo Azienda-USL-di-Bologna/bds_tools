@@ -250,6 +250,7 @@ public class CreatoreFascicoloSpeciale implements Job{
                PreparedStatement ps = dbConnection.prepareStatement(queryIdfascicolo);
            ) {
             ps.setString(1, numerazioneGerarchica);
+            log.debug("Query GetIdFascicolo: " + ps);
             ResultSet resIdFascicolo = ps.executeQuery();
             while (resIdFascicolo.next()) {                
                 if (resIdFascicolo.getString("id_fascicolo") != null && !resIdFascicolo.getString("id_fascicolo").equals("")) {
@@ -278,25 +279,30 @@ public class CreatoreFascicoloSpeciale implements Job{
         try {
             dbConnection = UtilityFunctions.getDBConnection();
             dbConnection.setAutoCommit(false);
-        } catch (SQLException | NamingException ex) {
-            log.debug("Errore nell'ottenimento della connessione al DB!", ex);
-            log.debug("=========================== Creazione dei Fascicoli speciali FALLITA ===========================");
-        }
-        
-        try {
             if (!alreadyExist()) {
                 log.debug("=========================== Avvio Creazione Fascicoli Spaeciali ===========================");
                 create();
                 dbConnection.commit();
                 log.debug("=========================== Fine Creazione Fascicoli Spaeciali ===========================");
             }else{
+                log.debug("ROLLBACK sulla transazione...");
+                dbConnection.rollback();
+                log.debug("FATTO!");
+                log.debug("CLOSE della connessione...");
+                dbConnection.close();
+                log.debug("FATTO!");
 //                log.debug("=========================== " + sequenceName + " ===========================");
                 log.debug("=========================== I fascicoli speciali sono già presenti per l'anno corrente ===========================");
             }
             //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        } catch (SQLException | NullPointerException | ServletException ex) {
+        } catch (Exception ex) {
             try {
+                log.debug("ROLLBACK sulla transazione...");
                 dbConnection.rollback();
+                log.debug("FATTO!");
+                log.debug("CLOSE della connessione...");
+                dbConnection.close();
+                log.debug("FATTO!");
             } catch (SQLException e) {
                 log.debug("Errore durante il RollBack: ", e);
             }
