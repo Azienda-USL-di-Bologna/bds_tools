@@ -51,18 +51,24 @@ public class Downloader extends HttpServlet {
         String token = request.getParameter("token");
         String deleteTokenParams = request.getParameter("deletetoken");
         JSONObject downloadParams = null;
+        log.debug("token: " + token);
+        log.debug("deleteTokenParams: " + deleteTokenParams);
         boolean deleteToken = true;
         if (deleteTokenParams != null && deleteTokenParams.toLowerCase().equals("false")) {
             deleteToken = false;
         }
         Jedis redis = new Jedis(ApplicationParams.getRedisHost());
         String params = redis.get(token);
+        log.debug("params: " + params);
         if (deleteToken) {
-            redis.del(token);
+            log.debug("deleting token...");
+            Long deleted = redis.del(token);
+            log.debug("deleted: " + deleted);
         }
         redis.disconnect();
         JSONObject pluginParams = null;
         if (params == null) {
+            log.error(String.format("Redis key: %s not found", token));
             throw new ServletException("Redis key not found");
         }
         try {
