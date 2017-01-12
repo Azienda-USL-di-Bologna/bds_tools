@@ -46,6 +46,7 @@ public class CreatoreFascicoloSpeciale implements Job{
     private final Integer anno;
     private String idStrutturaUtenteResponsabile;
     private String sequenceName;
+    private Connection dbConnection;
 
     public CreatoreFascicoloSpeciale() {
         log.debug("=========================== Inizializzazione Servizio Creazione Fascicoli Speciali ===========================");
@@ -75,20 +76,21 @@ public class CreatoreFascicoloSpeciale implements Job{
         this.sequenceName = sequenceName;
     }
 
-    public void create() throws Exception{
+    private void create() throws NullPointerException, SQLException, ServletException{
         idStrutturaUtenteResponsabile = getIdStrutturaResponsabile();
         // Fascicolo: Atti dell'azienda
         String idFascicoloSpecialeAtti = "FascicoloSpecial" + anno;
         // il numero fascicolo è a 0 perchè verra sovrascritto dalla storeprocidure che stacca i numeri e li assegna
         createFascicoloSpeciale(idFascicoloSpecialeAtti, 0, "1", fascicoloSpecialeAtti, null);
         // Sottofascicoli: Registri, Determinazioni, Deliberazioni
-        createFascicoloSpeciale("Special2016" + anno, 1, "2", fascicoloSpecialeRegistri, idFascicoloSpecialeAtti);
+        String idFascicoloRegistro = "SFSpecialeRegis" + anno;
+        createFascicoloSpeciale(idFascicoloRegistro, 1, "2", fascicoloSpecialeRegistri, idFascicoloSpecialeAtti);
         createFascicoloSpeciale("SFSpecialeDeter" + anno, 2, "2", fascicoloSpecialeDete, idFascicoloSpecialeAtti);
         createFascicoloSpeciale("SFSpecialeDeli" + anno, 3, "2", fascicoloSpecialeDeli, idFascicoloSpecialeAtti);
         // Ottengo id del sottofascicolo Registro
-        String idFascicoloRegistro = getIdFascicolo("1-1/" + anno);
+        
         if (idFascicoloRegistro == null || idFascicoloRegistro.equals("")) {
-            throw new Exception("Error: idFascicoloRegistro è null!");
+            throw new NullPointerException("Error: idFascicoloRegistro è null!");
         }
         // Inserti: Registro giornaliero di protocollo, Registro giornaliero delle determinazioni, Registro giornaliero delle deliberazioni, Registri annuali
         createFascicoloSpeciale("ISpecialeProto" + anno, 1, "3", registroGgProtocollo, idFascicoloRegistro);
@@ -97,20 +99,19 @@ public class CreatoreFascicoloSpeciale implements Job{
         createFascicoloSpeciale("ISpecialeAnnuali" + anno, 4, "3", registriAnnuali, idFascicoloRegistro);
     }
     
-    private void createFascicoloSpeciale(String idFascicolo, int numeroFascicolo, String livelloFascicolo, String nomeFascicoloSpeciale, String idFascicoloPadre){
+    private void createFascicoloSpeciale(String idFascicolo, int numeroFascicolo, String livelloFascicolo, String nomeFascicoloSpeciale, String idFascicoloPadre) throws SQLException, ServletException{
         String queryCreateFascicolo = "INSERT INTO " + ApplicationParams.getFascicoliTableName() + "(" +
                                             "id_fascicolo, nome_fascicolo, numero_fascicolo, anno_fascicolo, " +
                                             "stato_fascicolo, id_livello_fascicolo, id_fascicolo_padre, " +
                                             "id_struttura, id_titolo, id_utente_responsabile, " +
                                             "id_utente_creazione, id_utente_responsabile_vicario, " +
                                             "data_creazione, data_responsabilita, id_tipo_fascicolo, codice_fascicolo, " +
-                                            "eredita_permessi, speciale, guid_fascicolo, numerazione_gerarchica) " +
+                                            "eredita_permessi, speciale, guid_fascicolo) " +
                                             "VALUES (?, ?, ?, ?, ?, " +
                                                         "?, ?, ?, ?, " +
                                                         "?, ?, ?, ?, ?, " +
-                                                        "?, ?, ?, ?, ?, ?);";
+                                                        "?, ?, ?, ?, ?);";
         try (
-               Connection dbConnection = UtilityFunctions.getDBConnection();
                PreparedStatement ps = dbConnection.prepareStatement(queryCreateFascicolo);
            ) {
             int i = 1;
@@ -137,28 +138,31 @@ public class CreatoreFascicoloSpeciale implements Job{
             ps.setString(i++, "babel Codice" + idFascicolo);
             ps.setInt(i++, 0);
             ps.setInt(i++, -1);
-            ps.setString(i++, "guid" + idFascicolo);
-            String numerazioneGerarchica = getNumerazioneGerarchica(idFascicoloPadre);
+            String guidFascicolo = "guid_" + idFascicolo;
+            ps.setString(i++, guidFascicolo);
+//            String numerazioneGerarchica = getNumerazioneGerarchica(idFascicoloPadre);
             // Caso fascicolo atti dell'azienda stacco il numero
-            if (numerazioneGerarchica ==  null || numerazioneGerarchica.equals("")) {
-                ps.setString(i++, numeroFascicolo + "/" + anno);
+            if (idFascicoloPadre ==  null || idFascicoloPadre.equals("")) {
+//                E' stato introdotto un trigger che mette in automatico la numerazione gerarchica
+//                ps.setString(i++, numeroFascicolo + "/" + anno);
                 log.debug("QUERY INSERT: " + ps);
                 ps.executeUpdate();
-                String idFascicoloCreato = getIdFascicolo("1/" + anno);
-                SetDocumentNumber.setNumber(dbConnection, idFascicoloCreato, sequenceName);
+                SetDocumentNumber.setNumber(dbConnection, guidFascicolo, sequenceName);
             }else{
-                ps.setString(i++, numerazioneGerarchica + "-" + numeroFascicolo + "/" + anno);
+//                ps.setString(i++, numerazioneGerarchica + "-" + numeroFascicolo + "/" + anno);
                 log.debug("QUERY INSERT: " + ps);
                 ps.executeUpdate();
             }
-        } catch (SQLException | NamingException ex) {
-            log.error("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
+        } catch (SQLException ex) {
+//            log.error("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
+            throw new SQLException("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
         } catch (ServletException ex) {
-            log.error("Errore nell'assegnamento del numero al fascicolo: " + nomeFascicoloSpeciale, ex);
+//            log.error("Errore nell'assegnamento del numero al fascicolo: " + nomeFascicoloSpeciale, ex);
+            throw new ServletException("Errore nell'assegnamento del numero al fascicolo: " + nomeFascicoloSpeciale, ex);
         }
     }
     
-    private String getNumerazioneGerarchica(String idFascicolo){
+    private String getNumerazioneGerarchica(String idFascicolo) throws SQLException{
         if ( idFascicolo == null || idFascicolo.equals("")) {
             return null;
         }
@@ -166,7 +170,6 @@ public class CreatoreFascicoloSpeciale implements Job{
                                                 "FROM gd.fascicoligd " + 
                                                 "WHERE id_fascicolo=?;";
         try (
-               Connection dbConnection = UtilityFunctions.getDBConnection();
                PreparedStatement psNumerazioneGerarchica = dbConnection.prepareStatement(queryNumerazioneGerarchica);
            ) {
             psNumerazioneGerarchica.setString(1, idFascicolo);
@@ -180,18 +183,18 @@ public class CreatoreFascicoloSpeciale implements Job{
                     throw new NullPointerException("La numerazione gerarchica del fascicolo è null: " + resNumeroFascicolo.getInt("numerazione_gerarchica"));
                 }
             }
-        } catch (SQLException | NamingException ex) {
-            log.error("Errore nel ottenimento della numerazione gerarchica del fascicolo: " + idFascicolo + " " + ex);
+        } catch (SQLException ex) {
+//            log.error("Errore nel ottenimento della numerazione gerarchica del fascicolo: " + idFascicolo + " " + ex);
+            throw new SQLException("Errore nel ottenimento della numerazione gerarchica del fascicolo: " + idFascicolo, ex);
         }
         return null;
     }
     
-    private String getIdStrutturaResponsabile(){
+    private String getIdStrutturaResponsabile() throws SQLException{
         String queryIdStrutturaResponsabile = "SELECT id_struttura " +
                                                 "FROM " + ApplicationParams.getUtentiTableName() + " " + 
                                                 "WHERE id_utente=?;";
         try (
-               Connection dbConnection = UtilityFunctions.getDBConnection();
                PreparedStatement ps = dbConnection.prepareStatement(queryIdStrutturaResponsabile);
            ) {
             ps.setString(1, idUtenteResponsabileFascicoloSpeciale);
@@ -200,18 +203,17 @@ public class CreatoreFascicoloSpeciale implements Job{
                 if (resIdStrutturaResponsabile != null && resIdStrutturaResponsabile.getString("id_struttura") != null && !resIdStrutturaResponsabile.getString("id_struttura").equals("")) {
                     return resIdStrutturaResponsabile.getString("id_struttura");
                 }else{
-                    throw new Exception("La struttura del responsabile è null: " + resIdStrutturaResponsabile.getString("id_struttura"));
+                    throw new NullPointerException("La struttura del responsabile è null: " + resIdStrutturaResponsabile.getString("id_struttura"));
                 }
             }
-        } catch (SQLException | NamingException ex) {
-            log.error("Errore nel ottenimento dell'id della struttura dell'utente responsabile: " + idUtenteResponsabileFascicoloSpeciale, ex);
-        } catch (Exception ex) {
-            log.error(ex);
+        } catch (SQLException ex) {
+//            log.error("Errore nel ottenimento dell'id della struttura dell'utente responsabile: " + idUtenteResponsabileFascicoloSpeciale, ex);
+            throw new SQLException("Errore nel ottenimento dell'id della struttura dell'utente responsabile: " + idUtenteResponsabileFascicoloSpeciale, ex);
         }
         return null;
     }
    
-    private Integer getNumeroFascicolo(String idFascicolo){
+    private Integer getNumeroFascicolo(String idFascicolo) throws SQLException{
         if ( idFascicolo == null || idFascicolo.equals("")) {
             return null;
         }
@@ -219,7 +221,6 @@ public class CreatoreFascicoloSpeciale implements Job{
                                                 "FROM " + ApplicationParams.getFascicoliTableName() + " " + 
                                                 "WHERE id_fascicolo=?;";
         try (
-               Connection dbConnection = UtilityFunctions.getDBConnection();
                PreparedStatement ps = dbConnection.prepareStatement(queryNumeroFascicolo);
            ) {
             ps.setString(1, idFascicolo);
@@ -228,18 +229,17 @@ public class CreatoreFascicoloSpeciale implements Job{
                 if (resNumeroFascicolo.getInt("numero_fascicolo") != 0) {
                     return resNumeroFascicolo.getInt("numero_fascicolo");
                 }else{
-                    throw new Exception("Il numero del fascicolo è null: " + resNumeroFascicolo.getInt("numero_fascicolo"));
+                    throw new NullPointerException("Il numero del fascicolo è null: " + resNumeroFascicolo.getInt("numero_fascicolo"));
                 }
             }
-        } catch (SQLException | NamingException ex) {
-            log.error("Errore nel ottenimento del numero del fascicolo: " + idFascicolo, ex);
-        } catch (Exception ex) {
-            log.error(ex);
+        } catch (SQLException ex) {
+//            log.error("Errore nel ottenimento del numero del fascicolo: " + idFascicolo, ex);
+            throw new SQLException("Errore nel ottenimento del numero del fascicolo: " + idFascicolo, ex);
         }
         return null;
     }
     
-    private String getIdFascicolo(String numerazioneGerarchica){
+    private String getIdFascicolo(String numerazioneGerarchica) throws SQLException{
          if ( numerazioneGerarchica == null || numerazioneGerarchica.equals("")) {
             return null;
         }
@@ -247,27 +247,26 @@ public class CreatoreFascicoloSpeciale implements Job{
                                                 "FROM " + ApplicationParams.getFascicoliTableName() + " " + 
                                                 "WHERE numerazione_gerarchica=?;";
         try (
-               Connection dbConnection = UtilityFunctions.getDBConnection();
                PreparedStatement ps = dbConnection.prepareStatement(queryIdfascicolo);
            ) {
             ps.setString(1, numerazioneGerarchica);
+            log.debug("Query GetIdFascicolo: " + ps);
             ResultSet resIdFascicolo = ps.executeQuery();
             while (resIdFascicolo.next()) {                
                 if (resIdFascicolo.getString("id_fascicolo") != null && !resIdFascicolo.getString("id_fascicolo").equals("")) {
                     return resIdFascicolo.getString("id_fascicolo");
                 }else{
-                    throw new Exception("L'id del fascicolo è null: " + resIdFascicolo.getInt("id_fascicolo"));
+                    throw new NullPointerException("L'id del fascicolo è null: " + resIdFascicolo.getInt("id_fascicolo"));
                 }
             }
-        } catch (SQLException | NamingException ex) {
-            log.error("Errore nel ottenimento dell'id del fascicolo: " + numerazioneGerarchica, ex);
-        } catch (Exception ex) {
-            log.error(ex);
+        } catch (SQLException ex) {
+//            log.error("Errore nel ottenimento dell'id del fascicolo: " + numerazioneGerarchica, ex);
+            throw new SQLException("Errore nel ottenimento dell'id del fascicolo: " + numerazioneGerarchica, ex);
         }
         return null;
     }
     
-    private Boolean alreadyExist(){
+    private Boolean alreadyExist() throws SQLException{
         String idFascicoloAttiAzienda = getIdFascicolo("1/" + anno);
         if(idFascicoloAttiAzienda != null && !idFascicoloAttiAzienda.equals("")){
             return true;
@@ -277,23 +276,39 @@ public class CreatoreFascicoloSpeciale implements Job{
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
-        
-//        if(true)
-//            return;
-        
         try {
+            dbConnection = UtilityFunctions.getDBConnection();
+            dbConnection.setAutoCommit(false);
             if (!alreadyExist()) {
                 log.debug("=========================== Avvio Creazione Fascicoli Spaeciali ===========================");
-                create(); 
+                create();
+                dbConnection.commit();
                 log.debug("=========================== Fine Creazione Fascicoli Spaeciali ===========================");
             }else{
+                log.debug("ROLLBACK sulla transazione...");
+                dbConnection.rollback();
+                log.debug("FATTO!");
+                log.debug("CLOSE della connessione...");
+                dbConnection.close();
+                log.debug("FATTO!");
 //                log.debug("=========================== " + sequenceName + " ===========================");
                 log.debug("=========================== I fascicoli speciali sono già presenti per l'anno corrente ===========================");
             }
+            //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         } catch (Exception ex) {
-            log.error("Errore nella creazione dei fascicoli: ", ex);
+            try {
+                log.debug("ROLLBACK sulla transazione...");
+                dbConnection.rollback();
+                log.debug("FATTO!");
+                log.debug("CLOSE della connessione...");
+                dbConnection.close();
+                log.debug("FATTO!");
+            } catch (SQLException e) {
+                log.debug("Errore durante il RollBack: ", e);
+            }
+            log.debug("Errore nella creazione dei fascicoli speciali: ", ex);
+            log.debug("=========================== Creazione dei Fascicoli speciali FALLITA ===========================");
         }
-        //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     
 }
