@@ -1,25 +1,25 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package it.bologna.ausl.bds_tools.jobs;
 
 import it.bologna.ausl.bds_tools.SetDocumentNumber;
-import it.bologna.ausl.bds_tools.utils.ApplicationParams;
+import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.Calendar;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.naming.Context;
-import javax.naming.NamingException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import javax.servlet.ServletException;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -27,46 +27,30 @@ import org.quartz.JobExecutionException;
 
 /**
  *
- * @author Fayssel
+ * @author gdm
  */
 @DisallowConcurrentExecution
-public class CreatoreFascicoloSpeciale implements Job{
-    private static final org.apache.logging.log4j.Logger log = LogManager.getLogger(CreatoreFascicoloSpeciale.class);
-    private final String fascicoloSpecialeAtti;
-    private final String fascicoloSpecialeRegistri;
-    private final String fascicoloSpecialeDete;
-    private final String fascicoloSpecialeDeli;
-    private final String idUtenteResponsabileFascicoloSpeciale;
-    private final String idVicarioFascicoloSpeciale;
-    private final String idClassificazioneFascicoloSpeciale;    
-    private final String registroGgProtocollo;
-    private final String registroGgDeliberazioni;
-    private final String registroGgDeterminazioni;
-    private final String registriAnnuali;
-    private final Integer anno;
-    private String idStrutturaUtenteResponsabile;
+public class DuplicatoreFascicoliAttivita implements Job{
+    private static final Logger log = LogManager.getLogger(DuplicatoreFascicoliAttivita.class);
     private String sequenceName;
-    private Connection dbConnection;
+    
+    private final int SQL_TRUE = -1;
+    private final int SQL_FALSE = 0;
+    private final String ID_APPLICAZIONE = "gedi";
+    private final int TIPO_FASCICOLO_ATTIVITA = 3;
 
-    public CreatoreFascicoloSpeciale() {
-        log.debug("=========================== Inizializzazione Servizio Creazione Fascicoli Speciali ===========================");
-        idUtenteResponsabileFascicoloSpeciale  = ApplicationParams.getOtherPublicParam("idUtenteResponsabileFascicoloSpeciale");
-        idVicarioFascicoloSpeciale  = ApplicationParams.getOtherPublicParam("idVicarioFascicoloSpeciale");
-        idClassificazioneFascicoloSpeciale = ApplicationParams.getOtherPublicParam("idClassificazioneFascSpeciale");
-        String nomeFascicoli = ApplicationParams.getOtherPublicParam("nomeFascicoliSpeciali");
-        String[] nomeFascicoliSplittati = nomeFascicoli.split(":");
-        int i = 0;
-        fascicoloSpecialeAtti = nomeFascicoliSplittati[i++];
-        fascicoloSpecialeRegistri = nomeFascicoliSplittati[i++];
-        fascicoloSpecialeDete = nomeFascicoliSplittati[i++];
-        fascicoloSpecialeDeli = nomeFascicoliSplittati[i++];
-        registroGgProtocollo = nomeFascicoliSplittati[i++];
-        registroGgDeterminazioni = nomeFascicoliSplittati[i++];
-        registroGgDeliberazioni = nomeFascicoliSplittati[i++];
-        registriAnnuali = nomeFascicoliSplittati[i++];
-        anno = Calendar.getInstance().get(Calendar.YEAR);
-        log.debug("=========================== Fine Inizializzazione Servizio Creazione Fascicoli Speciali ===========================");
-    }
+    private final String LIVELLO_FASCICOLO_RADICE = "1";
+    private final String LIVELLO_FASCICOLO_SOTTOFASCICOLO = "2";
+    private final String LIVELLO_FASCICOLO_INSERTO = "3";
+    
+    private final int MAX_LIVELLO_FASCICOLO = 3;
+
+    private static final String[] COLUMN_TO_EXCLUDE = {"id_fascicolo","nome_fascicolo","numero_fascicolo","anno_fascicolo","id_fascicolo_padre",
+        "numerazione_gerarchica","guid_fascicolo","stato_mestieri","in_uso_da","id_padre_catena_fascicolare","codice_fascicolo","tscol", "data_registrazione", 
+        "id_fascicolo_importato", "data_chiusura", "note_importazione", "fascicolo_pregresso_collegato", "note",
+        "copiato_da", "creato_dal_sistema"};
+    
+    private int currYear;
 
     public String getSequenceName() {
         return sequenceName;
@@ -75,240 +59,235 @@ public class CreatoreFascicoloSpeciale implements Job{
     public void setSequenceName(String sequenceName) {
         this.sequenceName = sequenceName;
     }
-
-    private void create() throws NullPointerException, SQLException, ServletException{
-        idStrutturaUtenteResponsabile = getIdStrutturaResponsabile();
-        // Fascicolo: Atti dell'azienda
-        String idFascicoloSpecialeAtti = "FascicoloSpecial" + anno;
-        // il numero fascicolo è a 0 perchè verra sovrascritto dalla storeprocidure che stacca i numeri e li assegna
-        createFascicoloSpeciale(idFascicoloSpecialeAtti, 0, "1", fascicoloSpecialeAtti, null);
-        // Sottofascicoli: Registri, Determinazioni, Deliberazioni
-        String idFascicoloRegistro = "SFSpecialeRegis" + anno;
-        createFascicoloSpeciale(idFascicoloRegistro, 1, "2", fascicoloSpecialeRegistri, idFascicoloSpecialeAtti);
-        createFascicoloSpeciale("SFSpecialeDeter" + anno, 2, "2", fascicoloSpecialeDete, idFascicoloSpecialeAtti);
-        createFascicoloSpeciale("SFSpecialeDeli" + anno, 3, "2", fascicoloSpecialeDeli, idFascicoloSpecialeAtti);
-        // Ottengo id del sottofascicolo Registro
-        
-        if (idFascicoloRegistro == null || idFascicoloRegistro.equals("")) {
-            throw new NullPointerException("Error: idFascicoloRegistro è null!");
-        }
-        // Inserti: Registro giornaliero di protocollo, Registro giornaliero delle determinazioni, Registro giornaliero delle deliberazioni, Registri annuali
-        createFascicoloSpeciale("ISpecialeProto" + anno, 1, "3", registroGgProtocollo, idFascicoloRegistro);
-        createFascicoloSpeciale("ISpecialeDeter" + anno, 2, "3", registroGgDeterminazioni, idFascicoloRegistro);
-        createFascicoloSpeciale("ISpecialeDeli" + anno, 3, "3", registroGgDeliberazioni, idFascicoloRegistro);
-        createFascicoloSpeciale("ISpecialeAnnuali" + anno, 4, "3", registriAnnuali, idFascicoloRegistro);
-    }
     
-    private void createFascicoloSpeciale(String idFascicolo, int numeroFascicolo, String livelloFascicolo, String nomeFascicoloSpeciale, String idFascicoloPadre) throws SQLException, ServletException{
-        String queryCreateFascicolo = "INSERT INTO " + ApplicationParams.getFascicoliTableName() + "(" +
-                                            "id_fascicolo, nome_fascicolo, numero_fascicolo, anno_fascicolo, " +
-                                            "stato_fascicolo, id_livello_fascicolo, id_fascicolo_padre, " +
-                                            "id_struttura, id_titolo, id_utente_responsabile, " +
-                                            "id_utente_creazione, id_utente_responsabile_vicario, " +
-                                            "data_creazione, data_responsabilita, id_tipo_fascicolo, codice_fascicolo, " +
-                                            "eredita_permessi, speciale, guid_fascicolo) " +
-                                            "VALUES (?, ?, ?, ?, ?, " +
-                                                        "?, ?, ?, ?, " +
-                                                        "?, ?, ?, ?, ?, " +
-                                                        "?, ?, ?, ?, ?);";
-        try (
-               PreparedStatement ps = dbConnection.prepareStatement(queryCreateFascicolo);
-           ) {
-            int i = 1;
-            ps.setString(i++, idFascicolo);
-            ps.setString(i++, nomeFascicoloSpeciale);
-            // Nel caso sia il fascicolo "Atti" verra chiamata poi la funzione che stacchera e gli assegnera il numero
-            if (idFascicoloPadre == null) {
-                ps.setInt(i++, 0);
-            }else{
-                ps.setInt(i++, numeroFascicolo);
-            }
-            ps.setInt(i++, anno);
-            ps.setString(i++, "a"); // "a" indica stato aperto
-            ps.setString(i++, livelloFascicolo);
-            ps.setString(i++, idFascicoloPadre);
-            ps.setString(i++, idStrutturaUtenteResponsabile);
-            ps.setString(i++, idClassificazioneFascicoloSpeciale);
-            ps.setString(i++, idUtenteResponsabileFascicoloSpeciale);
-            ps.setString(i++, idUtenteResponsabileFascicoloSpeciale);
-            ps.setString(i++, idVicarioFascicoloSpeciale);
-            ps.setDate(i++, new Date(Calendar.getInstance().getTimeInMillis()));
-            ps.setDate(i++, new Date(Calendar.getInstance().getTimeInMillis()));
-            ps.setInt(i++, 1);
-            ps.setString(i++, "babel Codice" + idFascicolo);
-            ps.setInt(i++, 0);
-            ps.setInt(i++, -1);
-            String guidFascicolo = "guid_" + idFascicolo;
-            ps.setString(i++, guidFascicolo);
-//            String numerazioneGerarchica = getNumerazioneGerarchica(idFascicoloPadre);
-            // Caso fascicolo atti dell'azienda stacco il numero
-            if (idFascicoloPadre ==  null || idFascicoloPadre.equals("")) {
-//                E' stato introdotto un trigger che mette in automatico la numerazione gerarchica
-//                ps.setString(i++, numeroFascicolo + "/" + anno);
-                log.debug("QUERY INSERT: " + ps);
-                ps.executeUpdate();
-                SetDocumentNumber.setNumber(dbConnection, guidFascicolo, sequenceName);
-            }else{
-//                ps.setString(i++, numerazioneGerarchica + "-" + numeroFascicolo + "/" + anno);
-                log.debug("QUERY INSERT: " + ps);
-                ps.executeUpdate();
-            }
-        } catch (SQLException ex) {
-//            log.error("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
-            throw new SQLException("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
-        } catch (ServletException ex) {
-//            log.error("Errore nell'assegnamento del numero al fascicolo: " + nomeFascicoloSpeciale, ex);
-            throw new ServletException("Errore nell'assegnamento del numero al fascicolo: " + nomeFascicoloSpeciale, ex);
-        }
-    }
-    
-    private String getNumerazioneGerarchica(String idFascicolo) throws SQLException{
-        if ( idFascicolo == null || idFascicolo.equals("")) {
-            return null;
-        }
-        String queryNumerazioneGerarchica = "SELECT numerazione_gerarchica " +
-                                                "FROM gd.fascicoligd " + 
-                                                "WHERE id_fascicolo=?;";
-        try (
-               PreparedStatement psNumerazioneGerarchica = dbConnection.prepareStatement(queryNumerazioneGerarchica);
-           ) {
-            psNumerazioneGerarchica.setString(1, idFascicolo);
-            ResultSet resNumeroFascicolo = psNumerazioneGerarchica.executeQuery();
-            while (resNumeroFascicolo.next()) {                
-                if (!resNumeroFascicolo.getString("numerazione_gerarchica").equals("")) {
-                    String numerazioneGerarchica = resNumeroFascicolo.getString("numerazione_gerarchica");
-                    String[] splitted = numerazioneGerarchica.split("/");
-                    return splitted[0];
-                }else{
-                    throw new NullPointerException("La numerazione gerarchica del fascicolo è null: " + resNumeroFascicolo.getInt("numerazione_gerarchica"));
-                }
-            }
-        } catch (SQLException ex) {
-//            log.error("Errore nel ottenimento della numerazione gerarchica del fascicolo: " + idFascicolo + " " + ex);
-            throw new SQLException("Errore nel ottenimento della numerazione gerarchica del fascicolo: " + idFascicolo, ex);
-        }
-        return null;
-    }
-    
-    private String getIdStrutturaResponsabile() throws SQLException{
-        String queryIdStrutturaResponsabile = "SELECT id_struttura " +
-                                                "FROM " + ApplicationParams.getUtentiTableName() + " " + 
-                                                "WHERE id_utente=?;";
-        try (
-               PreparedStatement ps = dbConnection.prepareStatement(queryIdStrutturaResponsabile);
-           ) {
-            ps.setString(1, idUtenteResponsabileFascicoloSpeciale);
-            ResultSet resIdStrutturaResponsabile = ps.executeQuery();
-            while (resIdStrutturaResponsabile.next()) {                
-                if (resIdStrutturaResponsabile != null && resIdStrutturaResponsabile.getString("id_struttura") != null && !resIdStrutturaResponsabile.getString("id_struttura").equals("")) {
-                    return resIdStrutturaResponsabile.getString("id_struttura");
-                }else{
-                    throw new NullPointerException("La struttura del responsabile è null: " + resIdStrutturaResponsabile.getString("id_struttura"));
-                }
-            }
-        } catch (SQLException ex) {
-//            log.error("Errore nel ottenimento dell'id della struttura dell'utente responsabile: " + idUtenteResponsabileFascicoloSpeciale, ex);
-            throw new SQLException("Errore nel ottenimento dell'id della struttura dell'utente responsabile: " + idUtenteResponsabileFascicoloSpeciale, ex);
-        }
-        return null;
-    }
-   
-    private Integer getNumeroFascicolo(String idFascicolo) throws SQLException{
-        if ( idFascicolo == null || idFascicolo.equals("")) {
-            return null;
-        }
-        String queryNumeroFascicolo = "SELECT numero_fascicolo " +
-                                                "FROM " + ApplicationParams.getFascicoliTableName() + " " + 
-                                                "WHERE id_fascicolo=?;";
-        try (
-               PreparedStatement ps = dbConnection.prepareStatement(queryNumeroFascicolo);
-           ) {
-            ps.setString(1, idFascicolo);
-            ResultSet resNumeroFascicolo = ps.executeQuery();
-            while (resNumeroFascicolo.next()) {                
-                if (resNumeroFascicolo.getInt("numero_fascicolo") != 0) {
-                    return resNumeroFascicolo.getInt("numero_fascicolo");
-                }else{
-                    throw new NullPointerException("Il numero del fascicolo è null: " + resNumeroFascicolo.getInt("numero_fascicolo"));
-                }
-            }
-        } catch (SQLException ex) {
-//            log.error("Errore nel ottenimento del numero del fascicolo: " + idFascicolo, ex);
-            throw new SQLException("Errore nel ottenimento del numero del fascicolo: " + idFascicolo, ex);
-        }
-        return null;
-    }
-    
-    private String getIdFascicolo(String numerazioneGerarchica) throws SQLException{
-         if ( numerazioneGerarchica == null || numerazioneGerarchica.equals("")) {
-            return null;
-        }
-        String queryIdfascicolo = "SELECT id_fascicolo " +
-                                                "FROM " + ApplicationParams.getFascicoliTableName() + " " + 
-                                                "WHERE numerazione_gerarchica=?;";
-        try (
-               PreparedStatement ps = dbConnection.prepareStatement(queryIdfascicolo);
-           ) {
-            ps.setString(1, numerazioneGerarchica);
-            log.debug("Query GetIdFascicolo: " + ps);
-            ResultSet resIdFascicolo = ps.executeQuery();
-            while (resIdFascicolo.next()) {                
-                if (resIdFascicolo.getString("id_fascicolo") != null && !resIdFascicolo.getString("id_fascicolo").equals("")) {
-                    return resIdFascicolo.getString("id_fascicolo");
-                }else{
-                    throw new NullPointerException("L'id del fascicolo è null: " + resIdFascicolo.getInt("id_fascicolo"));
-                }
-            }
-        } catch (SQLException ex) {
-//            log.error("Errore nel ottenimento dell'id del fascicolo: " + numerazioneGerarchica, ex);
-            throw new SQLException("Errore nel ottenimento dell'id del fascicolo: " + numerazioneGerarchica, ex);
-        }
-        return null;
-    }
-    
-    private Boolean alreadyExist() throws SQLException{
-        String idFascicoloAttiAzienda = getIdFascicolo("1/" + anno);
-        if(idFascicoloAttiAzienda != null && !idFascicoloAttiAzienda.equals("")){
-            return true;
-        }
-        return false;
-    }
-
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
-        try {
-            dbConnection = UtilityFunctions.getDBConnection();
-            dbConnection.setAutoCommit(false);
-            if (!alreadyExist()) {
-                log.debug("=========================== Avvio Creazione Fascicoli Spaeciali ===========================");
-                create();
-                dbConnection.commit();
-                log.debug("=========================== Fine Creazione Fascicoli Spaeciali ===========================");
-            }else{
-                log.debug("ROLLBACK sulla transazione...");
-                dbConnection.rollback();
-                log.debug("FATTO!");
-                log.debug("CLOSE della connessione...");
-                dbConnection.close();
-                log.debug("FATTO!");
-//                log.debug("=========================== " + sequenceName + " ===========================");
-                log.debug("=========================== I fascicoli speciali sono già presenti per l'anno corrente ===========================");
-            }
-            //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        } catch (Exception ex) {
+        if (true)
+            return;
+        try (Connection dbConn = UtilityFunctions.getDBConnection();) {
+
+            LocalDateTime now = LocalDateTime.now();
+            currYear = now.getYear();
             try {
-                log.debug("ROLLBACK sulla transazione...");
-                dbConnection.rollback();
-                log.debug("FATTO!");
-                log.debug("CLOSE della connessione...");
-                dbConnection.close();
-                log.debug("FATTO!");
-            } catch (SQLException e) {
-                log.debug("Errore durante il RollBack: ", e);
+                if (notDoneThisYear(dbConn)) {
+                    if (existFascicoloSpeciale(dbConn)) {
+                        log.info(String.format("fascicolo speciale 1 dell'anno corrente %s trovato", currYear));
+                        log.debug("=========================== Avvio Creazione Fascicoli Spaeciali ===========================");
+                        updateDataInizioDataFine(dbConn, Timestamp.valueOf(now), null);
+                        dbConn.setAutoCommit(false);
+                        log.info("avvio duplicazione");
+                        duplicateFascicoli(dbConn);
+                        log.info("duplicazione terminata");
+                        updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
+                        dbConn.commit();
+                        log.debug("=========================== Fine Creazione Fascicoli Spaeciali ===========================");
+                    }
+                    else {
+                        log.info("fascicolo speciale 1 dell'anno corrente NON trovato, impossibile procedere alla duplicazione");
+                    }
+                }
+                else {
+                    log.info(String.format("duplicazione fascicoli già eseguita per l'anno corrente: %s", currYear));
+                }
             }
-            log.debug("Errore nella creazione dei fascicoli speciali: ", ex);
-            log.debug("=========================== Creazione dei Fascicoli speciali FALLITA ===========================");
+            catch (Exception ex) {
+                log.error("Errore nella duplicazione dei fascicoli: ", ex);
+                if (!dbConn.getAutoCommit())
+                    dbConn.rollback();
+                throw ex;
+            }
+        }
+        catch (Exception ex) {
+            log.error("Errore nel servizio di duplicazione dei fascicoli: ", ex);
         }
     }
     
+    private boolean existFascicoloSpeciale(Connection dbConn) throws SQLException {
+        String query = ""
+                + "select id_fascicolo "
+                + "from gd.fascicoligd "
+                + "where numero_fascicolo = ? and "
+                + "anno_fascicolo = ? and "
+                + "speciale = ? and "
+                + "id_livello_fascicolo = ?";
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
+            ps.setInt(1, 1);
+            ps.setInt(2, currYear);
+            ps.setInt(3, SQL_TRUE);
+            ps.setString(4, LIVELLO_FASCICOLO_RADICE);
+            
+            log.info(String.format("verifico l'esistenza del fascicolo speciale con numero 1 dell'anno corrente(%s) ", currYear));
+            log.debug(String.format("eseguo la query: %s...", ps.toString()));
+            ResultSet res = ps.executeQuery();
+            if (res.next()) 
+                return true;
+            else 
+                return false;
+        }
+    }
+
+    private boolean notDoneThisYear(Connection dbConn) throws SQLException {
+        String query = ""
+                + "select extract (year from data_inizio) "
+                + "from bds_tools.servizi "
+                + "where nome_servizio = ? and id_applicazione = ?";
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
+            ps.setString(1, getClass().getSimpleName());
+            ps.setString(2, ID_APPLICAZIONE);
+            log.debug(String.format("eseguo la query: %s", ps.toString()));
+            ResultSet res = ps.executeQuery();
+            if (res.next()) {
+                int year = res.getInt(1);
+                log.debug(String.format("anno letto: %s", year));
+                return year < currYear;
+            }
+            else
+                throw new SQLException(String.format("servizio %s dell'applicazione %s non trovato", getClass().getSimpleName(), ID_APPLICAZIONE));
+        }
+    }
+    
+    /**
+     * aggiorna le date di avvio, termine del servizio, per aggiorarne solo una passare null all'altra
+     * @param dataInizio
+     * @param dataFine
+     * @throws SQLException 
+     */
+    private void updateDataInizioDataFine(Connection dbConn, Timestamp dataInizio, Timestamp dataFine) throws SQLException {
+        String query = ""
+                + "update bds_tools.servizi "
+                + "set "
+                + "data_inizio = coalesce(?, data_inizio), "
+                + "data_fine = coalesce(?, data_fine) "
+                + "where nome_servizio = ? and id_applicazione = ?";
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
+            int index = 1;
+            ps.setTimestamp(index++, dataInizio);
+            ps.setTimestamp(index++, dataFine);
+            ps.setString(index++, getClass().getSimpleName());
+            ps.setString(index++, ID_APPLICAZIONE);
+            
+            log.debug(String.format("eseguo la query: %s...", ps.toString()));
+            int res = ps.executeUpdate();
+            if (res == 0)
+                throw new SQLException("errore nell'aggiornamento delle date inizio/fine, l'update ha tornato 0");
+        }
+    }
+    
+    private ResultSet extractFascicoliAttivita(Connection dbConn, PreparedStatement ps, String livello) throws SQLException {
+        String query = ""
+                + "select * "
+                + "from gd.fascicoligd "
+                + "where id_livello_fascicolo = ? and "
+                + "id_tipo_fascicolo = ? and "
+                + "anno_fascicolo = ?";
+        ps = dbConn.prepareStatement(query, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+        ps.setString(1, livello);
+        ps.setInt(2, TIPO_FASCICOLO_ATTIVITA);
+        ps.setInt(3, currYear - 1);
+        log.debug(String.format("eseguo la query %s...", ps.toString()));
+
+        return ps.executeQuery();
+    }
+    
+    private void duplicateFascicoli(Connection dbConn) throws SQLException, IOException, MalformedURLException, SendHttpMessageException, ServletException {
+        //String query = "select * from gd.fascicoligd where guid_fascicolo in (?,?,?)";
+
+        Map<String, String> idFascicoliOldNewMap1 = new HashMap();
+        Map<String, String> idFascicoliOldNewMap2 = new HashMap();
+        Map<String, String>[] idFascicoliMaps = new Map[2];
+        idFascicoliMaps[0] = idFascicoliOldNewMap1;
+        idFascicoliMaps[1] = idFascicoliOldNewMap2;
+
+        for(int livello = 1; livello <= MAX_LIVELLO_FASCICOLO; livello++) {
+            try (PreparedStatement ps = null) {
+                ResultSet fascicoliRS = extractFascicoliAttivita(dbConn, ps, String.valueOf(livello));
+                int fascicoliNumber = 0;
+                if (fascicoliRS.last()) {
+                    fascicoliNumber = fascicoliRS.getRow();
+                    fascicoliRS.beforeFirst();
+                    JSONArray indeIds = UtilityFunctions.getIndeId(fascicoliNumber);
+                    int fascicoliCont = 0;
+                    Map<String, String> readIdMap = idFascicoliMaps[(livello % 2)];
+                    Map<String, String> writeIdMap = idFascicoliMaps[1 - (livello % 2)];
+                    writeIdMap.clear();
+                    while(fascicoliRS.next() && fascicoliCont < fascicoliNumber) {
+                        fascicoliRS.moveToInsertRow();
+                        JSONObject idAndGuid = (JSONObject)indeIds.get(fascicoliCont);
+                        String idFascicoloSorgente = fascicoliRS.getString("id_fascicolo");
+                        String idFascicoloDuplicato = (String) idAndGuid.get("document_id");
+                        String guidFascicoloDuplicato = (String) idAndGuid.get("document_guid");
+                        fascicoliRS.updateString("id_fascicolo", idFascicoloDuplicato);
+                        
+                        fascicoliRS.updateString("nome_fascicolo", null);
+                        fascicoliRS.updateInt("anno_fascicolo", currYear);
+                        fascicoliRS.updateString("guid_fascicolo", guidFascicoloDuplicato);
+                        fascicoliRS.updateString("codice_fascicolo", fascicoliRS.getString("codice_fascicolo").replace(fascicoliRS.getString("guid_fascicolo"), guidFascicoloDuplicato));
+                        fascicoliRS.updateString("copiato_da", idFascicoloSorgente);
+                        fascicoliRS.updateInt("creato_dal_sistema", SQL_TRUE);
+
+                        String idFascicoloPadre = null;
+                        if (livello > 1) {
+                            idFascicoloPadre = readIdMap.get(fascicoliRS.getString("id_fascicolo_padre"));
+                            fascicoliRS.updateInt("numero_fascicolo", fascicoliRS.getInt("numero_fascicolo"));
+                        }
+                        else
+                            fascicoliRS.updateInt("numero_fascicolo", 0);
+
+                        if (livello < MAX_LIVELLO_FASCICOLO)
+                            writeIdMap.put(idFascicoloSorgente, idFascicoloDuplicato);
+
+                        fascicoliRS.updateString("id_fascicolo_padre", idFascicoloPadre);
+
+                        ResultSetMetaData metaData = fascicoliRS.getMetaData();
+                        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                            String columnName = metaData.getColumnName(i);
+                            int columnType = metaData.getColumnType(i);
+                            if (!Arrays.stream(COLUMN_TO_EXCLUDE).anyMatch(c -> c.equalsIgnoreCase(columnName))) {
+                                log.debug(String.format("processing column: %s of type: %s ",columnName, columnType));
+                                fascicoliRS.updateObject(columnName, fascicoliRS.getObject(columnName));
+                            }
+                        }
+                        fascicoliCont++;
+                        fascicoliRS.insertRow();
+                        fascicoliRS.moveToCurrentRow();
+                        insertVicari(dbConn, idFascicoloSorgente, idFascicoloDuplicato);
+                        
+                        if (livello == 1) {
+                            String number = SetDocumentNumber.setNumber(dbConn, guidFascicoloDuplicato, sequenceName);
+                            log.info(String.format("numero generato: %s", number));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void insertVicari(Connection dbConn, String idFascicoloSorgente, String idFascicoloDuplicato) throws SQLException {
+        
+        String queryVicari = "select * from gd.fascicoli_gd_vicari where id_fascicolo = ?";
+        try (PreparedStatement psVicari = dbConn.prepareStatement(queryVicari, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE, ResultSet.CLOSE_CURSORS_AT_COMMIT);) {
+            psVicari.setString(1, idFascicoloSorgente);
+            log.debug(String.format("eseguo la query: %s...", psVicari.toString()));
+            ResultSet vicariRS = psVicari.executeQuery();
+            if (vicariRS.last()) {
+                int vicariNumber = vicariRS.getRow();
+                log.debug(String.format("vicari tovati: ", vicariNumber));
+                vicariRS.beforeFirst();
+                int vicariCont = 0;
+                while (vicariRS.next() && vicariCont < vicariNumber) {
+                    log.debug(String.format("processing vicario row: %s --> %s", vicariRS.getString(1), vicariRS.getString(2)));
+                    vicariRS.moveToInsertRow();
+                    vicariRS.updateString("id_fascicolo", idFascicoloDuplicato);
+                    vicariRS.updateString("id_utente", vicariRS.getString("id_utente"));
+                    vicariRS.insertRow();
+                    vicariCont++;
+                    vicariRS.moveToCurrentRow();
+                }
+            }
+            else {
+                log.debug("non ci sono vicari");
+            }
+        }
+    }
 }
