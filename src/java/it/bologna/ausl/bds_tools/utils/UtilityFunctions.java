@@ -37,6 +37,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -53,6 +54,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tika.mime.MimeTypeException;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONValue;
 import org.w3c.tidy.Tidy;
 
 public class UtilityFunctions {
@@ -442,5 +445,33 @@ static {
             }
         }
         return result;
+    }
+    
+    /**
+     * fa una richiesta ad una applicazione INDE apposita che torna un JsonArray contente il numero di DocId INDE richiesti così composto: 
+     * [
+     *      {
+     *          "document_id": "<DOC_ID>", 
+     *          "document_guid": "<GUID_CORRISPONDENTE>"
+     *      }, 
+     *      ...
+     * ]
+     * @param idNumber numero di id da generare
+     * @return JsonArray contente idNumber elementi
+     * @throws IOException
+     * @throws MalformedURLException
+     * @throws SendHttpMessageException 
+     */
+    public static JSONArray getIndeId(int idNumber) throws IOException, MalformedURLException, SendHttpMessageException {
+
+        // contruisco la mappa dei parametri per la servlet (va passato solo un parametro che è il numero di id da generare)
+        Map<String, byte[]> params = new HashMap<>();
+
+        params.put("generateidnumber", String.valueOf(idNumber).getBytes());
+
+        String res = UtilityFunctions.sendHttpMessage(ApplicationParams.getGetIndeUrlServiceUri(), null, null, params, "POST", null);
+
+        // la servlet torna un JsonArray contente idNumber elementi, ognuno dei quali è una coppia (id, guid)
+        return (JSONArray) JSONValue.parse(res);
     }
 }
