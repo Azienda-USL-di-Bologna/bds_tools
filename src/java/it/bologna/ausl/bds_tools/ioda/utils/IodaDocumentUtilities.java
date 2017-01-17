@@ -68,13 +68,10 @@ public class IodaDocumentUtilities {
     public static final String INDE_DOCUMENT_ID_PARAM_NAME = "document_id";
     public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
 
-    private static final String GENERATE_INDE_NUMBER_PARAM_NAME = "generateidnumber";
-
     HttpServletRequest request;
     private String prefixIds; // prefisso da anteporre agli id dei documenti che si inseriscono o che si ricercano (GdDoc, SottoDocumenti)
     private MongoWrapper mongo;
     private String mongoParentPath;
-    private String getIndeIdServletUrl;
     private String gdDocTable;
     private String datiParerGdDocTable;
     private String sottoDocumentiTable;
@@ -101,7 +98,6 @@ public class IodaDocumentUtilities {
             this.detector = new Detector();
             this.indeIdIndex = 0;
             this.mongoParentPath = ApplicationParams.getUploadGdDocMongoPath();
-            this.getIndeIdServletUrl = ApplicationParams.getGetIndeUrlServiceUri();
             this.fascicoliTable = ApplicationParams.getFascicoliTableName();
             this.fascicoliGdDocTable = ApplicationParams.getFascicoliGdDocsTableName();
         }
@@ -644,11 +640,11 @@ public class IodaDocumentUtilities {
             while (res.next()) {
                 PubblicazioneIoda p = new PubblicazioneIoda();
                 p.setAnnoPubblicazione(res.getInt("anno_pubblicazione"));
-                Date dataAl = res.getDate("data_al");
+                Timestamp dataAl = res.getTimestamp("data_al");
                 if (dataAl != null) {
                     p.setDataAl(new DateTime(dataAl.getTime()));
                 };
-                Date dataDal = res.getDate("data_dal");
+                Timestamp dataDal = res.getTimestamp("data_dal");
                 if (dataAl != null) {
                     p.setDataDal(new DateTime(dataDal.getTime()));
                 };
@@ -1861,10 +1857,7 @@ public class IodaDocumentUtilities {
 
     private void getIndeId() throws IOException, MalformedURLException, SendHttpMessageException {
 
-        // contruisco la mappa dei parametri per la servlet (va passato solo un parametro che è il numero di id da generare)
-        Map<String, byte[]> params = new HashMap<>();
-
-        // il numero di id è ottenuto dal numero dei SottoDocumenti + il GdDoc
+        // il numero di id da generare è ottenuto dal numero dei SottoDocumenti + il GdDoc
         int idNumber = 1;
         if (gdDoc.getFascicolazioni() != null) {
             idNumber += gdDoc.getFascicolazioni().size();
@@ -1872,12 +1865,9 @@ public class IodaDocumentUtilities {
         if (gdDoc.getSottoDocumenti() != null) {
             idNumber += gdDoc.getSottoDocumenti().size();
         }
-        params.put(GENERATE_INDE_NUMBER_PARAM_NAME, String.valueOf(idNumber).getBytes());
 
-        String res = UtilityFunctions.sendHttpMessage(getIndeIdServletUrl, null, null, params, "POST", null);
-
-        // la servlet torna un JsonArray contente idNumber elementi, ognuno dei quali è una coppia (id, guid)
-        indeId = (JSONArray) JSONValue.parse(res);
+        // torna un JsonArray contente idNumber elementi, ognuno dei quali è una coppia (id, guid)
+        indeId = UtilityFunctions.getIndeId(idNumber);
     }
 
     public String getGdDocTable() {
