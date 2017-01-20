@@ -288,16 +288,16 @@ public class DuplicatoreFascicoliAttivita implements Job{
     private void duplicateFascicoli(Connection dbConn) throws SQLException, IOException, MalformedURLException, SendHttpMessageException, ServletException {
 
         /* 
-        nella duplicazione ho bisono di inserire il campo id_fascicolo_padre; per recuperarlo dovrei fare una query che mi recuperi il campo id_fasicolo 
-        dal fascicolo che ha id_fascicolo_duplicato = al id_fascicolo_padre del fascicolo che sto duplicando.
-        Per evitare di fare una query per ogni fascicolo che voglio duplicare allora, ad ogni duplicazione, salvo in una mappa 
-        id fascicolo che sto duplicando -> id_fascicolo duplicato. Questo mi permette, al giro successivo di prendere il campo dell'id_fascicolo_padre 
-        direttamente dalla mappa. Infatti l'id_fascicolo_padre del fascicolo duplicato che sto creando, sarà il valore identificato dalla chiave 
-        id_fascicolo_padre del fascicolo che sto duplicando.
-        Ho bisogno quindi di 2 mappe: una in cui scrivere la mappatura degli id_fascicolo (sorgente->duplicato) e una da cui leggerli. 
-        Ad ogni ciclo devo quindi scrivere in una e leggere dall'altra (che deve essere quella che nel giro precedente è stata scritta)
-        Per realizzare questo utilizzo un array di 2 elementi in cui inserisco le reference delle 2 mappe e ad ogni ciclo le utilizzo per leggere/scrivere
-        in modo alternato. Naturalmente al primo giro, non leggerò niente, e all'ultimo non scriverò niente.
+            nella duplicazione ho bisono di inserire il campo id_fascicolo_padre; per recuperarlo dovrei fare una query che mi recuperi il campo id_fasicolo 
+            dal fascicolo che ha id_fascicolo_duplicato = al id_fascicolo_padre del fascicolo che sto duplicando.
+            Per evitare di fare una query per ogni fascicolo che voglio duplicare allora, ad ogni duplicazione, salvo in una mappa 
+            id fascicolo che sto duplicando -> id_fascicolo duplicato. Questo mi permette, al giro successivo di prendere il campo dell'id_fascicolo_padre 
+            direttamente dalla mappa. Infatti l'id_fascicolo_padre del fascicolo duplicato che sto creando, sarà il valore identificato dalla chiave 
+            id_fascicolo_padre del fascicolo che sto duplicando.
+            Ho bisogno quindi di 2 mappe: una in cui scrivere la mappatura degli id_fascicolo (sorgente->duplicato) e una da cui leggerli. 
+            Ad ogni ciclo devo quindi scrivere in una e leggere dall'altra (che deve essere quella che nel giro precedente è stata scritta)
+            Per realizzare questo utilizzo un array di 2 elementi in cui inserisco le reference delle 2 mappe e ad ogni ciclo le utilizzo per leggere/scrivere
+            in modo alternato. Naturalmente al primo giro, non leggerò niente, e all'ultimo non scriverò niente.
         */
         Map<String, String> idFascicoliOldNewMap1 = new HashMap();
         Map<String, String> idFascicoliOldNewMap2 = new HashMap();
@@ -342,13 +342,21 @@ public class DuplicatoreFascicoliAttivita implements Job{
                     writeIdMap.clear();
                     int fascicoliCont = 0;
                     log.info(String.format("inizio duplicazione livello %d", livello));
-                    // ciclo su tutti i fascicoli estratti
+                    /*
+                        Ciclo su tutti i fascicoli estratti.
+                        Devo aggiungere la condizione "fascicoliCont < fascicoliNumber" perché uso la modalità di inserimento del RecodSet:
+                        Questa modalità mi permette di inserire facilmente senza dover genrare la stringa "INSERT INTO..." ed eseguire la query per l'inserimento.
+                        Così facendo però inserisco il nuovo oggetto sia nel database, che nel RecordSet che sto ciclando, perciò, alla fine degli oggetti
+                        tirati fuori dalla query, mi ritroverò i nuovi oggetti inseriti; per terminare il ciclo alla fine degli oggetti iniziali e non proseguire
+                        con quelli appena inseriti devo quindi contare il numero di oggetti presenti inizialmente e aggiungere una condizione che mi faccia terminare
+                        il ciclo quando ne raggiungo il numero.
+                    */
                     while(fascicoliRS.next() && fascicoliCont < fascicoliNumber) {
                         String idFascicoloSorgente = fascicoliRS.getString("id_fascicolo");
                         String numerazioneGerarchicaSorgente = fascicoliRS.getString("numerazione_gerarchica");
                         log.info(String.format("processo il fascicolo %s con id: %s", numerazioneGerarchicaSorgente, idFascicoloSorgente));
                         
-                        // sposto il cursore in modalità inserimento
+                        // sposto il cursore in modalità inserimento (dopo l'inserimento lo rimetterò nella posizione corrente)
                         fascicoliRS.moveToInsertRow();
 
                         // chiedo alla servlet INDE degli id/guid per inserire i fascicoli che devo duplicare. Chiedo tanti id quanti fascicoli ho estratto(naturalmente)
@@ -402,8 +410,10 @@ public class DuplicatoreFascicoliAttivita implements Job{
                         fascicoliRS.updateString("id_fascicolo_padre", idFascicoloPadre);
 
                         log.info("duplicazione campi...");
-                        // per duplicare gli altri campi, estraggo tutti i nomi delle colonne dal risultato della query e li inserisco nel duplicato leggendoli dal sorgente.
-                        // dalla duplucazione però escludo i campi presenti nell'array "COLUMN_TO_EXCLUDE"
+                        /*
+                            per duplicare gli altri campi, estraggo tutti i nomi delle colonne dal risultato della query e li inserisco nel duplicato
+                            leggendoli dal sorgente. Dalla duplicazione però escludo i campi presenti nell'array "COLUMN_TO_EXCLUDE"
+                        */
                         ResultSetMetaData metaData = fascicoliRS.getMetaData();
                         for (int i = 1; i <= metaData.getColumnCount(); i++) {
                             String columnName = metaData.getColumnName(i);
@@ -413,13 +423,21 @@ public class DuplicatoreFascicoliAttivita implements Job{
                                 fascicoliRS.updateObject(columnName, fascicoliRS.getObject(columnName));
                             }
                         }
+                        
+                        // inserisco la riga nel database e nel RecordSet
                         log.info("inserimento riga duplicata...");
                         fascicoliRS.insertRow();
                         log.info("inserimento OK");
+                        
+                        // rimetto il cursore al punto in cui era
                         fascicoliRS.moveToCurrentRow();
                         log.info("inserimento vicari...");
+                        
+                        // duplico anche i vicari
                         duplicateVicari(dbConn, idFascicoloSorgente, idFascicoloDuplicato);
                         log.info("inserimento vicari OK");
+                        
+                        // se sono al livello 1 (radice) numero il fascicolo con il servizio di numerazione
                         if (livello == 1) {
                             log.info("numerazione...");
                             String number = SetDocumentNumber.setNumber(dbConn, guidFascicoloDuplicato, sequenceName);
