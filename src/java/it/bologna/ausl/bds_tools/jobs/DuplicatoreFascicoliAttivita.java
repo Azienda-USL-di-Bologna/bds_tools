@@ -251,8 +251,8 @@ public class DuplicatoreFascicoliAttivita implements Job{
                 +       "select s.id_fascicolo, r.radice, s.id_livello_fascicolo "
                 +       "from gd.fascicoligd s join fascicoli_ric r on s.id_fascicolo_padre = r.id_fascicolo "
                 +   ")"
-                +   "select * "
-                +   "from fascicoli_ric r JOIN gd.fascicoligd f using (id_fascicolo) "
+                +   "select f.* "
+                +   "from gd.fascicoligd f JOIN  fascicoli_ric r using (id_fascicolo) "
                 +   "where f.id_livello_fascicolo = ?";
         ps = dbConn.prepareStatement(query, ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
         ps.setInt(1, TIPO_FASCICOLO_ATTIVITA);
