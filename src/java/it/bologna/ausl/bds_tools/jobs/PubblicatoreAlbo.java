@@ -267,6 +267,7 @@ public class PubblicatoreAlbo implements Job {
             PubblicazioneIoda pIoda = new PubblicazioneIoda();
             pIoda.setNumeroPubblicazione(p.getNumeroPubblicazione());
             pIoda.setAnnoPubblicazione(p.getAnnoPubblicazione());
+            pIoda.setDataEsecutivita(new DateTime(p.getDataEsecutivita().getTime()));
 
             if (p.getDataDefissione() != null) { // pubblicazione defissa, aggiorno la data defissione (numero e anno ci sono già, quindi li uso per individuarla)
                 pIoda.setDataDefissione(new DateTime(p.getDataDefissione().getTime()));

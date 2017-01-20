@@ -1774,7 +1774,8 @@ public class IodaDocumentUtilities {
                 + "numero_pubblicazione = coalesce(?, numero_pubblicazione), "
                 + "anno_pubblicazione = coalesce(?, anno_pubblicazione), "
                 + "pubblicatore = coalesce(?, pubblicatore), "
-                + "data_defissione = coalesce(?, data_defissione) "
+                + "data_defissione = coalesce(?, data_defissione), "
+                + "data_esecutivita = coalesce(?, data_defissione) "
                 + "WHERE id = ? ";
 
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
@@ -1792,6 +1793,13 @@ public class IodaDocumentUtilities {
             //data defissione
             if (p.getDataDefissione() != null) {
                 ps.setTimestamp(index++, new Timestamp(p.getDataDefissione().getMillis()));
+            } else {
+                ps.setNull(index++, Types.TIMESTAMP);
+            }
+            
+             //data esecutivita
+            if (p.getDataEsecutivita() != null) {
+                ps.setTimestamp(index++, new Timestamp(p.getDataEsecutivita().getMillis()));
             } else {
                 ps.setNull(index++, Types.TIMESTAMP);
             }
@@ -1816,6 +1824,7 @@ public class IodaDocumentUtilities {
         String sqlText
                 = "UPDATE " + ApplicationParams.getPubblicazioniAlboTableName() + " SET "
                 + "data_defissione = coalesce(?, data_defissione), "
+                + "data_esecutivita = coalesce(?, data_esecutivita), "
                 + "pubblicatore = coalesce(?, pubblicatore) "
                 + "WHERE numero_pubblicazione = ? AND anno_pubblicazione = ?";
 
@@ -1825,6 +1834,13 @@ public class IodaDocumentUtilities {
             //data defissione
             if (p.getDataDefissione() != null) {
                 ps.setTimestamp(index++, new Timestamp(p.getDataDefissione().getMillis()));
+            } else {
+                ps.setNull(index++, Types.TIMESTAMP);
+            }
+            
+            //data esecutivita
+            if (p.getDataEsecutivita() != null) {
+                ps.setTimestamp(index++, new Timestamp(p.getDataEsecutivita().getMillis()));
             } else {
                 ps.setNull(index++, Types.TIMESTAMP);
             }
