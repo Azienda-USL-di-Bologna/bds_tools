@@ -245,7 +245,7 @@ public class IodaFascicolazioniUtilities {
                 "AND f.id_fascicolo = fg.id_fascicolo " +
                 "AND fg.id_fascicolo = ? ";
 	
-        String sqlText = 
+        String sqlText2 = 
                 "SELECT f.numerazione_gerarchica, f.nome_fascicolo, fg.data_assegnazione, fg.id_utente_fascicolatore, fg.data_eliminazione, " +
                 "fg.id_utente_eliminazione, f.numero_fascicolo, f.anno_fascicolo, " +
                 "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
@@ -259,10 +259,51 @@ public class IodaFascicolazioniUtilities {
                 "AND f.id_fascicolo = fg.id_fascicolo " +
                 "AND fg.id_fascicolo = ? " ;
         
+        String sqlText = 
+                "with permesso as ( "  + 
+"select fvp.id_fascicolo, f.numerazione_gerarchica, (select nome_fascicolo  from procton_tools.get_fascicolo_root(fvp.id_fascicolo)) as root " + 
+"from gd.fascicoli_visibili_permessi fvp " + 
+"join gd.fascicoligd f on f.id_fascicolo = fvp.id_fascicolo " + 
+"where fvp.id_utente = ?  and  fvp.id_fascicolo in (?) " + 
+"union " +  
+"select v.id_fascicolo, f.numerazione_gerarchica ,(select nome_fascicolo from procton_tools.get_fascicolo_root(v.id_fascicolo)) as root " + 
+"from gd.fascicoli_gd_vicari v " + 
+"join gd.fascicoligd f on f.id_fascicolo = v.id_fascicolo " +
+"where v.id_utente = ?  and  v.id_fascicolo in (?) " + 
+"union " + 
+"select fr.id_fascicolo , f.numerazione_gerarchica, (select nome_fascicolo from procton_tools.get_fascicolo_root(fr.id_fascicolo)) as root " + 
+"from gd.fascicoli_responsabilita fr " + 
+"join gd.fascicoligd f on f.id_fascicolo = fr.id_fascicolo " +
+"where fr.id_utente_responsabile = ? and fr.id_fascicolo in (?) )" + 
+"SELECT f.numerazione_gerarchica, f.nome_fascicolo, fg.data_assegnazione, fg.id_utente_fascicolatore, fg.data_eliminazione, " +
+"	fg.id_utente_eliminazione, f.numero_fascicolo, f.anno_fascicolo, " +
+"	CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
+"		WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
+"		ELSE nome_fascicolo " +
+"		END as nome_fascicolo_interfaccia, " +
+"	CASE WHEN (select count(*) from permesso  ) = 0  THEN f.numerazione_gerarchica " +
+"		ELSE (select root from permesso) " +
+"		END as nome_fascicolo_interfaccia_omissis, " +
+"	CASE WHEN (select count(*) from permesso  ) = 0  THEN false " +
+"		ELSE true " +
+"		END as permesso " +
+"FROM " + getFascicoliTable() + " f, " + getFascicoliGdDocTable() + " fg, "+ getGdDocTable() + " g " +
+"WHERE g.id_oggetto_origine = ? " +
+"AND g.tipo_oggetto_origine = ? " +
+"AND g.id_gddoc = fg.id_gddoc " +
+"AND f.id_fascicolo = fg.id_fascicolo " +
+"AND fg.id_fascicolo = ? " ;
+        
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
-            ps.setString(1, sd.getIdOggettoOrigine());
-            ps.setString(2, sd.getTipoOggettoOrigine());
-            ps.setString(3, idFascicolo);
+            ps.setString(1, sd.getUtente());
+            ps.setString(2, idFascicolo);
+            ps.setString(3, sd.getUtente());
+            ps.setString(4, idFascicolo);
+            ps.setString(5, sd.getUtente());
+            ps.setString(6, idFascicolo);
+            ps.setString(7, sd.getIdOggettoOrigine());
+            ps.setString(8, sd.getTipoOggettoOrigine());
+            ps.setString(9, idFascicolo);
             log.debug("eseguo la query: " + ps.toString() + " ...");
             ResultSet res = ps.executeQuery();
 
@@ -321,8 +362,12 @@ public class IodaFascicolazioniUtilities {
                 if(idUtenteFascicolatore != null && !idUtenteFascicolatore.equals("")){
                     descrizioneFascicolatore = this.getNomeCognome(dbConn, idUtenteFascicolatore);
                 }
+                
+                String nomeFascicoloInterfacciaOmissis = res.getString(index++); 
+                boolean permessoFascicolo = res.getBoolean(index++);
 
-                fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
+                //fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
+                fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia, nomeFascicoloInterfacciaOmissis, permessoFascicolo);
                 fascicolazione.setAnno(annoFascicolo);
                 fascicolazione.setNumero(numeroFascicolo);
             }
