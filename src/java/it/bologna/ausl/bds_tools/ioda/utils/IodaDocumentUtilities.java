@@ -613,6 +613,7 @@ public class IodaDocumentUtilities {
                     + "AND p.numero_pubblicazione > 0 "
                     + "AND p.anno_pubblicazione IS NOT NULL "
                     + "AND p.anno_pubblicazione > 0 "
+                    + "AND p.tipologia = ? "
                     + "ORDER BY p.numero_pubblicazione";
         } else {
             sqlText
@@ -628,12 +629,14 @@ public class IodaDocumentUtilities {
                     + "pubblica_solo_se_pubblicato_albo "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " "
                     + "WHERE id_gddoc = ? "
+                    + "AND p.tipologia = ? "
                     + "ORDER BY numero_pubblicazione";
         }
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             ps.setString(1, idGdDoc);
+            ps.setString(2, PubblicazioneIoda.Tipologia.ALBO.toString());
 
             log.debug("eseguo la query: " + ps.toString() + "...");
             ResultSet res = ps.executeQuery();
