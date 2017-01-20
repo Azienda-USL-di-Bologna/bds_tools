@@ -605,6 +605,7 @@ public class IodaDocumentUtilities {
                     + "esecutivita, "
                     + "esecutiva, "
                     + "data_defissione, "
+                    + "data_esecutivita, "
                     + "tipologia, "
                     + "pubblica_solo_se_pubblicato_albo "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p "
@@ -625,6 +626,7 @@ public class IodaDocumentUtilities {
                     + "esecutivita, "
                     + "esecutiva, "
                     + "data_defissione, "
+                    + "data_esecutivita, "
                     + "tipologia, "
                     + "pubblica_solo_se_pubblicato_albo "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " "
@@ -662,6 +664,10 @@ public class IodaDocumentUtilities {
                 Timestamp dataDefissione = res.getTimestamp("data_defissione");
                 if (dataDefissione != null) {
                     p.setDataDefissione(new DateTime(dataDefissione.getTime()));
+                }
+                Timestamp dataEsecutivita = res.getTimestamp("data_esecutivita");
+                if (dataEsecutivita != null) {
+                    p.setDataEsecutivita(new DateTime(dataEsecutivita.getTime()));
                 }
 
                 String sqlTipoProvvedimentoText
