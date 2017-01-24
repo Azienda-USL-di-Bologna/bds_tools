@@ -106,11 +106,11 @@ public class CreatoreFascicoloSpeciale implements Job{
                                             "id_struttura, id_titolo, id_utente_responsabile, " +
                                             "id_utente_creazione, id_utente_responsabile_vicario, " +
                                             "data_creazione, data_responsabilita, id_tipo_fascicolo, codice_fascicolo, " +
-                                            "eredita_permessi, speciale, guid_fascicolo) " +
+                                            "eredita_permessi, speciale, guid_fascicolo, servizio_creazione) " +
                                             "VALUES (?, ?, ?, ?, ?, " +
                                                         "?, ?, ?, ?, " +
                                                         "?, ?, ?, ?, ?, " +
-                                                        "?, ?, ?, ?, ?);";
+                                                        "?, ?, ?, ?, ?, ?);";
         try (
                PreparedStatement ps = dbConnection.prepareStatement(queryCreateFascicolo);
            ) {
@@ -140,6 +140,7 @@ public class CreatoreFascicoloSpeciale implements Job{
             ps.setInt(i++, -1);
             String guidFascicolo = "guid_" + idFascicolo;
             ps.setString(i++, guidFascicolo);
+            ps.setString(i++, getClass().getSimpleName());
 //            String numerazioneGerarchica = getNumerazioneGerarchica(idFascicoloPadre);
             // Caso fascicolo atti dell'azienda stacco il numero
             if (idFascicoloPadre ==  null || idFascicoloPadre.equals("")) {
