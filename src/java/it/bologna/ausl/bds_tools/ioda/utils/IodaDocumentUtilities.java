@@ -631,7 +631,7 @@ public class IodaDocumentUtilities {
                     + "pubblica_solo_se_pubblicato_albo "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " "
                     + "WHERE id_gddoc = ? "
-                    + "AND p.tipologia = ? "
+                    + "AND tipologia = ? "
                     + "ORDER BY numero_pubblicazione";
         }
 
