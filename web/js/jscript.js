@@ -7,7 +7,11 @@ $(document).ready(function(){
 //  }
   var allServices = ''; // Contiene il json di TUTTI i servizi dell'ultima chiamata ajax effettuata
   // 'http://localhost:8084/bds_tools/Schedulatore';  IN LOCALE
-  var servletUrl = 'https://' + splittedUrl[2]+ '/bds_tools/Schedulatore';
+//  console.log(urlPage);
+//  console.log(splittedUrl[0]);
+//  console.log(splittedUrl[1]);
+//  console.log(splittedUrl[2]);
+  var servletUrl = splittedUrl[0] + '//' + splittedUrl[2] + '/bds_tools/Schedulatore';
 //  console.log(servletUrl);
 
   // Funzione che ritorna l'icona del servizio dando in input il nome del servizio
@@ -100,7 +104,8 @@ $(document).ready(function(){
               if (oldJson) {
                 if (oldJson === data) {
                   if (counter <= 3) {
-                    setTimeout(function(){showAllServices(data, counter++)}, 1000);
+                      counter++;
+                    setTimeout(function(){showAllServices(data, counter)}, 1000);
                   }else {
                     showTemporaryMessage('Deve essersi verificato un errore lato server:<br/>Il Json ritornato dal server è uguale a quello attuale.');
                   }
@@ -122,11 +127,13 @@ $(document).ready(function(){
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
+//            console.log('Qui ' + counter)
           if (!counter) {
-            counter = 2;
+            counter = 1;
           }
           if (counter <= 3) {
-            setTimeout(function(){showAllServices(oldJson, counter++)}, 1000);
+              counter++;
+            setTimeout(function(){showAllServices(oldJson, counter)}, 1000);
           }else {
             console.error(jqXHR, textStatus, errorThrown);
             showTemporaryMessage('Si è verificato un errore nella chiamata al server.<br>Guardare la console dei log per maggiori informazioni.');
