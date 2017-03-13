@@ -17,6 +17,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -215,15 +216,17 @@ public class IodaFascicoliUtilities {
             "        f.numerazione_gerarchica, f.id_utente_responsabile, uResp.nome, uResp.cognome, " + 
             "        f.stato_fascicolo, f.id_utente_responsabile_proposto, f.id_fascicolo_padre, " + 
             "        f.id_titolo, f.speciale, t.codice_gerarchico || '' || t.codice_titolo || ' ' || t.titolo as titolo, " + 
-            "        f.id_fascicolo_importato, f.data_chiusura, f.note_importazione " + 
+            "        f.id_fascicolo_importato, f.data_chiusura, f.note_importazione, f.guid_fascicolo " + 
             "FROM gd.fascicoligd f " + 
             "	LEFT join procton.titoli t ON t.id_titolo = f.id_titolo " + 
             "	JOIN procton.utenti uResp ON uResp.id_utente=f.id_utente_responsabile " + 
             "	JOIN procton.utenti uCrea ON f.id_utente_creazione=uCrea.id_utente " + 
             "WHERE 1=1  " + 
-            "	AND f.id_fascicolo_importato in ( " + idList + " ) ";
+            "	AND f.guid_fascicolo in (" + idList + ") ";
         
         ps = dbConn.prepareStatement(sqlText);
+        
+        log.debug("Query: " + ps);
         
         ResultSet results = ps.executeQuery();
         
@@ -253,11 +256,14 @@ public class IodaFascicoliUtilities {
             String titolo = results.getString(index++);
             String idFascicoloImportato = results.getString(index++);
             DateTime dataChiusura = null;
-            String tmp = results.getString(index++);
+            Timestamp tmp = results.getTimestamp(index++);
+            log.debug("Data chiusura fasciclo: " + tmp);
             if(tmp != null){
-                dataChiusura = DateTime.parse(tmp, formatterWithHHmmss);
+                dataChiusura = new DateTime(tmp.getTime());
+                log.debug("Data chiusura convertito: " + dataChiusura);
             }
-            String noteImportazione = results.getString(index++);                           
+            String noteImportazione = results.getString(index++);   
+            String guidFascicolo = results.getString(index++);   
             
             String descrizioneUtenteResponsabile = nomeUtenteResponsabile + " " + cognomeUtenteResponsabile;
             Fascicolo f = new Fascicolo();
@@ -280,7 +286,7 @@ public class IodaFascicoliUtilities {
             f.setNoteImportazione(noteImportazione);            
             f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
             
-            res.addFascicolo(idFascicoloImportato, f);
+            res.addFascicolo(guidFascicolo, f);
         }
                
         return res;

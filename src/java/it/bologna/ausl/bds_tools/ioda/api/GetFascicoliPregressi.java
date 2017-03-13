@@ -46,6 +46,7 @@ public class GetFascicoliPregressi extends HttpServlet{
      * @throws IOException if an I/O error occurs
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        log.debug("GetFascicoliPregressi called");
         IodaRequestDescriptor iodaReq;
         Connection dbConn = null;
         PreparedStatement ps = null;
@@ -89,6 +90,8 @@ public class GetFascicoliPregressi extends HttpServlet{
                 throw new ServletException(message);
             }
 
+            
+            
             // controllo se l'applicazione è autorizzata
             String prefix;
             try {
@@ -104,6 +107,8 @@ public class GetFascicoliPregressi extends HttpServlet{
                 return;
             }
 
+            log.debug("All the checks done!");
+            
             try{
                 Researcher researcher = (Researcher) iodaReq.getObject();
                 
@@ -111,6 +116,9 @@ public class GetFascicoliPregressi extends HttpServlet{
                 
                 fascicoliMap = fascicoliUtilities.getFascicoliPregressi(dbConn, ps);
 
+            }catch(Exception e){
+                log.debug("Exeption raized: ", e);
+                throw new Exception(e);
             }
             finally{
                 if (ps != null)
