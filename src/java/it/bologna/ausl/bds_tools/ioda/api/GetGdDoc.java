@@ -67,6 +67,8 @@ public class GetGdDoc extends HttpServlet {
                     response.sendError(HttpServletResponse.SC_BAD_REQUEST, "json della richiesta mancante");
                     return;
                 }
+//                String res = UtilityFunctions.inputStreamToString(is);
+//                System.out.println("res:\n" + res);
                 iodaRequest = IodaRequestDescriptor.parse(is);
             } catch (Exception ex) {
                 log.error("formato json della richiesta errato: " + ex);

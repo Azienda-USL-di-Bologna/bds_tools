@@ -352,8 +352,7 @@ public class IodaDocumentUtilities {
      *
      * @param dbConn connessione al db da usare
      * @param doc un oggetto SimpleDocument che rappresenta il GdDoc da caricare
-     * @param collections una mappa Map<String, Boolean> con indicate le
-     * collection da caricare
+     * @param collections una mappa Map<String, Boolean> con indicate le collection da caricare
      * @param prefix il prefisso dell'applicazione
      * @return un oggetto GdDoc rapprestato dall'idOggettoOrigine e
      * tipoOggettoOrigine presente nel SimpleDocument all'interno della
@@ -597,48 +596,59 @@ public class IodaDocumentUtilities {
 
         if (soloNumerate) {
             sqlText
-                    = "SELECT  numero_pubblicazione, "
-                    + "anno_pubblicazione, "
-                    + "data_dal, "
-                    + "data_al, "
-                    + "pubblicatore, "
-                    + "esecutivita, "
-                    + "esecutiva, "
-                    + "data_defissione, "
-                    + "data_esecutivita, "
-                    + "tipologia, "
-                    + "pubblica_solo_se_pubblicato_albo "
+                    = "SELECT  "
+                    +   "p.numero_pubblicazione, "
+                    +   "p.anno_pubblicazione, "
+                    +   "p.data_dal, "
+                    +   "p.data_al, "
+                    +   "p.pubblicatore, "
+                    +   "p.esecutivita, "
+                    +   "p.esecutiva, "
+                    +   "p.data_defissione, "
+                    +   "p.data_esecutivita, "
+                    +   "p.tipologia, "
+                    +   "p.pubblica_solo_se_pubblicato_albo, "
+                    +   "pb.uuid_relata "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p "
+                    +   "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
+                    +       "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
+                    +           "AND p.tipologia = ? "
                     + "WHERE p.id_gddoc = ? "
-                    + "AND p.numero_pubblicazione IS NOT NULL "
-                    + "AND p.numero_pubblicazione > 0 "
-                    + "AND p.anno_pubblicazione IS NOT NULL "
-                    + "AND p.anno_pubblicazione > 0 "
-                    + "AND p.tipologia = ? "
+                    +   "AND p.numero_pubblicazione IS NOT NULL "
+                    +   "AND p.numero_pubblicazione > 0 "
+                    +   "AND p.anno_pubblicazione IS NOT NULL "
+                    +   "AND p.anno_pubblicazione > 0 "
+                    +   "AND p.tipologia = ? "
                     + "ORDER BY p.numero_pubblicazione";
         } else {
             sqlText
-                    = "SELECT  numero_pubblicazione, "
-                    + "anno_pubblicazione, "
-                    + "data_dal, "
-                    + "data_al, "
-                    + "pubblicatore, "
-                    + "esecutivita, "
-                    + "esecutiva, "
-                    + "data_defissione, "
-                    + "data_esecutivita, "
-                    + "tipologia, "
-                    + "pubblica_solo_se_pubblicato_albo "
-                    + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " "
-                    + "WHERE id_gddoc = ? "
-                    + "AND tipologia = ? "
-                    + "ORDER BY numero_pubblicazione";
+                    = "SELECT  "
+                    +   "p.numero_pubblicazione, "
+                    +   "p.anno_pubblicazione, "
+                    +   "p.data_dal, "
+                    +   "p.data_al, "
+                    +   "p.pubblicatore, "
+                    +   "p.esecutivita, "
+                    +   "p.esecutiva, "
+                    +   "p.data_defissione, "
+                    +   "p.data_esecutivita, "
+                    +   "p.tipologia, "
+                    +   "p.pubblica_solo_se_pubblicato_albo, "
+                    +   "pb.uuid_relata "
+                    + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p "
+                    +   "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
+                    +       "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
+                    +           "AND p.tipologia = ? "
+                    + "WHERE p.id_gddoc = ? "
+                    +   "AND p.tipologia = ? "
+                    + "ORDER BY p.numero_pubblicazione";
         }
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
-            ps.setString(1, idGdDoc);
-            ps.setString(2, PubblicazioneIoda.Tipologia.ALBO.toString());
+            ps.setString(1, PubblicazioneIoda.Tipologia.ALBO.toString());
+            ps.setString(2, idGdDoc);
+            ps.setString(3, PubblicazioneIoda.Tipologia.ALBO.toString());
 
             log.debug("eseguo la query: " + ps.toString() + "...");
             ResultSet res = ps.executeQuery();
@@ -661,6 +671,7 @@ public class IodaDocumentUtilities {
                 p.setEsecutivita(res.getString("esecutivita"));
                 p.setTipologia(PubblicazioneIoda.Tipologia.valueOf(res.getString("tipologia")));
                 p.setPubblicaSoloSePubblicatoAlbo((res.getInt("pubblica_solo_se_pubblicato_albo") != 0));
+                p.setUuidRelata(res.getString("uuid_relata"));
                 Timestamp dataDefissione = res.getTimestamp("data_defissione");
                 if (dataDefissione != null) {
                     p.setDataDefissione(new DateTime(dataDefissione.getTime()));

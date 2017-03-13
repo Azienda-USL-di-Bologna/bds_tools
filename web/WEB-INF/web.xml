@@ -267,6 +267,11 @@
         <param-value>gd.pubblicazioni_albo</param-value>
     </context-param>
     <context-param>
+        <param-name>PubblicazioniBalboTableName</param-name>
+        <param-value>gd.pubblicazioni_balbo</param-value>
+        <description>tabella delle relate compilata da balbo_bridge</description>
+    </context-param>
+    <context-param>
         <param-name>MetadatiTrasparenzaTableName</param-name>
         <param-value>bds_tools.metadati_trasparenza</param-value>
     </context-param>
