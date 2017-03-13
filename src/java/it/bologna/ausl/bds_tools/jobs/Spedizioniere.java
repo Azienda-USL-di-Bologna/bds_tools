@@ -1149,33 +1149,34 @@ public class Spedizioniere implements Job{
                         
                     }else{ // NEL CASO SIA UNA MAIL NORMALE E NON UNA PEC DOPO TOT GIORNI DEVE ESSERE MESSA A CONFIMED E SETTARE IL TIMESTAMP
                         log.debug("SONO NELLO STATO CONTROLLO CONSEGNA OPPURE NON HO RICEVUTE");
-                        if (spStatus.getStatus() == Status.ACCEPTED) {
-                            
-                            // calcolo i giorni, DIFF TRA IL TIMESTAMP DI E QUELLO SU DB
-                            Long ggDiff = getDays(res.getTimestamp("verifica_timestamp"), new Timestamp(new Date().getTime()));
-                            log.debug("Giorni differenza: " + ggDiff);
-                            
-                            if(ggDiff >= getExpired()){ 
-                                // QUERY DI AGGIORNAMENTO DEGLI STATI SU DB da CONFIRMED -> CONSEGNATO 
-                                String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                                "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ?, verifica_timestamp=now() " +
-                                                "WHERE id = ?";
-                                try (
-                                    Connection conn = UtilityFunctions.getDBConnection();
-                                    PreparedStatement ps = conn.prepareStatement(query)
-                                ) {
-                                    ps.setString(1, StatiSpedizione.CONSEGNATO.toString());
-                                    ps.setInt(2, 0);
-                                    ps.setLong(3, id);
-                                    log.debug("Query: " + ps);
-                                    ps.executeUpdate();
-                                } catch (NamingException ex) {
-                                    log.debug("Eccezione aggiornamento stato email expired: ", ex);
-                                }
-                            }else{
-                                log.debug("attendo ancora la ricevuta di consegna...");
+                        // calcolo i giorni, DIFF TRA IL TIMESTAMP DI E QUELLO SU DB
+                        Long ggDiff = getDays(res.getTimestamp("verifica_timestamp"), new Timestamp(new Date().getTime()));
+                        log.debug("Giorni differenza: " + ggDiff);
+
+                        if(ggDiff >= getExpired()){ 
+                            // QUERY DI AGGIORNAMENTO DEGLI STATI SU DB da CONFIRMED -> CONSEGNATO 
+                            String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                            "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ?, verifica_timestamp=now() " +
+                                            "WHERE id = ?";
+                            try (
+                                Connection conn = UtilityFunctions.getDBConnection();
+                                PreparedStatement ps = conn.prepareStatement(query)
+                            ) {
+                                ps.setString(1, StatiSpedizione.CONSEGNATO.toString());
+                                ps.setInt(2, 0);
+                                ps.setLong(3, id);
+                                log.debug("Query: " + ps);
+                                ps.executeUpdate();
+                            } catch (NamingException ex) {
+                                log.debug("Eccezione aggiornamento stato email expired: ", ex);
                             }
+                        }else{
+                            log.debug("attendo ancora la ricevuta di consegna...");
                         }
+//                        Prima il controllo veniva fatto solo per le spedizioni in stato accettato
+//                        if (spStatus.getStatus() == Status.ACCEPTED) {                       
+//                          
+//                        }
                     } 
                 } else if (spStatus.getStatus() == SpedizioniereStatus.Status.ERROR) { // NEL CASO DI STATO DI ERRORE
                     log.debug("Dentro ERROR");
