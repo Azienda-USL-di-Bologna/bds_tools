@@ -30,6 +30,7 @@ import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -42,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.logging.Level;
 import javax.naming.NamingException;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
@@ -1206,83 +1208,100 @@ public class VersatoreParer implements Job {
     private boolean isVersabile(GdDoc gddoc) throws SQLException, NamingException{
         
         boolean res = false;
-        Fascicolazione primaFascicolazione = null;
-        DateTime dataPrimaFascicolazione = null;
-        try{
-            primaFascicolazione = ordinaFascicolazioni(gddoc.getFascicolazioni()).get(0);
-            dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
-        }
-        catch(Exception ex){
-            log.error(ex);
-            dataPrimaFascicolazione = null;
-        }
         
         
-        switch (getStringFromJsonObject(gddoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
+
+        try {
+            Map<String, String> params = new HashMap<>();
+            String jsonStr = gddoc.getJSONString();
             
-            case "in":
-                // il gddoc è versabile se sono passati almeno 7 giorni
-                Days d = Days.daysBetween(gddoc.getDataRegistrazione(), DateTime.now());
-                int giorni = d.getDays();
-                
-                if (getCanSendPicoEntrata() && giorni > 7){
-                    if (dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
-                        res = true;
-                    }
-                }
-            break;
+            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
+            params.put("gddoc", jsonStr);
             
-            case "out":
-                if (getCanSendPicoUscita()){
-                    if (dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
-                        res = true;
-                    }
-                }
-            break;
+            String result = UtilityFunctions.sendHttpMessage(ApplicationParams.getIndePicoIdoneitaParerUri(), null, null, params, "POST");
             
-            case "Dete":
-                if (getCanSendDete()){
-                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
-                    if (pubblicazione != null && dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
-                        res = true;
-                    }
-                }
-            break;
+            //log.debug("risutato_versabile: " + result);
+        } catch (IOException | SendHttpMessageException ex) {
             
-            case "Deli":
-                if (getCanSendDeli()){
-                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
-                    if (pubblicazione != null && dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
-                        res = true;
-                    }
-                }
-            break;
-         
-            case "RegistroRepertorio":
-                if (getCanSendRegistroGiornaliero()){
-                    
-                    if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
-                        res = true;
-                    }
-                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
-                        res = true;
-                    }
-                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
-                        res = true;
-                    }
-                    else {
-                        res = false;
-                    }
-                }
-            break;
-            
-            default:
-                res = false;
-        }
+        } 
+        
+//        Fascicolazione primaFascicolazione = null;
+//        DateTime dataPrimaFascicolazione = null;
+//        try{
+//            primaFascicolazione = ordinaFascicolazioni(gddoc.getFascicolazioni()).get(0);
+//            dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
+//        }
+//        catch(Exception ex){
+//            log.error(ex);
+//            dataPrimaFascicolazione = null;
+//        }
+//        
+//        
+//        switch (getStringFromJsonObject(gddoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
+//            
+//            case "in":
+//                // il gddoc è versabile se sono passati almeno 7 giorni
+//                Days d = Days.daysBetween(gddoc.getDataRegistrazione(), DateTime.now());
+//                int giorni = d.getDays();
+//                
+//                if (getCanSendPicoEntrata() && giorni > 7){
+//                    if (dataPrimaFascicolazione != null){
+//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+//                        res = true;
+//                    }
+//                }
+//            break;
+//            
+//            case "out":
+//                if (getCanSendPicoUscita()){
+//                    if (dataPrimaFascicolazione != null){
+//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+//                        res = true;
+//                    }
+//                }
+//            break;
+//            
+//            case "Dete":
+//                if (getCanSendDete()){
+//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+//                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+//                        res = true;
+//                    }
+//                }
+//            break;
+//            
+//            case "Deli":
+//                if (getCanSendDeli()){
+//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+//                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+//                        res = true;
+//                    }
+//                }
+//            break;
+//         
+//            case "RegistroRepertorio":
+//                if (getCanSendRegistroGiornaliero()){
+//                    
+//                    if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
+//                        res = true;
+//                    }
+//                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
+//                        res = true;
+//                    }
+//                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
+//                        res = true;
+//                    }
+//                    else {
+//                        res = false;
+//                    }
+//                }
+//            break;
+//            
+//            default:
+//                res = false;
+//        }
         return res;
     }
         
