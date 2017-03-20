@@ -71,29 +71,18 @@ public class IodaFascicoliUtilities {
         
         Fascicoli res = new Fascicoli();
 
-        // La stringa cercata è una numerazione gerarchica?
-        boolean matcha = strToFind.matches("(/?\\d+)"+              // /n o n
-                                   "|(\\d+/)"+                      // n/
-                                   "|((\\d+-))"+                    // n-
-                                   "|(\\-\\d+)"+                    // -n
-                                   "|(\\-\\d+/)"+                   // -n/
-                                   "|(\\d+/\\d+)"+                  // n/n
-                                   "|(\\d+\\-\\d+)"+                // n-n
-                                   "|(\\-\\d+/\\d+)"+               // -n/n
-                                   "|(\\d+\\-\\d+/)"+               // n-n/
-                                   "|(\\d+\\-\\d+-)"+               // n-n-
-                                   "|(\\-\\d+\\-\\d+)"+             // -n-n
-                                   "|(\\-\\d+\\-\\d+/)"+            // -n-n/
-                                   "|(\\d+\\-\\d+/\\d+)"+           // n-n/n
-                                   "|(\\d+\\-\\d+\\-\\d+)"+         // n-n-n
-                                   "|(\\-\\d+\\-\\d+/\\d+)"+        // -n-n/n
-                                   "|(\\d+\\-\\d+\\-\\d+/)"+        // n-n-n/
-                                   "|(\\d+\\-\\d+\\-\\d+/\\d+)");   // n-n-n/n
-        
+        // La stringa cercata è una numerazione gerarchica? (Deve iniziare con un numero)
+        boolean matcha = strToFind.matches("(\\d+-?)"+                   // n- , n
+                                        "|(\\d+/\\d*)"+                  // n/ , n/n
+                                        "|(\\d+\\-\\d+/?)"+              // n-n/ , n-n
+                                        "|(\\d+\\-\\d+/\\d+)"+           // n-n/n
+                                        "|(\\d+\\-\\d+\\-\\d*)"+         // n-n- , n-n-n
+                                        "|(\\d+\\-\\d+\\-\\d+/\\d*)");   // n-n-n/n , n-n-n/
+
         String whereCondition;
 
         if(matcha)
-            whereCondition = "where f.numerazione_gerarchica ilike ('%" + strToFind + "%')";
+            whereCondition = "where f.numerazione_gerarchica ilike ('" + strToFind + "%')"; // In questo caso si vuole l'"inizia con"
         else
             whereCondition = "where f.nome_fascicolo ilike ('%" + strToFind + "%')";
         
@@ -117,8 +106,6 @@ public class IodaFascicoliUtilities {
                             "join gd.fascicoli_modificabili fv on fv.id_fascicolo=f.id_fascicolo and fv.id_utente= ? " +
                             "join procton.utenti uResp on uResp.id_utente=f.id_utente_responsabile " +
                             "join procton.utenti uCrea on f.id_utente_creazione=uCrea.id_utente " +
-//                            "where 1=1  AND (f.nome_fascicolo ilike ('%" + strToFind + "%') " +
-//                            "or cast(f.numero_fascicolo as text) like '%" + strToFind + "%') " + 
                             whereCondition +
                             "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' " +
                             "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
