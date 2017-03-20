@@ -70,26 +70,34 @@ public class IodaFascicoliUtilities {
     private Fascicoli getFascicoli(Connection dbConn, PreparedStatement ps, String strToFind, String idUtente, int limit) throws SQLException{
         
         Fascicoli res = new Fascicoli();
+
+        // La stringa cercata è una numerazione gerarchica?
+        boolean matcha = strToFind.matches("(/?\\d+)"+              // /n o n
+                                   "|(\\d+/)"+                      // n/
+                                   "|((\\d+-))"+                    // n-
+                                   "|(\\-\\d+)"+                    // -n
+                                   "|(\\-\\d+/)"+                   // -n/
+                                   "|(\\d+/\\d+)"+                  // n/n
+                                   "|(\\d+\\-\\d+)"+                // n-n
+                                   "|(\\-\\d+/\\d+)"+               // -n/n
+                                   "|(\\d+\\-\\d+/)"+               // n-n/
+                                   "|(\\d+\\-\\d+-)"+               // n-n-
+                                   "|(\\-\\d+\\-\\d+)"+             // -n-n
+                                   "|(\\-\\d+\\-\\d+/)"+            // -n-n/
+                                   "|(\\d+\\-\\d+/\\d+)"+           // n-n/n
+                                   "|(\\d+\\-\\d+\\-\\d+)"+         // n-n-n
+                                   "|(\\-\\d+\\-\\d+/\\d+)"+        // -n-n/n
+                                   "|(\\d+\\-\\d+\\-\\d+/)"+        // n-n-n/
+                                   "|(\\d+\\-\\d+\\-\\d+/\\d+)");   // n-n-n/n
         
-        String sqlTextOld = "select distinct(f.id_fascicolo), f.id_livello_fascicolo, f.numero_fascicolo, " + 
-                         "f.nome_fascicolo,f.anno_fascicolo, f.id_utente_creazione, f.data_creazione, " +
-                         "f.numerazione_gerarchica, f.id_utente_responsabile, uResp.nome, uResp.cognome, " + 
-                         "f.stato_fascicolo, f.id_utente_responsabile_proposto, f.id_fascicolo_padre, " + 
-                         "f.id_titolo, f.speciale, t.codice_gerarchico || '' || t.codice_titolo || ' ' || t.titolo as titolo, " +
-                         "case when fv.id_fascicolo is null then 0 else -1 end as accesso " +
-                         "from " +
-                         "gd.fascicoligd f " +
-                         "left join procton.titoli t on t.id_titolo = f.id_titolo " +
-                         "left join gd.log_azioni_fascicolo laf on laf.id_fascicolo= f.id_fascicolo " +
-                         "join gd.fascicoli_modificabili fv on fv.id_fascicolo=f.id_fascicolo and fv.id_utente= ? " +
-                         "join procton.utenti uResp on uResp.id_utente=f.id_utente_responsabile " +
-                         "join procton.utenti uCrea on f.id_utente_creazione=uCrea.id_utente " +
-                         "where 1=1  AND (f.nome_fascicolo ilike ('%" + strToFind + "%') " +
-                         "or cast(f.numero_fascicolo as text) like '%" + strToFind + "%') " + 
-                         "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' " + 
-                         "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
+        String whereCondition;
+
+        if(matcha)
+            whereCondition = "where f.numerazione_gerarchica ilike ('%" + strToFind + "%')";
+        else
+            whereCondition = "where f.nome_fascicolo ilike ('%" + strToFind + "%')";
         
-        
+        // Preparo la query
         String sqlText = "select distinct(f.id_fascicolo), f.id_livello_fascicolo, " +
                             "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
                             "WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
@@ -109,8 +117,9 @@ public class IodaFascicoliUtilities {
                             "join gd.fascicoli_modificabili fv on fv.id_fascicolo=f.id_fascicolo and fv.id_utente= ? " +
                             "join procton.utenti uResp on uResp.id_utente=f.id_utente_responsabile " +
                             "join procton.utenti uCrea on f.id_utente_creazione=uCrea.id_utente " +
-                            "where 1=1  AND (f.nome_fascicolo ilike ('%" + strToFind + "%') " +
-                            "or cast(f.numero_fascicolo as text) like '%" + strToFind + "%') " + 
+//                            "where 1=1  AND (f.nome_fascicolo ilike ('%" + strToFind + "%') " +
+//                            "or cast(f.numero_fascicolo as text) like '%" + strToFind + "%') " + 
+                            whereCondition +
                             "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' " +
                             "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
         
