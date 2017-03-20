@@ -69,6 +69,7 @@ public class ApplicationParams {
     private static String balboServiceURI;
     private static String maxThreadSpedizioniere;
     private static String getIndeUrlServiceUri;
+    private static String getIndePicoIdoneitaParerUri;
     private static String spedizioniereApplicazioni;
     private static String fileSupportatiTable;
     private static String schedulatoreConf;
@@ -135,6 +136,7 @@ public class ApplicationParams {
             balboServiceURI = ConfigParams.getParam("balboServiceURI");
 
             getIndeUrlServiceUri = ConfigParams.getParam("getIndeUrlServiceUri");
+            getIndePicoIdoneitaParerUri = ConfigParams.getParam("getIndePicoIdoneitaParerUri");
             schedulatoreConf= ConfigParams.getParam("schedulatoreConfJson");
             bdmRestBaseUri = ConfigParams.getParam("BdmRestBaseUri");
             systemPecMail = ConfigParams.getParam("SystemPecMail");
@@ -357,6 +359,10 @@ public class ApplicationParams {
         return getIndeUrlServiceUri;
     }
 
+    public static String getIndePicoIdoneitaParerUri() {
+        return getIndePicoIdoneitaParerUri;
+    }
+    
     public static String getBdmRestBaseUri() {
         return bdmRestBaseUri;
     }

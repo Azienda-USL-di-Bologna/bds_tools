@@ -97,6 +97,10 @@
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetGdDoc</servlet-class>
     </servlet>
     <servlet>
+        <servlet-name>servletTest</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.servletTest</servlet-class>
+    </servlet>
+    <servlet>
         <servlet-name>EndSignManager</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.EndSignManager</servlet-class>
     </servlet>
@@ -525,12 +529,14 @@
         <servlet-name>GetGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/</url-pattern>
     </servlet-mapping>
-    
-      <!--<context-param>
+    <servlet-mapping>
+        <servlet-name>servletTest</servlet-name>
+        <url-pattern>/ioda/api/servletTest</url-pattern>
+    </servlet-mapping>
+    <!--<context-param>
             <param-name>schedulatore.active</param-name>
             <param-value>true</param-value>
         </context-param>  -->
-
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>

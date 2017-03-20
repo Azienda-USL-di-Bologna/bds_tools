@@ -238,6 +238,84 @@ static {
         }
     }
     
+    public static String sendHttpMessage(String targetUrl, String username, String password, Map<String, String> parameters, String method) throws MalformedURLException, IOException, SendHttpMessageException {
+
+        //System.out.println("connessione...");
+        String parametersToSend = "";
+        if (parameters != null) {
+            Set<Map.Entry<String, String>> entrySet = parameters.entrySet();
+            Iterator<Map.Entry<String, String>> iterator = entrySet.iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, String> param = iterator.next();
+                String paramName = param.getKey();
+                String paramValue = param.getValue();
+                parametersToSend += paramName + "=" + paramValue;
+                if (iterator.hasNext()) {
+                    parametersToSend += "&";
+                }
+            }
+            parametersToSend = parametersToSend.replace(" ", "%20");
+        }
+        URL url = new URL(targetUrl);
+        method = method.toUpperCase();
+        if (method.equals("GET") || method.equals("DELETE")) {
+            if (parametersToSend.length() > 0) {
+                targetUrl += "?" + parametersToSend;
+            }
+            url = new URL(targetUrl);
+        }
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+        if (username != null && !username.equals("")) {
+            String userpassword = null;
+            if (password != null) {
+                userpassword = username + ":" + password;
+            } else {
+                userpassword = "restuser";
+            }
+            String encodedAuthorization = Base64Coder.encodeString(userpassword);
+            connection.setRequestProperty("Authorization", "Basic " + encodedAuthorization);
+        }
+
+        if (method.equals("POST")) {
+            connection.setDoOutput(true);
+        }
+        connection.setDoInput(true);
+        connection.setInstanceFollowRedirects(false);
+        connection.setRequestMethod(method);
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setRequestProperty("charset", "utf-8");
+        if (method.equals("POST")) {
+            connection.setRequestProperty("Content-Length", "" + Integer.toString(parametersToSend.getBytes().length));
+        }
+        connection.setUseCaches(false);
+
+        if (method.equals("POST")) {
+            DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
+            wr.writeBytes(parametersToSend);
+            wr.flush();
+            wr.close();
+        }
+
+        InputStream resultStream = connection.getInputStream();
+
+        int responseCode = connection.getResponseCode();
+        //System.out.println("risposta: " + responseCode + " - " + connection.getResponseMessage());
+
+        String responseCodeToString = String.valueOf(responseCode);
+
+        String resultString = null;
+        if (resultStream != null) {
+            resultString = inputStreamToString(resultStream);
+        }
+        if (!responseCodeToString.substring(0, responseCodeToString.length() - 1).equals("20")) {
+            throw new SendHttpMessageException(responseCode, resultString);
+        }
+        IOUtils.closeQuietly(resultStream);
+        connection.disconnect();
+        return resultString;
+    }
+    
     public static String sendHttpMessage(String targetUrl, String username, String password, Map<String, byte[]> parameters, String method, String contentType) throws MalformedURLException, IOException, SendHttpMessageException {
 
         if (contentType == null)

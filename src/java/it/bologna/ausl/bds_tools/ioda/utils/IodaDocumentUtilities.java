@@ -53,6 +53,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.tika.mime.MediaType;
 import org.apache.tika.mime.MimeTypeException;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -523,17 +524,17 @@ public class IodaDocumentUtilities {
 
                 Timestamp dataGdDoc = result.getTimestamp("data_gddoc");
                 if (dataGdDoc != null) {
-                    gdDoc.setData(new DateTime(dataGdDoc.getTime()));
+                    gdDoc.setData(new DateTime(dataGdDoc.getTime(), DateTimeZone.getDefault()));
                 }
 
                 Timestamp dataRegistrazione = result.getTimestamp("data_registrazione");
                 if (dataRegistrazione != null) {
-                    gdDoc.setDataRegistrazione(new DateTime(dataRegistrazione.getTime()));
+                    gdDoc.setDataRegistrazione(new DateTime(dataRegistrazione.getTime(), DateTimeZone.UTC));
                 }
 
                 Timestamp dataUltimaModifica = result.getTimestamp("data_ultima_modifica");
                 if (dataUltimaModifica != null) {
-                    gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime()));
+                    gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime(), DateTimeZone.UTC));
                 }
 
                 gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
@@ -1245,11 +1246,11 @@ public class IodaDocumentUtilities {
                 = "INSERT INTO " + getDatiParerGdDocTable() + " ("
                 + "id_gddoc, stato_versamento_proposto, stato_versamento_effettivo, "
                 + "xml_specifico_parer, forza_conservazione, forza_accettazione, "
-                + "forza_collegamento)"
+                + "forza_collegamento, idoneo_versamento)"
                 + "VALUES ("
                 + "?, ?, DEFAULT, "
                 + "?, ?, ?, "
-                + "?)";
+                + "?, ?)";
 
         if (datiParer.getStatoVersamentoEffettivo() != null && !datiParer.getStatoVersamentoEffettivo().equals("")) {
             sqlText = sqlText.replaceFirst("DEFAULT", "'" + datiParer.getStatoVersamentoEffettivo() + "'");
@@ -1278,6 +1279,13 @@ public class IodaDocumentUtilities {
 
             // forza_collegamento
             if (datiParer.getForzaCollegamento() != null && datiParer.getForzaCollegamento()) {
+                ps.setInt(index++, -1);
+            } else {
+                ps.setInt(index++, 0);
+            }
+            
+            // idoneo_versamento
+            if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
                 ps.setInt(index++, -1);
             } else {
                 ps.setInt(index++, 0);
@@ -1421,7 +1429,8 @@ public class IodaDocumentUtilities {
                     + "xml_specifico_parer = coalesce(?, xml_specifico_parer), "
                     + "forza_conservazione = coalesce(?, forza_conservazione), "
                     + "forza_accettazione = coalesce(?, forza_accettazione), "
-                    + "forza_collegamento = coalesce(?, forza_collegamento) "
+                    + "forza_collegamento = coalesce(?, forza_collegamento), "
+                    + "idoneo_versamento = coalesce(?, idoneo_versamento) "
                     + "WHERE id_gddoc = ? ";
 
             try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
@@ -1456,6 +1465,13 @@ public class IodaDocumentUtilities {
                 } else {
                     ps.setInt(index++, 0);
                 }
+                
+                // idoneo_versamento
+                if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
+                    ps.setInt(index++, -1);
+                } else {
+                    ps.setInt(index++, 0);
+                }
 
                 ps.setString(index++, gdDoc.getId());
 
@@ -1481,7 +1497,8 @@ public class IodaDocumentUtilities {
                 + "xml_specifico_parer, "
                 + "forza_conservazione, "
                 + "forza_accettazione, "
-                + "forza_collegamento "
+                + "forza_collegamento, "
+                + "idoneo_versamento "
                 + "FROM " + ApplicationParams.getDatiParerGdDocTableName() + " "
                 + "WHERE id_gddoc = ?";
 
@@ -1502,6 +1519,7 @@ public class IodaDocumentUtilities {
                 datiParerGdDoc.setForzaConservazione(res.getInt("forza_conservazione") != 0);
                 datiParerGdDoc.setForzaAccettazione(res.getInt("forza_accettazione") != 0);
                 datiParerGdDoc.setForzaCollegamento(res.getInt("forza_collegamento") != 0);
+                datiParerGdDoc.setIdoneoVersamento(res.getInt("idoneo_versamento") != 0);
             }
         }
         return datiParerGdDoc;
