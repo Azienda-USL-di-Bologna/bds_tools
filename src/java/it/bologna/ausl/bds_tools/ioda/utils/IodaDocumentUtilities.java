@@ -118,6 +118,21 @@ public class IodaDocumentUtilities {
             }
         }
     }
+    
+    public IodaDocumentUtilities(GdDoc gdDoc, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
+        this(operation, prefixIds);
+        this.gdDoc = gdDoc;
+        this.gdDoc.setPrefissoApplicazioneOrigine(this.prefixIds);
+
+        if (operation != Document.DocumentOperationType.DELETE) {
+            getIndeId();
+            if (operation == Document.DocumentOperationType.INSERT) {
+                JSONObject nextIndeId = getNextIndeId();
+                this.gdDoc.setId((String) nextIndeId.get(INDE_DOCUMENT_ID_PARAM_NAME));
+                this.gdDoc.setGuid((String) nextIndeId.get(INDE_DOCUMENT_GUID_PARAM_NAME));
+            }
+        }
+    }
 
     public GdDoc getGdDoc() {
         return gdDoc;

@@ -105,26 +105,57 @@ static {
      * @throws java.sql.SQLException
      */
     public static String checkAuthentication(Connection dbConn, String idApplicazione, String token) throws NotAuthorizedException, SQLException {
+        String prefix;
+        
+        try{
+            prefix = getAuthorizedApplicationData(dbConn, idApplicazione, token);
+            String message = "applicazione: " + idApplicazione + " autorizzata";
+            log.info(message);
+            return prefix;
+        }
+        catch(NotAuthorizedException ex){
+            String message = "applicazione: " + idApplicazione + " non autorizzata";
+            log.error(message);
+            throw ex;
+        }       
+    }
+    
+    /**
+     * Controlla se l'applicazione è autorizzata e ne ritorna il prefisso da usare nella costruzione degli id
+     * @param dbConn connessione
+     * @param idApplicazione id applicazione della quale verificare l'autenticazione
+     * @param token token, se presente, corrispondente all'id applicazione della quale verificare l'autenticazione
+     * @return se l'applicazione è autorizzata torna il prefisso da usare nella costruzione degli id, se non è autorizzata torna NotAuthorizedException
+     * @throws it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException se l'applicazione non è autorizzata
+     * @throws java.sql.SQLException
+     */
+    public static String getAuthorizedApplicationData(Connection dbConn, String idApplicazione, String token) throws NotAuthorizedException, SQLException {
         String sqlText = 
                     "SELECT prefix " +
                     "FROM " + ApplicationParams.getAuthenticationTable() + " " +
-                    "WHERE id_applicazione = ? and token = ?";
+                    "WHERE id_applicazione = ?";
+        if (token != null && !token.isEmpty())
+            sqlText += " and token = ?";
 
+        String query;
+        
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             ps.setString(1, idApplicazione);
-            ps.setString(2, token);
-            String query = ps.toString().substring(0, ps.toString().lastIndexOf("=") + 1) + " ******";
+            if (token != null && !token.isEmpty()){
+                ps.setString(2, token);
+                query = ps.toString().substring(0, ps.toString().lastIndexOf("=") + 1) + " ******";
+            }
+            else{
+                query = ps.toString();
+            }
+                
             log.debug("eseguo la query: " + query + " ...");
-    //            dbConn.setAutoCommit(true);
+    
             ResultSet authenticationResultSet = ps.executeQuery();
 
             if (authenticationResultSet.next() == false) {
-                String message = "applicazione: " + idApplicazione + " non autorizzata";
-                log.error(message);
-                throw new NotAuthorizedException(message);
+                throw new NotAuthorizedException("application not found");
             } else {
-                String message = "applicazione: " + idApplicazione + " autorizzata";
-                log.info(message);
                 return authenticationResultSet.getString(1);
             }
         }

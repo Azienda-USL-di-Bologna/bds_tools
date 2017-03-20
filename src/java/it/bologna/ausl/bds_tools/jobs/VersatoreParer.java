@@ -1,19 +1,24 @@
 package it.bologna.ausl.bds_tools.jobs;
 
+import it.bologna.ausl.bdm.utilities.Bag;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
+import it.bologna.ausl.bds_tools.exceptions.ResourceNotAvailableException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.exceptions.VersatoreParerException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
+import it.bologna.ausl.bds_tools.ioda.utils.LockUtilities;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.BagProfiloArchivistico;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParerGdDoc;
+import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDocSessioneVersamento;
 import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
+import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
 import it.bologna.ausl.masterchefclient.SendToParerParams;
 import it.bologna.ausl.masterchefclient.SendToParerResult;
 import it.bologna.ausl.masterchefclient.WorkerData;
@@ -88,6 +93,7 @@ public class VersatoreParer implements Job {
     private boolean useFakeId;
     
     private String idApplicazione, tokenApplicazione;
+    private String prefix;
     
     
     @Override
@@ -1186,14 +1192,14 @@ public class VersatoreParer implements Job {
     */
     private GdDoc getGdDocById(String idGdDoc) throws SQLException, NamingException, NotAuthorizedException, IodaDocumentException{
         
-        String prefix;
+        
         
         GdDoc gdDoc = null;
         
         try (
             Connection dbConnection = UtilityFunctions.getDBConnection();
         ) {
-            prefix = UtilityFunctions.checkAuthentication(dbConnection, getIdApplicazione(), getTokenApplicazione());
+            this.prefix = UtilityFunctions.checkAuthentication(dbConnection, getIdApplicazione(), getTokenApplicazione());
             
             HashMap<String, Object> additionalData = new HashMap <String, Object>(); 
             additionalData.put("FASCICOLAZIONI", "LOAD");
@@ -1205,26 +1211,146 @@ public class VersatoreParer implements Job {
         return gdDoc;    
     }
     
-    private boolean isVersabile(GdDoc gddoc) throws SQLException, NamingException{
+    private boolean isVersabile(GdDoc gdDoc){
+        String res = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
         
-        boolean res = false;
+        JSONObject json = (JSONObject) JSONValue.parse(res);
         
+        String idOggetto = (String) json.get("id_oggetto");
+        String bool = (String) json.get("idoneo");
+        Boolean bool2 = (Boolean) json.get("idoneo");
         
-
-        try {
-            Map<String, String> params = new HashMap<>();
-            String jsonStr = gddoc.getJSONString();
+        log.debug("idOggetto: " + idOggetto);
+        log.debug("bool: " + bool);
+        if(bool2){
+            log.debug("bool2: TRUE");
+        }
+        else{
+            log.debug("bool2: FALSE");
+        }
             
-            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
-            params.put("gddoc", jsonStr);
-            
-            String result = UtilityFunctions.sendHttpMessage(ApplicationParams.getIndePicoIdoneitaParerUri(), null, null, params, "POST");
-            
-            //log.debug("risutato_versabile: " + result);
-        } catch (IOException | SendHttpMessageException ex) {
-            
-        } 
-        
+        return false;
+    }
+    
+    /**
+     * Controlla se il GdDoc è versabile oppure no
+     * @param dbConn connessione
+     * @param gddoc gdDoc da esaminare
+     * @return ritorna true se il gddoc è versabile al ParER ed effettua un updategddoc, altrimenti ritorna false
+     * @throws SQLException
+     * @throws NamingException 
+     */
+//    private boolean isVersabileAndUpdateGdDoc(Connection dbConn, GdDoc gdDoc) throws SQLException, NamingException, Exception{
+//        
+//        boolean res = false;
+//        IodaDocumentUtilities idu;
+//        LockUtilities lock = null;
+//        
+//        
+//        // se il gddoc è già idoneo allora ritorno subito la versabilità e non faccio altro
+//        if (!gdDoc.getDatiParerGdDoc().getIdoneoVersamento()){
+//            return true;
+//        }
+//        
+//        /** qui è il caso in cui il parametro di idoneità è FALSE **/
+//        
+//        // chiedo all'applicazione se idoneo e mi restituisce un bag
+//        switch (getStringFromJsonObject(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
+//            case "in":
+//                String result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
+//                
+//            break;
+//            
+//            case "out":
+//            break;
+//            
+//            case "Dete":
+//            break;
+//            
+//            case "Deli":
+//            break;
+//         
+//            case "RegistroRepertorio":
+//                if (getCanSendRegistroGiornaliero()){
+//                    
+//                    if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
+//                        res = true;
+//                    }
+//                    else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
+//                        res = true;
+//                    }
+//                    else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
+//                        res = true;
+//                    }
+//                    else {
+//                        res = false;
+//                    }
+//                }
+//            break;
+//            
+//            default:
+//                res = false;
+//        }
+//            // se bag è NO non faccio altro e restituisco FALSE
+//            // se bag è SI gli faccio un updateGdDoc sul GdDoc tornato, finisce di popolare xmlSpecifico con placeHolder e setta idoneo a true e ritorna TRUE
+//            
+//        
+//        lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
+//        //-----------------------------------------------------------------------------------
+//        
+//        try {
+//            dbConn.setAutoCommit(false);
+//            idu = new IodaDocumentUtilities(gdDoc, Document.DocumentOperationType.UPDATE, prefix);
+//            lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
+//                
+//            int times = 0;
+//            boolean updateComplete = false;
+//            while (!updateComplete && times < ApplicationParams.getResourceLockedMaxRetryTimes()) {
+//                if (lock.getLock()) {
+//                    idu.updateGdDoc(dbConn, null);
+//                    dbConn.commit();
+//                    updateComplete = true;
+//                }
+//                Thread.sleep(ApplicationParams.getResourceLockedSleepMillis());
+//                times++;
+//            }
+//            if (!updateComplete) {
+//                //dare eccezione per risorsa non disponibile
+//                String message = "Risorsa non disponibile perchè occupata da un altro processo. Riprovare più tardi";
+//                throw new ResourceNotAvailableException(message);
+//            }
+//        }
+//        catch (Exception ex) {
+//            log.error("errore nella gestione del gdddoc: ", ex);
+//            dbConn.rollback();
+//            throw new VersatoreParerException(ex);
+//        }
+//        finally {
+//            dbConn.close();
+//            if (lock != null)
+//                lock.deleteLock(false);
+//        }
+//        
+//        
+//        //-----------------------------------------------------------------------------------
+//        
+//        
+//        
+//
+////        try {
+////            Map<String, String> params = new HashMap<>();
+////            String jsonStr = gddoc.getJSONString();
+////            
+////            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
+////            params.put("gddoc", jsonStr);
+////            
+////            String result = UtilityFunctions.sendHttpMessage(ApplicationParams.getIndePicoIdoneitaParerUri(), null, null, params, "POST");
+////            
+////            //log.debug("risutato_versabile: " + result);
+////        } catch (IOException | SendHttpMessageException ex) {
+////            
+////        } 
+//        
 //        Fascicolazione primaFascicolazione = null;
 //        DateTime dataPrimaFascicolazione = null;
 //        try{
@@ -1302,7 +1428,24 @@ public class VersatoreParer implements Job {
 //            default:
 //                res = false;
 //        }
-        return res;
+//        return res;
+//    }
+    
+    private String sendGdDocToApplication(String uri, GdDoc gdDoc){
+        String result = null;
+        try {
+            Map<String, String> params = new HashMap<>();
+            String jsonStr = gdDoc.getJSONString();
+            
+            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
+            params.put("gddoc", jsonStr);
+            
+            result = UtilityFunctions.sendHttpMessage(uri, null, null, params, "POST");
+            
+        } catch (IOException | SendHttpMessageException ex) {
+            log.error("errore in sendGdDocToApplication: " + ex);
+        }
+        return result;
     }
         
     // ripiazza i segna posto con valori reali
