@@ -106,7 +106,7 @@ public class IodaFascicoliUtilities {
                             "join gd.fascicoli_modificabili fv on fv.id_fascicolo=f.id_fascicolo and fv.id_utente= ? " +
                             "join procton.utenti uResp on uResp.id_utente=f.id_utente_responsabile " +
                             "join procton.utenti uCrea on f.id_utente_creazione=uCrea.id_utente " +
-                            whereCondition +
+                            whereCondition + " " +
                             "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' " +
                             "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
         
