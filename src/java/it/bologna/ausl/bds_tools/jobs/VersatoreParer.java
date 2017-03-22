@@ -1239,23 +1239,43 @@ public class VersatoreParer implements Job {
             log.debug("isVersabile: controllo movimentazione");
             switch (getStringFromJsonObject(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
                 case "in":
-                    log.debug("isVersabile: PE");
-                    result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);       
+                    if(getCanSendPicoEntrata()){
+                        log.debug("isVersabile: PE");
+                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);       
+                    }
+                    else{
+                        return false;
+                    }
                 break;
 
                 case "out":
-                    log.debug("isVersabile: PU");
-                    result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
+                    if(getCanSendPicoUscita()){
+                        log.debug("isVersabile: PU");
+                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
+                    }
+                    else{
+                     return false;   
+                    }
                 break;
 
                 case "Dete":
-                    log.debug("isVersabile: DETE");
-                    result = sendGdDocToApplication(ApplicationParams.getIndeDeteIdoneitaParerUri(), gdDoc);
+                    if(getCanSendDete()){
+                        log.debug("isVersabile: DETE");
+                        result = sendGdDocToApplication(ApplicationParams.getIndeDeteIdoneitaParerUri(), gdDoc);   
+                    }
+                    else{
+                        return false;
+                    }
                 break;
 
                 case "Deli":
-                    log.debug("isVersabile: DELI");
-                    result = sendGdDocToApplication(ApplicationParams.getIndeDeliIdoneitaParerUri(), gdDoc);
+                    if(getCanSendDeli()){
+                        log.debug("isVersabile: DELI");
+                        result = sendGdDocToApplication(ApplicationParams.getIndeDeliIdoneitaParerUri(), gdDoc);
+                    }
+                    else{
+                        return false;
+                    }
                 break;
 
                 case "RegistroRepertorio":
