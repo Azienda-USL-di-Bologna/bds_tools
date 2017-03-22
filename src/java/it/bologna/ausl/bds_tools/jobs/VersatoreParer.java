@@ -1301,89 +1301,90 @@ public class VersatoreParer implements Job {
                     res = false;
             }
 
-            // parsing del risultato proveniente dalle applicazioni (esclusi registri repertori che hanno una gestione diversa, vedi sopra nello switch)
-            JSONObject json = (JSONObject) JSONValue.parse(result);
+            
+            if(result != null){
+                // parsing del risultato proveniente dalle applicazioni (esclusi registri repertori che hanno una gestione diversa, vedi sopra nello switch)
+                JSONObject json = (JSONObject) JSONValue.parse(result);
 
-            String idOggettoOrigine = (String) json.get("id_oggetto");
-            log.debug("isVersabile: valore idOggettoOrigine -> " + idOggettoOrigine);
-            String idoneo = (String) json.get("idoneo");
-            log.debug("isVersabile: valore idoneo -> " + idoneo);
+                String idOggettoOrigine = (String) json.get("id_oggetto");
+                log.debug("isVersabile: valore idOggettoOrigine -> " + idOggettoOrigine);
+                String idoneo = (String) json.get("idoneo");
+                log.debug("isVersabile: valore idoneo -> " + idoneo);
 
-            // se l'applicazione reputa idoneo il documento
-            if(idoneo.equalsIgnoreCase("true")){    
-                log.debug("isVersabile: documento idoneo per l'applicazione");
+                // se l'applicazione reputa idoneo il documento
+                if(idoneo.equalsIgnoreCase("true")){    
+                    log.debug("isVersabile: documento idoneo per l'applicazione");
 
-                // l'applicazione ha già effettuato un updategddoc quindi aggiorno solo il campo idoneità sui dati parer del gddoc
-                // quindi lo ricarico
-                GdDoc gddocRicaricato = getGdDocById(gdDoc.getId());
-                log.debug("VERSABILE: gddoc ricaricato");
+                    // l'applicazione ha già effettuato un updategddoc quindi aggiorno solo il campo idoneità sui dati parer del gddoc
+                    // quindi lo ricarico
+                    GdDoc gddocRicaricato = getGdDocById(gdDoc.getId());
+                    log.debug("VERSABILE: gddoc ricaricato");
 
-                // sistema la fascicolazione
-                Fascicolazione primaFascicolazione = null;
-                DateTime dataPrimaFascicolazione = null;
-                try{
-                    primaFascicolazione = ordinaFascicolazioni(gddocRicaricato.getFascicolazioni()).get(0);
-                    log.debug("VERSABILE: prima fascicolazione settata");
-                    dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
-                    log.debug("VERSABILE: data prima fascicolazione settata");
+                    // sistema la fascicolazione
+                    Fascicolazione primaFascicolazione = null;
+                    DateTime dataPrimaFascicolazione = null;
+                    try{
+                        primaFascicolazione = ordinaFascicolazioni(gddocRicaricato.getFascicolazioni()).get(0);
+                        log.debug("VERSABILE: prima fascicolazione settata");
+                        dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
+                        log.debug("VERSABILE: data prima fascicolazione settata");
+                    }
+                    catch(Exception ex){
+                        log.error(ex);
+                        dataPrimaFascicolazione = null;
+                    }
+
+                    PubblicazioneIoda pubblicazione = null;
+                    log.debug("VERSABILE: parte di replaceplaceholder");
+                    switch (getStringFromJsonObject(gddocRicaricato.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
+                        case "in":
+                            log.debug("VERSABILE: IN");
+                            if (dataPrimaFascicolazione != null){
+                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
+                                res = true;
+                            }
+                        break;
+
+                        case "out":
+                            log.debug("VERSABILE: OUT");
+                            if (dataPrimaFascicolazione != null){
+                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
+                                res = true;
+                            }
+                        break;
+
+                        case "Dete":
+                            log.debug("VERSABILE: DETE");
+                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
+                            if (pubblicazione != null && dataPrimaFascicolazione != null){
+                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
+                                res = true;
+                            }
+                        break;
+
+                        case "Deli":
+                            log.debug("VERSABILE: DELI");
+                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
+                            if (pubblicazione != null && dataPrimaFascicolazione != null){
+                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
+                                res = true;
+                            }
+                        break;
+                    }    
                 }
-                catch(Exception ex){
-                    log.error(ex);
-                    dataPrimaFascicolazione = null;
+                else{
+                    log.debug("isVersabile: documento non idoneo");
+                    res = false;
                 }
 
-                PubblicazioneIoda pubblicazione = null;
-                log.debug("VERSABILE: parte di replaceplaceholder");
-                switch (getStringFromJsonObject(gddocRicaricato.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
-                    case "in":
-                        log.debug("VERSABILE: IN");
-                        if (dataPrimaFascicolazione != null){
-                            replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
-                            res = true;
-                        }
-                    break;
-
-                    case "out":
-                        log.debug("VERSABILE: OUT");
-                        if (dataPrimaFascicolazione != null){
-                            replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
-                            res = true;
-                        }
-                    break;
-
-                    case "Dete":
-                        log.debug("VERSABILE: DETE");
-                        pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
-                        if (pubblicazione != null && dataPrimaFascicolazione != null){
-                            replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
-                            res = true;
-                        }
-                    break;
-
-                    case "Deli":
-                        log.debug("VERSABILE: DELI");
-                        pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
-                        if (pubblicazione != null && dataPrimaFascicolazione != null){
-                            replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
-                            res = true;
-                        }
-                    break;
-                }    
-            }
-            else{
-                log.debug("isVersabile: documento non idoneo");
-                res = false;
-            }
-
-            if (res){
-                setIdoneitaVersamento(idOggettoOrigine);
+                if (res){
+                    setIdoneitaVersamento(idOggettoOrigine);
+                }
             }
         }
         else{
             res = false;
         }
-        
-        
         
         return res;
     }

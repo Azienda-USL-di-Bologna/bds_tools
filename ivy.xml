@@ -32,6 +32,7 @@
         <dependency org="com.squareup.okhttp3" name="okhttp" rev="3.4.+"/>
         <dependency org="com.google.code.gson" name="gson" rev="2.6.2"/>
         <dependency org="org.slf4j" name="slf4j-api" rev="1.7.21"/>
+        <dependency org="org.apache.tomcat" name="juli" rev="6.0.26"/>
         
     </dependencies>
 </ivy-module>
