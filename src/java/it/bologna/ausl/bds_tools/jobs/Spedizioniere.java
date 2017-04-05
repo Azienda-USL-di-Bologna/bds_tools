@@ -1,6 +1,8 @@
 package it.bologna.ausl.bds_tools.jobs;
 
 import groovy.xml.dom.DOMCategory;
+import it.bologna.ausl.bdm.core.Bdm;
+import it.bologna.ausl.bdm.core.Step;
 import it.bologna.ausl.bdm.utilities.Bag;
 import it.bologna.ausl.bdm.workflows.processes.ProtocolloInUscitaProcess;
 import it.bologna.ausl.bdmclient.BdmClientInterface;
@@ -1344,10 +1346,12 @@ public class Spedizioniere implements Job{
             log.debug("Dentro do Step");
             try {
                 BdmClientInterface bdmClient = new RemoteBdmClientImplementation(ApplicationParams.getBdmRestBaseUri());
-                String currentStep = bdmClient.getCurrentStep(processId).getStepType();
+                Step currentStep = bdmClient.getCurrentStep(processId);
+//                String currentStep = bdmClient.getCurrentStep(processId).getStepType();
+                log.debug("Process status: " + bdmClient.getProcessStatus(processId));
                 log.debug("current step: " + currentStep);
                 
-                if (currentStep.equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI.name())) {
+                if (bdmClient.getProcessStatus(processId) == Bdm.BdmStatus.FINISHED || currentStep.getStepType().equals(ProtocolloInUscitaProcess.Steps.ASPETTA_SPEDIZIONI.name())) {
                     log.debug("eseguo lo stepon sul processo: " + processId);
                     bdmClient.stepOn(processId, new Bag());
                     String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
