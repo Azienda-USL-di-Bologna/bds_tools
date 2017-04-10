@@ -718,13 +718,17 @@ public class Spedizioniere implements Job{
                 }
             }
             catch(Exception ex) {
+                
                 try {
                     setMessaggioErrore("Errore nella costruzione della mail", res.getLong("id"));
-                    String subject = "Build Mail Error | " + ConfigParams.getAmbiente() + "/" + ConfigParams.getAzienda() + " - Errore nella costruzione della mail";
-                    sendMail(res, subject, ex);
+                    if (!documentiIncriminati.contains(res.getString("id_oggetto_origine"))) {
+                        String subject = "Build Mail Error | " + ConfigParams.getAmbiente() + "/" + ConfigParams.getAzienda() + " - Errore nella costruzione della mail";
+                        sendMail(res, subject, ex);
+                    }
                 } catch (SQLException e) {
                     log.debug("Errore update messaggio_errore: ", e);
                 }
+                
                 throw new SpedizioniereException("Errore nella costruzione dell'oggetto mail", ex);
             }
         }
