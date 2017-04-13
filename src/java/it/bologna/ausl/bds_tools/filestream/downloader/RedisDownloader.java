@@ -1,4 +1,4 @@
-package it.bologna.ausl.bds_tools.downloader;
+package it.bologna.ausl.bds_tools.filestream.downloader;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;

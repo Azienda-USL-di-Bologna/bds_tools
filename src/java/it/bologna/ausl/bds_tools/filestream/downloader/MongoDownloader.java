@@ -1,4 +1,4 @@
-package it.bologna.ausl.bds_tools.downloader;
+package it.bologna.ausl.bds_tools.filestream.downloader;
 
 import com.mongodb.MongoException;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
