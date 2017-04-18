@@ -1,13 +1,19 @@
 package it.bologna.ausl.bds_tools.filestream.uploader;
 
+import com.google.gson.JsonArray;
 import it.bologna.ausl.bds_tools.*;
+import it.bologna.ausl.bds_tools.filestream.downloader.DownloaderPlugin;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.mongowrapper.MongoWrapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
 import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -17,8 +23,10 @@ import javax.servlet.http.Part;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import redis.clients.jedis.Jedis;
 
 /**
  *
@@ -32,7 +40,7 @@ import org.json.simple.JSONValue;
 )
 public class Uploader extends HttpServlet {
 
-private static final Logger log = LogManager.getLogger(Uploader.class);
+    private static final Logger log = LogManager.getLogger(Uploader.class);
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -48,72 +56,90 @@ private static final Logger log = LogManager.getLogger(Uploader.class);
         log.info("Avvio servlet: " + getClass().getSimpleName());
         log.info("--------------------------------");
 
-        InputStream fis = null;
-        String fileName;
         PrintWriter responeWriter = null;
 
 //        {
 //            "server":"mongoConnectionString",
 //            "plugin":"Mongo",
+//            "force_download":true,
+//            "delete_token":true,
 //            "params":{
-//                "file_name":"",
 //                "path":"/tmp/test"
 //            }
 //        }
-
         try {
-            JSONObject params;
-            try {
-                params = (JSONObject) JSONValue.parse(URLDecoder.decode(UtilityFunctions.getMultipartStringParam(request, "metadata"), "UTF-8"));
+            JSONObject metaData = null;
+            List<Part> files = new ArrayList<>();
+
+            for (Part part : request.getParts()) {
+                if (part.getName().equalsIgnoreCase("metadata")) {
+
+                    try {
+                        metaData = (JSONObject) JSONValue.parse(URLDecoder.decode(UtilityFunctions.getMultipartStringParam(request, "metadata"), "UTF-8"));
+                    } catch (Exception ex) {
+                        response.sendError(HttpServletResponse.SC_BAD_REQUEST, "errore nel parsing della form part \"metadata\": " + ex);
+                        return;
+                    }
+                } else if (part.getName().equalsIgnoreCase("files")) {
+                    files.add(part);
+                } else {
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, String.format("nome part: %s non valido", part.getName()));
+                    return;
+                }
             }
-            catch (Exception ex) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "errore nel parsing della form part \"metadata\": " + ex);
+
+            if (metaData == null || metaData.isEmpty()) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "metadata vuoto");
+                return;
+            }
+            if (files == null || files.isEmpty()) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "nessun file trovato nella richiesta");
                 return;
             }
 
-            Part filePart = request.getPart("file");
-            log.info("letto: " + filePart.getName());
-            fis = filePart.getInputStream();
-            fileName = filePart.getSubmittedFileName();
-            System.out.println("Ricevuto il file " + fileName + "...");
+            String plugin = (String) metaData.get("plugin");
+            String server = (String) metaData.get("server");
+            Boolean forceDownload = (Boolean) metaData.get("force_download");
+            Boolean deleteToken = (Boolean) metaData.get("delete_token");
 
-            String uuid;
-            try {
-                if (fis == null) {
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Nessun file trovato nella richiesta");
-                    return;
-                }
+            String connParameters = ApplicationParams.getOtherPublicParam(server);
 
-                if (params == null) {
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Manca il parametro \"params\"");
-                    return;
-                }
-                responeWriter = response.getWriter();
-                String serverIdentifier = (String) params.get("serverIdentifier");
-                if (serverIdentifier == null || serverIdentifier.equals("")) {
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"serverIdentifier\" non trovato");
-                    return;
-                }
-                
-                String mongoDownloadUrl = ApplicationParams.getMongoDownloadUri();
+            Class<UploaderPlugin> pluginClass = (Class<UploaderPlugin>) Class.forName("it.bologna.ausl.bds_tools.filestream.uploader." + plugin + "Uploader", true, this.getClass().getClassLoader());
+            Constructor<UploaderPlugin> uploaderPluginConstructor = pluginClass.getDeclaredConstructor(String.class);
+            UploaderPlugin uploaderPluginInstance = uploaderPluginConstructor.newInstance(connParameters);
 
-                if (mongoDownloadUrl == null || mongoDownloadUrl.equals("")) {
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"mongoDownloadUrl\" non trovato");
-                    return;
-                }
+            String basePath = (String) metaData.get("path");
+            JSONArray jsonArray = new JSONArray();
+            Jedis redis = new Jedis(ApplicationParams.getRedisHost());
 
-                MongoWrapper m = new MongoWrapper(mongoDownloadUrl);
-                uuid = m.put(fis, fileName, "/tmp", false);
-                responeWriter.print(uuid);
-            } catch (Exception ex) {
-                throw new ServletException(ex);
+            for (Part filePart : files) {
+                String fileName = filePart.getSubmittedFileName();
+                InputStream file = filePart.getInputStream();
+
+                String res = uploaderPluginInstance.putFile(file, basePath, fileName);
+
+                JSONObject downloaderParams = new JSONObject();
+                downloaderParams.put("server", server);
+                downloaderParams.put("plugin", plugin);
+                downloaderParams.put("content_type", filePart.getContentType());
+                downloaderParams.put("force_download", forceDownload);
+
+                JSONObject params = new JSONObject();
+                params.put("file_name", fileName);
+                params.put("file_id", res);
+
+                downloaderParams.put("params", params);
+                String token = UUID.randomUUID().toString();
+
+                redis.set(token, downloaderParams.toJSONString());
+
+                // costruirsi link per il download da restituire
+                // {"server":"mongoConnectionString","plugin":"Mongo","content_type":"","force_download":true,"params":{"file_name":"","file_id":"58bd11a582cea552acdd56b9"}}
             }
-        } catch (ServletException ex) {
-            throw ex;
+
         } catch (Exception ex) {
             throw new ServletException(ex);
         } finally {
-            IOUtils.closeQuietly(fis);
             IOUtils.closeQuietly(responeWriter);
         }
     }

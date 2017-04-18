@@ -284,9 +284,9 @@
         <param-value>gd.pubblicazioni_albo</param-value>
     </context-param>
     <context-param>
+         <!--tabella delle relate compilata da balbo_bridge-->
         <param-name>PubblicazioniBalboTableName</param-name>
-        <param-value>gd.pubblicazioni_balbo</param-value>
-        <description>tabella delle relate compilata da balbo_bridge</description>
+      <param-value>gd.pubblicazioni_balbo</param-value>       
     </context-param>
     <context-param>
         <param-name>MetadatiTrasparenzaTableName</param-name>
