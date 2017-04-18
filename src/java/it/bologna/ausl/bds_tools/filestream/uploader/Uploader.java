@@ -2,6 +2,7 @@ package it.bologna.ausl.bds_tools.filestream.uploader;
 
 import com.google.gson.JsonArray;
 import it.bologna.ausl.bds_tools.*;
+import it.bologna.ausl.bds_tools.filestream.downloader.Downloader;
 import it.bologna.ausl.bds_tools.filestream.downloader.DownloaderPlugin;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -41,6 +42,10 @@ import redis.clients.jedis.Jedis;
 public class Uploader extends HttpServlet {
 
     private static final Logger log = LogManager.getLogger(Uploader.class);
+
+    private static final String FILE_NAME_KEY = "filename";
+    private static final String LINK_KEY = "link";
+    private static final int TOKEN_TIMEOUT = 600;
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -99,8 +104,19 @@ public class Uploader extends HttpServlet {
 
             String plugin = (String) metaData.get("plugin");
             String server = (String) metaData.get("server");
-            Boolean forceDownload = (Boolean) metaData.get("force_download");
-            Boolean deleteToken = (Boolean) metaData.get("delete_token");
+            Boolean forceDownload = true;
+            try {
+                forceDownload = (Boolean) metaData.get("force_download");
+            } catch (Exception ex) {
+                log.warn("force_download non passato. Settato al valore di default: " + forceDownload);
+            }
+
+            Boolean deleteToken = true;
+            try {
+                deleteToken = (Boolean) metaData.get("delete_token");
+            } catch (Exception ex) {
+                log.warn("delete_token non passato. Settato al valore di default: " + deleteToken);
+            }
 
             String connParameters = ApplicationParams.getOtherPublicParam(server);
 
@@ -108,9 +124,13 @@ public class Uploader extends HttpServlet {
             Constructor<UploaderPlugin> uploaderPluginConstructor = pluginClass.getDeclaredConstructor(String.class);
             UploaderPlugin uploaderPluginInstance = uploaderPluginConstructor.newInstance(connParameters);
 
-            String basePath = (String) metaData.get("path");
-            JSONArray jsonArray = new JSONArray();
+            String basePath = (String) ((JSONObject) metaData.get("params")).get("path");
+            JSONArray fileLinkResultList = new JSONArray();
+
             Jedis redis = new Jedis(ApplicationParams.getRedisHost());
+
+            String thisUrl = request.getRequestURL().toString();
+            String baseDownloaderUrl = thisUrl.substring(0, thisUrl.lastIndexOf("/") + 1) + Downloader.class.getSimpleName();
 
             for (Part filePart : files) {
                 String fileName = filePart.getSubmittedFileName();
@@ -132,10 +152,22 @@ public class Uploader extends HttpServlet {
                 String token = UUID.randomUUID().toString();
 
                 redis.set(token, downloaderParams.toJSONString());
+                redis.expire(token, TOKEN_TIMEOUT);
 
+                String downloaderLink = baseDownloaderUrl + "?token=" + token + "&delete_token=" + deleteToken.toString();
+
+                JSONObject fileLinkResult = new JSONObject();
+                fileLinkResult.put(FILE_NAME_KEY, fileName);
+                fileLinkResult.put(LINK_KEY, downloaderLink);
+
+                fileLinkResultList.add(fileLinkResult);
                 // costruirsi link per il download da restituire
                 // {"server":"mongoConnectionString","plugin":"Mongo","content_type":"","force_download":true,"params":{"file_name":"","file_id":"58bd11a582cea552acdd56b9"}}
             }
+
+            response.addHeader("Content-Type", "application/json");
+            responeWriter = response.getWriter();
+            responeWriter.write(fileLinkResultList.toJSONString());
 
         } catch (Exception ex) {
             throw new ServletException(ex);
