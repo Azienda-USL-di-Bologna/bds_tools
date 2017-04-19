@@ -157,7 +157,7 @@ public class GetGdDocProIdoneita extends HttpServlet {
             ps.setString(index++, numeroGiorniDaConsiderare + " day");
 
             String queryStr = ps.toString();
-            log.debug("eseguo la query: " + queryStr + " ...");
+            log.debug("getArrayIDOggettoOrigine - eseguo la query: " + queryStr + " ...");
             ResultSet resultQuery = ps.executeQuery();
             while (resultQuery.next()) {
                 res.add(resultQuery.getString("id_oggetto_origine").replace(prefix, ""));
