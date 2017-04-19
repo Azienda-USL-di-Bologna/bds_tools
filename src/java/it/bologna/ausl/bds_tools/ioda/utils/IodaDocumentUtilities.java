@@ -635,7 +635,10 @@ public class IodaDocumentUtilities {
                     +   "AND p.anno_pubblicazione IS NOT NULL "
                     +   "AND p.anno_pubblicazione > 0 "
                     +   "AND p.tipologia = ? "
-                    + "ORDER BY p.numero_pubblicazione";
+                    + "ORDER BY p.id";
+//                    c'era la riga di sotto prima ma vogliamo le pubblicazioni in ordine (sia quelle dell'albo che di balbo) 
+//                    in modo che l'ultima pubblicazione ritornata sia effettivamente l'ultima pubblicazione del documento
+//                    + "ORDER BY p.numero_pubblicazione";
         } else {
             sqlText
                     = "SELECT  "
@@ -657,7 +660,10 @@ public class IodaDocumentUtilities {
                     +           "AND p.tipologia = ? "
                     + "WHERE p.id_gddoc = ? "
                     +   "AND p.tipologia = ? "
-                    + "ORDER BY p.numero_pubblicazione";
+                    + "ORDER BY p.id";
+//                    c'era la riga di sotto prima ma vogliamo le pubblicazioni in ordine (sia quelle dell'albo che di balbo) 
+//                    in modo che l'ultima pubblicazione ritornata sia effettivamente l'ultima pubblicazione del documento
+//                    + "ORDER BY p.numero_pubblicazione";
         }
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
