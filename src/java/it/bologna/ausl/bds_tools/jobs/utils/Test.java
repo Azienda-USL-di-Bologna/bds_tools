@@ -22,9 +22,17 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.ParseException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
+import org.quartz.CronExpression;
 
 /**
  *
@@ -32,8 +40,48 @@ import org.apache.commons.io.IOUtils;
  */
 public class Test {
 
-    public static void main(String[] args) throws JsonProcessingException, FileNotFoundException, IOException, SQLException, NamingException, NotAuthorizedException, IodaDocumentException {
-               
+    public static void main(String[] args) throws JsonProcessingException, FileNotFoundException, IOException, SQLException, NamingException, NotAuthorizedException, IodaDocumentException, ParseException {
+        
+        Date date;
+        CronExpression exp;
+          
+        String timeSettato = "0 10 9 1/1 * ? *";
+
+        exp = new CronExpression(timeSettato);
+        date = exp.getNextValidTimeAfter(new Date());
+        LocalDateTime nowLocal = LocalDateTime.now();
+        
+        
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);  
+        int oraDB = cal.get(Calendar.HOUR_OF_DAY);
+        int minutiDB = cal.get(Calendar.MINUTE);
+        
+        System.out.println("ora letta da db: " + oraDB);
+        System.out.println("minuti letti db: " + minutiDB);
+        
+        System.out.println("ora attuale: " + nowLocal.getHour());
+        System.out.println("minuti attuali: " + nowLocal.getMinute());
+
+        //Date now = Date.from(nowLocal.atZone(ZoneId.systemDefault()).toInstant());
+        
+        if (nowLocal.getHour() == oraDB){
+            if (nowLocal.getMinute() > minutiDB){
+                System.out.println("può partire");
+            }
+            else{
+                System.out.println("non può partire");
+            }
+        }
+        else if(nowLocal.getHour() > oraDB){
+            System.out.println("può partire");
+        }
+        else{
+            System.out.println("non può partire");
+        }
+
+    
+        System.exit(0);
         String query = "SELECT attivo " +
                         "FROM bds_tools.spedizioniere_applicazioni " +
                         "WHERE  id_applicazione_spedizioniere = ? ;";              

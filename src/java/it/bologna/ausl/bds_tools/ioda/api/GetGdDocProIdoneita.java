@@ -54,12 +54,12 @@ public class GetGdDocProIdoneita extends HttpServlet {
 
         try {
             // dati per l'autenticazione
-            idApplicazione = request.getParameter("idapplicazione");
+            idApplicazione = request.getParameter("id_applicazione");
             if (idApplicazione == null) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"idapplicazione\" mancante");
                 return;
             }
-            tokenApplicazione = request.getParameter("tokenapplicazione");
+            tokenApplicazione = request.getParameter("token_applicazione");
             if (tokenApplicazione == null) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"tokenapplicazione\" mancante");
                 return;
@@ -71,13 +71,16 @@ public class GetGdDocProIdoneita extends HttpServlet {
                 return;
             }
             
-            codiceRegistro = request.getParameter("codiceregistro");
+            codiceRegistro = request.getParameter("codice_registro");
             if (codiceRegistro == null) {
                 response.sendError(HttpServletResponse.SC_BAD_REQUEST, "\"codiceRegistro\" mancante");
                 return;
             }
             
-            limiteEstrazione = request.getParameter("limitestrazione");
+            limiteEstrazione = request.getParameter("limite_estrazione");
+            if (limiteEstrazione.equalsIgnoreCase("0")){
+                limiteEstrazione = null;
+            }
 
             // ottengo una connessione al db
             try {

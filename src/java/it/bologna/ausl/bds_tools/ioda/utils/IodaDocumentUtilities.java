@@ -1301,7 +1301,7 @@ public class IodaDocumentUtilities {
             
             // idoneo_versamento
             if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
-                ps.setInt(index++, -1);
+                ps.setInt(index++, 1);
             } else {
                 ps.setInt(index++, 0);
             }
@@ -1483,7 +1483,7 @@ public class IodaDocumentUtilities {
                 
                 // idoneo_versamento
                 if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
-                    ps.setInt(index++, -1);
+                    ps.setInt(index++, 1);
                 } else {
                     ps.setInt(index++, 0);
                 }
