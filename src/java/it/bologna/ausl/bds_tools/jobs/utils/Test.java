@@ -7,8 +7,12 @@ package it.bologna.ausl.bds_tools.jobs.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
+import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
+import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -18,6 +22,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import javax.naming.NamingException;
 import org.apache.commons.io.IOUtils;
 
@@ -27,7 +32,7 @@ import org.apache.commons.io.IOUtils;
  */
 public class Test {
 
-    public static void main(String[] args) throws JsonProcessingException, FileNotFoundException, IOException {
+    public static void main(String[] args) throws JsonProcessingException, FileNotFoundException, IOException, SQLException, NamingException, NotAuthorizedException, IodaDocumentException {
                
         String query = "SELECT attivo " +
                         "FROM bds_tools.spedizioniere_applicazioni " +
@@ -75,5 +80,26 @@ public class Test {
         //jl2 = mapper.readValue("/tmp/joblist.json", JobList.class);
         System.out.println(jl2.getJobs().get(0).getJobParams().getParam("k1"));
 
+    }
+    
+    private static GdDoc getGdDocById(String idGdDoc) throws SQLException, NamingException, NotAuthorizedException, IodaDocumentException{
+        
+        
+        
+        GdDoc gdDoc = null;
+        
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+        ) {
+            String prefix = UtilityFunctions.checkAuthentication(dbConnection, "procton", "procton");
+            
+            HashMap<String, Object> additionalData = new HashMap <String, Object>(); 
+            additionalData.put("FASCICOLAZIONI", "LOAD");
+            additionalData.put("PUBBLICAZIONI", "LOAD");
+            
+            gdDoc = IodaDocumentUtilities.getGdDocById(dbConnection, idGdDoc, additionalData, prefix);
+            gdDoc.setId(idGdDoc);
+        }
+        return gdDoc;    
     }
 }
