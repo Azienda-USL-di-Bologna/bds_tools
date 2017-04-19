@@ -65,6 +65,10 @@ public class servletTest extends HttpServlet {
 //            GdDoc gd = (GdDoc)Requestable.parse(val, GdDoc.class);
 //         
 //            log.debug(gd.getJSONString());
+            
+              GdDoc gd = getGdDocById("FWx;BhDEZpn^K8uHfa4C");
+              gd.ordinaPubblicazioni(gd.getPubblicazioni(), GdDoc.GdDocSortValues.ASC);
+
          
         } catch (Exception ex) {
             System.out.println("errore: " + ex);

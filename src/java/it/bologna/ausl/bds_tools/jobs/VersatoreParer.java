@@ -106,6 +106,8 @@ public class VersatoreParer implements Job {
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
 
+        
+        
         try (Connection dbConn = UtilityFunctions.getDBConnection();) {
             // controllo se il servizio è già stato eseguito oggi
             if (nonFattoOggi(dbConn)) {

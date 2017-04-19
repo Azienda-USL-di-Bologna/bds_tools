@@ -42,6 +42,10 @@ public class Test {
 
     public static void main(String[] args) throws JsonProcessingException, FileNotFoundException, IOException, SQLException, NamingException, NotAuthorizedException, IodaDocumentException, ParseException {
         
+        
+                
+        System.exit(0);
+        
         Date date;
         CronExpression exp;
           
@@ -130,6 +134,7 @@ public class Test {
 
     }
     
+    
     private static GdDoc getGdDocById(String idGdDoc) throws SQLException, NamingException, NotAuthorizedException, IodaDocumentException{
         
         
@@ -139,7 +144,7 @@ public class Test {
         try (
             Connection dbConnection = UtilityFunctions.getDBConnection();
         ) {
-            String prefix = UtilityFunctions.checkAuthentication(dbConnection, "procton", "procton");
+            String prefix = "babel_suite_";//UtilityFunctions.checkAuthentication(dbConnection, getIdApplicazione(), getTokenApplicazione());
             
             HashMap<String, Object> additionalData = new HashMap <String, Object>(); 
             additionalData.put("FASCICOLAZIONI", "LOAD");
@@ -150,4 +155,5 @@ public class Test {
         }
         return gdDoc;    
     }
+    
 }
