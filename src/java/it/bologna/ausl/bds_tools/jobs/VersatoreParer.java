@@ -94,6 +94,11 @@ public class VersatoreParer implements Job {
     private String prefix;
     
     private final String ID_APPLICAZIONE = "gedi";
+    private final String APPLICAZIONE_PICO = "pico";
+    private final String APPLICAZIONE_DETE = "dete";
+    private final String APPLICAZIONE_DELI = "deli";
+    
+    private final String SERVIZIO_IDONEITA = "IdoneitaParerService";
     
     
     
@@ -106,9 +111,15 @@ public class VersatoreParer implements Job {
             if (nonFattoOggi(dbConn)) {
                 // controllo se l'ora è maggiore di quella indicata
                 if (oraLancioIdonea()){
-                    updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
-                    doJob(context);
-                    updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
+                    if (serviziApplicativiFiniti(dbConn)) {
+                        updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
+                        doJob(context);
+                        updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
+                    }
+                    else{
+                        log.info("servizi calcolo idoneita applicazioni non tutti finiti");
+                    }
+                    
                 }
                 else{
                     log.info("ora di lancio non idonea");
@@ -2212,6 +2223,43 @@ public class VersatoreParer implements Job {
             result = false;
         }
         return result;
+    }
+    
+    
+    // controlla se i servizi attivi sulle aplicazioni di calcolo idoneità parer hanno finito
+    private boolean serviziApplicativiFiniti(Connection dbConn) throws SQLException {
+        
+        boolean serviziFiniti = true;
+        
+        String queryPico = ""
+                + "select id_applicazione, data_fine "
+                + "from bds_tools.servizi "
+                + "where nome_servizio = ? and attivo != 0";
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(queryPico)) {
+            ps.setString(1, SERVIZIO_IDONEITA);
+            log.debug(String.format("eseguo la query: %s", ps.toString()));
+            ResultSet res = ps.executeQuery();
+            if (res.next()) {
+                String id_applicazione = res.getString(1);
+
+                try{
+                    Date date = res.getDate(2);
+                    if(date == null){
+                        log.debug("servizio idoneita_parer_pico non finito");
+                        serviziFiniti = serviziFiniti && false;    
+                    }
+                }
+                catch(Exception ex){
+                    log.debug("servizio idoneita_parer su applicazione " + id_applicazione + "non ancora finito");
+                    serviziFiniti = serviziFiniti && false;
+                }
+                
+                return serviziFiniti;
+            }
+            else
+                throw new SQLException("nessun servizio di calcolo idoneita attivo");
+        }
     }
     
     
