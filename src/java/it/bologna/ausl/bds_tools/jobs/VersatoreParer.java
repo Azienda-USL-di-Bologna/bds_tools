@@ -112,19 +112,13 @@ public class VersatoreParer implements Job {
             // controllo se il servizio è già stato eseguito oggi
             if (nonFattoOggi(dbConn)) {
                 // controllo se l'ora è maggiore di quella indicata
-                if (oraLancioIdonea()){
-                    if (serviziApplicativiFiniti(dbConn)) {
-                        updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
-                        doJob(context);
-                        updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
-                    }
-                    else{
-                        log.info("servizi calcolo idoneita applicazioni non tutti finiti");
-                    }
-                    
+                if (serviziApplicativiFiniti(dbConn)) {
+                    updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
+                    doJob(context);
+                    updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
                 }
                 else{
-                    log.info("ora di lancio non idonea");
+                    log.info("servizi calcolo idoneita applicazioni non tutti finiti");
                     log.debug("Versatore ParER Finished");
                 }
             }
@@ -2166,14 +2160,27 @@ public class VersatoreParer implements Job {
             log.debug(String.format("eseguo la query: %s", ps.toString()));
             ResultSet res = ps.executeQuery();
             if (res.next()) {
-                Date date = res.getDate(1);
-                log.debug(String.format("data letta: %s", date));
+                Date date = null;
+                try{
+                    date = res.getDate(1);
+                    if (date != null){
+                        log.debug(String.format("data letta: %s", date));
+
+                        //in milliseconds
+                        long diff = System.currentTimeMillis() - date.getTime();
+                        long diffDays = diff / (24 * 60 * 60 * 1000);
+
+                        return diffDays > 0;
+                    }
+                    else{
+                        return false;
+                    }
+                }
+                catch(Exception ex){
+                    log.debug("nonFattoOggi - errore nel reperimento della data_fine: " + ex);
+                    return false;
+                }
                 
-                //in milliseconds
-		long diff = System.currentTimeMillis() - date.getTime();
-                long diffDays = diff / (24 * 60 * 60 * 1000);
-                
-                return diffDays > 0;
             }
             else
                 throw new SQLException(String.format("servizio %s dell'applicazione %s non trovato", getClass().getSimpleName(), ID_APPLICAZIONE));
@@ -2242,7 +2249,7 @@ public class VersatoreParer implements Job {
             ps.setString(1, SERVIZIO_IDONEITA);
             log.debug(String.format("eseguo la query: %s", ps.toString()));
             ResultSet res = ps.executeQuery();
-            if (res.next()) {
+            while (res.next()) {
                 String id_applicazione = res.getString(1);
 
                 try{
@@ -2257,10 +2264,9 @@ public class VersatoreParer implements Job {
                     serviziFiniti = serviziFiniti && false;
                 }
                 
-                return serviziFiniti;
+                
             }
-            else
-                throw new SQLException("nessun servizio di calcolo idoneita attivo");
+            return serviziFiniti;
         }
     }
     
