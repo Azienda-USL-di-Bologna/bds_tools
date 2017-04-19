@@ -1,10 +1,12 @@
-package it.bologna.ausl.bds_tools.downloader;
+package it.bologna.ausl.bds_tools.filestream.downloader;
 
+import it.bologna.ausl.bds_tools.exceptions.FileStreamException;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
+import java.util.logging.Level;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -23,6 +25,7 @@ public class Downloader extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
     private static final Logger log = LogManager.getLogger(Downloader.class);
+
     /**
      * @see HttpServlet#HttpServlet()
      */
@@ -42,11 +45,11 @@ public class Downloader extends HttpServlet {
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        
+
         log.info("--------------------------------");
         log.info("Avvio servlet: " + getClass().getSimpleName());
         log.info("--------------------------------");
-        
+
         DownloaderPlugin downloaderPluginInstance = null;
         String token = request.getParameter("token");
         String deleteTokenParams = request.getParameter("deletetoken");
@@ -89,19 +92,18 @@ public class Downloader extends HttpServlet {
             //String server = parts[1];
             String server = (String) downloadParams.get("server");
             String connParameters = null;
-            
+
             // temporaneo, per farlo funzionare anche prima della fine della modifica delle applicazioni con la nuova modalità
-            if (server.contains("gdml") || server.contains("arena") || server.contains("prod") || server.contains("prototipo")) {            
+            if (server.contains("gdml") || server.contains("arena") || server.contains("prod") || server.contains("prototipo")) {
                 connParameters = getServletContext().getInitParameter(server);
                 if (connParameters == null) {
                     throw new ServletException(server + " not found in parameters");
                 }
-            }
-            else {
+            } else {
                 // il parametro server è il nome del parametro da leggere dai parametri pubblici
                 connParameters = ApplicationParams.getOtherPublicParam(server);
             }
-            Class<DownloaderPlugin> pluginClass = (Class<DownloaderPlugin>) Class.forName("it.bologna.ausl.bds_tools.downloader." + plugin + "Downloader", true, this.getClass().getClassLoader());
+            Class<DownloaderPlugin> pluginClass = (Class<DownloaderPlugin>) Class.forName("it.bologna.ausl.bds_tools.filestream.downloader." + plugin + "Downloader", true, this.getClass().getClassLoader());
             Constructor<DownloaderPlugin> downloaderPluginConstructor = pluginClass.getDeclaredConstructor(String.class);
             downloaderPluginInstance = downloaderPluginConstructor.newInstance(connParameters);
             pluginParams = (JSONObject) downloadParams.get("params");
@@ -109,8 +111,18 @@ public class Downloader extends HttpServlet {
             log.error(e);
             throw new ServletException(e);
         }
-        InputStream in = downloaderPluginInstance.getFile(pluginParams);
-        String fileName = downloaderPluginInstance.getFileName(pluginParams);
+        InputStream in;
+        try {
+            in = downloaderPluginInstance.getFile(pluginParams);
+        } catch (FileStreamException ex) {
+            throw new ServletException(ex);
+        }
+        String fileName;
+        try {
+            fileName = downloaderPluginInstance.getFileName(pluginParams);
+        } catch (FileStreamException ex) {
+            throw new ServletException(ex);
+        }
         OutputStream out = response.getOutputStream();
 
         if (downloadParams.get("content_type") != null && !downloadParams.get("content_type").equals("")) {

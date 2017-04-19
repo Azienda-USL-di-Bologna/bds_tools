@@ -10,7 +10,12 @@
         <description/>
         <display-name>Downloader</display-name>
         <servlet-name>Downloader</servlet-name>
-        <servlet-class>it.bologna.ausl.bds_tools.downloader.Downloader</servlet-class>
+        <servlet-class>it.bologna.ausl.bds_tools.filestream.downloader.Downloader</servlet-class>
+    </servlet>
+    <servlet>
+        <display-name>Uploader</display-name>
+        <servlet-name>Uploader</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.filestream.uploader.Uploader</servlet-class>
     </servlet>
     <servlet>
         <description/>
@@ -115,6 +120,10 @@
     <servlet-mapping>
         <servlet-name>Downloader</servlet-name>
         <url-pattern>/Downloader</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>Uploader</servlet-name>
+        <url-pattern>/Uploader</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>SetCurrentActivity</servlet-name>
@@ -275,9 +284,9 @@
         <param-value>gd.pubblicazioni_albo</param-value>
     </context-param>
     <context-param>
+         <!--tabella delle relate compilata da balbo_bridge-->
         <param-name>PubblicazioniBalboTableName</param-name>
-        <param-value>gd.pubblicazioni_balbo</param-value>
-        <description>tabella delle relate compilata da balbo_bridge</description>
+      <param-value>gd.pubblicazioni_balbo</param-value>       
     </context-param>
     <context-param>
         <param-name>MetadatiTrasparenzaTableName</param-name>
@@ -339,43 +348,43 @@
         <param-name>GdDocToPublishExtractionQuery</param-name>
         <param-value> 
             SELECT g.id_gddoc, 
-                id_utente_modifica, 
-                nome_gddoc,
-                id_documento_origine,
-                tipo_gddoc,
-                g.data_ultima_modifica, 
-                stato_gd_doc, 
-                g.in_uso_da, 
-                data_gddoc,
-                g.stato_mestieri, 
-                guid_gddoc, 
-                g.codice_registro as codice_registro_gd,
-                data_registrazione, 
-                numero_registrazione, 
-                id_utente_registrazione,
-                anno_registrazione, 
-                firmato, 
-                id_oggetto_origine, 
-                tipo_oggetto_origine,
-                forzato_da_utente, 
-                id_utente_forzatura, 
-                g.oggetto as oggetto_gddoc,
-                codice, 
-                r.desc_pubb_albo as descrizione_albo, 
-                nome_struttura_firmatario as articolazione, 
-                giorni_pubblicazione,
-                prefix,
-                coalesce(sdOmissis.nome_sottodocumento,sd.nome_sottodocumento) as nome_sottodocumento, 
-                coalesce(sdOmissis.codice_sottodocumento,sd.codice_sottodocumento) as codice_sottodocumento,
-                pubblicato,
-                a.id_applicazione as id_applicazione
-        FROM gd.gddocs g
+            id_utente_modifica, 
+            nome_gddoc,
+            id_documento_origine,
+            tipo_gddoc,
+            g.data_ultima_modifica, 
+            stato_gd_doc, 
+            g.in_uso_da, 
+            data_gddoc,
+            g.stato_mestieri, 
+            guid_gddoc, 
+            g.codice_registro as codice_registro_gd,
+            data_registrazione, 
+            numero_registrazione, 
+            id_utente_registrazione,
+            anno_registrazione, 
+            firmato, 
+            id_oggetto_origine, 
+            tipo_oggetto_origine,
+            forzato_da_utente, 
+            id_utente_forzatura, 
+            g.oggetto as oggetto_gddoc,
+            codice, 
+            r.desc_pubb_albo as descrizione_albo, 
+            nome_struttura_firmatario as articolazione, 
+            giorni_pubblicazione,
+            prefix,
+            coalesce(sdOmissis.nome_sottodocumento,sd.nome_sottodocumento) as nome_sottodocumento, 
+            coalesce(sdOmissis.codice_sottodocumento,sd.codice_sottodocumento) as codice_sottodocumento,
+            pubblicato,
+            a.id_applicazione as id_applicazione
+            FROM gd.gddocs g
             left join gd.sotto_documenti sdOmissis on sdOmissis.nome_sottodocumento='StampaUnicaOmissis' and g.id_gddoc=sdOmissis.id_gddoc and sdOmissis.tipo_sottodocumento = 'stampa_unica'
             left join gd.sotto_documenti sd on sd.nome_sottodocumento='StampaUnica' and g.id_gddoc=sd.id_gddoc and sd.tipo_sottodocumento = 'stampa_unica',
             bds_tools.registri r,
             bds_tools.balbo_applicazioni ba,
             bds_tools.authorized_applications a
-        WHERE g.codice_registro = r.codice_registro
+            WHERE g.codice_registro = r.codice_registro
             and r.pubblicazione_automatica = -1
             and g.numero_registrazione is not null
             and g.numero_registrazione != ''
@@ -397,24 +406,24 @@
         </param-value>
     </context-param>
     <!-- NOT_USED
-    <context-param>
-        <param-name>PubblicazioniAlboQueryUpdatePubblicazione</param-name>
-        <param-value>
-            UPDATE bds_tools.pubblicazioni_albo
-            SET data_pubblicazione = ?
-            WHERE id_pubblicazione = ?
-        </param-value>
-    </context-param>
-    <context-param>
-        <param-name>PubblicazioniAlboQueryInsertPubblicazione</param-name>
-        <param-value>
-            INSERT INTO bds_tools.pubblicazioni_albo(
-            id_pubblicazione, applicazione, data_inizio, data_fine, 
-            uuid_relata, guid_oggetto, sistema, data_pubblicazione)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-        </param-value>
-    </context-param>
--->
+        <context-param>
+            <param-name>PubblicazioniAlboQueryUpdatePubblicazione</param-name>
+            <param-value>
+                UPDATE bds_tools.pubblicazioni_albo
+                SET data_pubblicazione = ?
+                WHERE id_pubblicazione = ?
+            </param-value>
+        </context-param>
+        <context-param>
+            <param-name>PubblicazioniAlboQueryInsertPubblicazione</param-name>
+            <param-value>
+                INSERT INTO bds_tools.pubblicazioni_albo(
+                id_pubblicazione, applicazione, data_inizio, data_fine, 
+                uuid_relata, guid_oggetto, sistema, data_pubblicazione)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            </param-value>
+        </context-param>
+    -->
     <!-- da rimuovere -->
     <context-param>
         <param-name>mongogdml</param-name>
@@ -542,9 +551,42 @@
         <url-pattern>/ioda/api/document/GetGdDocProIdoneita</url-pattern>
     </servlet-mapping>
     <!--<context-param>
-            <param-name>schedulatore.active</param-name>
+        <param-name>schedulatore.active</param-name>
+        <param-value>true</param-value>
+    </context-param>  -->
+        
+    <filter>
+        <filter-name>CorsFilter</filter-name>
+        <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>
+        <init-param>
+            <param-name>cors.allowed.origins</param-name>
+            <param-value>*</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cors.allowed.methods</param-name>
+            <param-value>GET,POST,HEAD,OPTIONS,PUT</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cors.allowed.headers</param-name>
+            <param-value>Content-Type,X-Requested-With,accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cors.exposed.headers</param-name>
+            <param-value>Access-Control-Allow-Origin,Access-Control-Allow-Credentials</param-value>
+        </init-param>
+        <init-param>
+            <param-name>cors.support.credentials</param-name>
             <param-value>true</param-value>
-        </context-param>  -->
+        </init-param>
+        <init-param>
+            <param-name>cors.preflight.maxage</param-name>
+            <param-value>10</param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>CorsFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>      
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>
