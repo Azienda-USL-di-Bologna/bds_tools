@@ -624,7 +624,8 @@ public class IodaDocumentUtilities {
                     +   "p.data_esecutivita, "
                     +   "p.tipologia, "
                     +   "p.pubblica_solo_se_pubblicato_albo, "
-                    +   "pb.uuid_relata "
+                    +   "pb.uuid_relata, "
+                    +   "p.id "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p "
                     +   "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
                     +       "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
@@ -653,7 +654,8 @@ public class IodaDocumentUtilities {
                     +   "p.data_esecutivita, "
                     +   "p.tipologia, "
                     +   "p.pubblica_solo_se_pubblicato_albo, "
-                    +   "pb.uuid_relata "
+                    +   "pb.uuid_relata, "
+                    +   "p.id "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p "
                     +   "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
                     +       "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
@@ -702,6 +704,8 @@ public class IodaDocumentUtilities {
                 if (dataEsecutivita != null) {
                     p.setDataEsecutivita(new DateTime(dataEsecutivita.getTime()));
                 }
+                
+                p.setId(res.getLong("id"));
 
                 String sqlTipoProvvedimentoText
                         = "SELECT t.descrizione "
@@ -1307,7 +1311,7 @@ public class IodaDocumentUtilities {
             
             // idoneo_versamento
             if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
-                ps.setInt(index++, -1);
+                ps.setInt(index++, 1);
             } else {
                 ps.setInt(index++, 0);
             }
@@ -1489,7 +1493,7 @@ public class IodaDocumentUtilities {
                 
                 // idoneo_versamento
                 if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
-                    ps.setInt(index++, -1);
+                    ps.setInt(index++, 1);
                 } else {
                     ps.setInt(index++, 0);
                 }

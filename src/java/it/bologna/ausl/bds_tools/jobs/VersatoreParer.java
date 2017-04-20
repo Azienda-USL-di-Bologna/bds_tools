@@ -1,24 +1,19 @@
 package it.bologna.ausl.bds_tools.jobs;
 
-import it.bologna.ausl.bdm.utilities.Bag;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
-import it.bologna.ausl.bds_tools.exceptions.ResourceNotAvailableException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.exceptions.VersatoreParerException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
-import it.bologna.ausl.bds_tools.ioda.utils.LockUtilities;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.BagProfiloArchivistico;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParerGdDoc;
-import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDocSessioneVersamento;
 import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
-import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaFileException;
 import it.bologna.ausl.masterchefclient.SendToParerParams;
 import it.bologna.ausl.masterchefclient.SendToParerResult;
 import it.bologna.ausl.masterchefclient.WorkerData;
@@ -35,32 +30,34 @@ import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.net.URLEncoder;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.ParseException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.logging.Level;
 import javax.naming.NamingException;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
-import org.joda.time.Days;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.quartz.CronExpression;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
@@ -90,16 +87,51 @@ public class VersatoreParer implements Job {
     private String ambiente, ente, strutturaVersante, userID;
     private String tipoComponenteDefault, codifica;
     private String dateFrom, dateTo;
+    private String role;
     private boolean useFakeId;
     
     private String idApplicazione, tokenApplicazione;
     private String prefix;
+    
+    private final String ID_APPLICAZIONE = "gedi";    
+    private final String SERVIZIO_IDONEITA = "IdoneitaParerService";
+    
     
     
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
 
+        
+        
+        try (Connection dbConn = UtilityFunctions.getDBConnection();) {
+            // controllo se il servizio è già stato eseguito oggi
+            if (nonFattoOggi(dbConn)) {
+                // controllo se l'ora è maggiore di quella indicata
+                if (serviziApplicativiFiniti(dbConn)) {
+                    updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
+                    doJob(context);
+                    updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
+                }
+                else{
+                    log.info("servizi calcolo idoneita applicazioni non tutti finiti");
+                    log.debug("Versatore ParER Finished");
+                }
+            }
+            else {
+                log.info("servizio versatore ParER già eseguito oggi");
+                log.debug("Versatore ParER Finished");
+            }
+            
+        }
+        catch (Exception ex) {
+            log.error("Errore nel servizio di versatore al ParER: ", ex);
+            log.debug("Versatore ParER Finished");
+        }
+    }
+    
+    public void doJob(JobExecutionContext context){   
+        
         // estraggo se ci sono i dati passati al servizio quando lo lancio manualmente
         JobDataMap dataMap = context.getJobDetail().getJobDataMap();
         String content = dataMap.getString("VersatoreParer");  
@@ -177,7 +209,7 @@ public class VersatoreParer implements Job {
                             if (isVersabile){
                                 
                                 // ricarico gddoc
-                                gddoc = getGdDocById(idGdDoc);
+                                //gddoc = getGdDocById(idGdDoc);
                                 
                                 // calcolo i dati
                                 GdDocSessioneVersamento gdSessioneVersamento = new GdDocSessioneVersamento();
@@ -313,7 +345,7 @@ public class VersatoreParer implements Job {
         finally {
             setStopSessioneVersamento(idSessioneVersamento);
             log.info("Job Versatore Parer finished");
-            log.debug("Versatore ParER Ended");
+            log.debug("Versatore ParER Finished");
         }
     }
     
@@ -382,7 +414,8 @@ public class VersatoreParer implements Job {
                 "AND (dp.stato_versamento_effettivo = 'non_versare' or dp.stato_versamento_effettivo = 'errore_versamento') " + 
                 "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " + 
                 "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
-                "AND g.codice_registro in (" + getCodiciAbilitati() +")" + 
+                "AND g.codice_registro in (" + getCodiciAbilitati() +") " + 
+                "AND dp.idoneo_versamento != 0 " +     
                 "LIMIT " + getLimit();
         }
         else if(!getDateFrom().equals("") && getDateTo().equals("")){
@@ -393,7 +426,8 @@ public class VersatoreParer implements Job {
                 "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " +  
                 "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
                 "AND g.id_gddoc = dp.id_gddoc " + 
-                "AND g.codice_registro in (" + getCodiciAbilitati() +")" + 
+                "AND dp.idoneo_versamento != 0 " + 
+                "AND g.codice_registro in (" + getCodiciAbilitati() +") " + 
                 "AND g.data_registrazione > '" + getDateFrom() +"' ";
         }
         else if(!getDateFrom().equals("") && !getDateTo().equals("")){
@@ -404,7 +438,8 @@ public class VersatoreParer implements Job {
                 "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " +  
                 "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
                 "AND g.id_gddoc = dp.id_gddoc " + 
-                "AND g.codice_registro in (" + getCodiciAbilitati() +")" + 
+                "AND dp.idoneo_versamento != 0 " + 
+                "AND g.codice_registro in (" + getCodiciAbilitati() +") " + 
                 "AND g.data_registrazione > '" + getDateFrom() + "' " + 
                 "AND g.data_registrazione < '" + getDateTo() + "' ";
         }
@@ -416,6 +451,7 @@ public class VersatoreParer implements Job {
                 "AND (dp.stato_versamento_effettivo = 'non_versare' or dp.stato_versamento_effettivo = 'errore_versamento') " + 
                 "AND dp.xml_specifico_parer IS NOT NULL and dp.xml_specifico_parer !=  '' " + 
                 "AND (dp.stato_versamento_proposto = 'da_versare' or dp.stato_versamento_proposto = 'da_aggiornare') " + 
+                "AND dp.idoneo_versamento != 0 " + 
                 "AND g.codice_registro in (" + getCodiciAbilitati() +") ";
         }      
         
@@ -1216,178 +1252,265 @@ public class VersatoreParer implements Job {
         return gdDoc;    
     }
     
-    
-    private boolean isVersabile(GdDoc gdDoc) throws VersatoreParerException, SQLException, Exception{
+    private boolean isVersabile(GdDoc gddoc) throws SQLException, NamingException{
         
-        //return true;
-        
-        log.debug("isVersabile: inizio");
+        log.debug("funzione isVersabile: inizio");
         boolean res = false;
         
         // se il gddoc è già idoneo allora ritorno subito la versabilità e non faccio altro
-        if (gdDoc.getDatiParerGdDoc().getIdoneoVersamento()){
-            log.debug("isVersabile: documento già idoneo");
-            return true;
+        if (!gddoc.getDatiParerGdDoc().getIdoneoVersamento()){
+            log.debug("funzione isVersabile: documento non idoneo");
+            return false;
         }
         
-        String result = null;
+        Fascicolazione primaFascicolazione = null;
+        DateTime dataPrimaFascicolazione = null;
+        try{
+            primaFascicolazione = ordinaFascicolazioni(gddoc.getFascicolazioni()).get(0);
+            dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
+        }
+        catch(Exception ex){
+            log.error(ex);
+            dataPrimaFascicolazione = null;
+        }
         
-        // se esistono dati specifici controllo, altrimenti non è sicuramente idoneo
-        if(gdDoc.getDatiParerGdDoc() != null){
+        
+        switch (getStringFromJsonObject(gddoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
             
-            // chiedo all'applicazione se idoneo
-            log.debug("isVersabile: controllo movimentazione");
-            switch (getStringFromJsonObject(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
-                case "in":
-                    if(getCanSendPicoEntrata()){
-                        log.debug("isVersabile: PE");
-                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);       
+            case "in":
+                if (getCanSendPicoEntrata()){
+                    if (dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+                        res = true;
                     }
-                    else{
-                        return false;
-                    }
-                break;
-
-                case "out":
-                    if(getCanSendPicoUscita()){
-                        log.debug("isVersabile: PU");
-                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
-                    }
-                    else{
-                     return false;   
-                    }
-                break;
-
-                case "Dete":
-                    if(getCanSendDete()){
-                        log.debug("isVersabile: DETE");
-                        result = sendGdDocToApplication(ApplicationParams.getIndeDeteIdoneitaParerUri(), gdDoc);   
-                    }
-                    else{
-                        return false;
-                    }
-                break;
-
-                case "Deli":
-                    if(getCanSendDeli()){
-                        log.debug("isVersabile: DELI");
-                        result = sendGdDocToApplication(ApplicationParams.getIndeDeliIdoneitaParerUri(), gdDoc);
-                    }
-                    else{
-                        return false;
-                    }
-                break;
-
-                case "RegistroRepertorio":
-                    log.debug("isVersabile: REGISTRO REPERTORIO");
-                    if (getCanSendRegistroGiornaliero()){
-
-                        if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
-                            return true;
-                        }
-                        else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
-                            return true;
-                        }
-                        else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
-                            return true;
-                        }
-                        else {
-                            return false;
-                        }
-                    }
-                break;
-
-                default:
-                    res = false;
-            }
-
+                }
+            break;
             
-            if(result != null){
-                // parsing del risultato proveniente dalle applicazioni (esclusi registri repertori che hanno una gestione diversa, vedi sopra nello switch)
-                JSONObject json = (JSONObject) JSONValue.parse(result);
-
-                String idOggettoOrigine = (String) json.get("id_oggetto");
-                log.debug("isVersabile: valore idOggettoOrigine -> " + idOggettoOrigine);
-                String idoneo = (String) json.get("idoneo");
-                log.debug("isVersabile: valore idoneo -> " + idoneo);
-
-                // se l'applicazione reputa idoneo il documento
-                if(idoneo.equalsIgnoreCase("true")){    
-                    log.debug("isVersabile: documento idoneo per l'applicazione");
-
-                    // l'applicazione ha già effettuato un updategddoc quindi aggiorno solo il campo idoneità sui dati parer del gddoc
-                    // quindi lo ricarico
-                    GdDoc gddocRicaricato = getGdDocById(gdDoc.getId());
-                    log.debug("VERSABILE: gddoc ricaricato");
-
-                    // sistema la fascicolazione
-                    Fascicolazione primaFascicolazione = null;
-                    DateTime dataPrimaFascicolazione = null;
-                    try{
-                        primaFascicolazione = ordinaFascicolazioni(gddocRicaricato.getFascicolazioni()).get(0);
-                        log.debug("VERSABILE: prima fascicolazione settata");
-                        dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
-                        log.debug("VERSABILE: data prima fascicolazione settata");
+            case "out":
+                if (getCanSendPicoUscita()){
+                    if (dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+                        res = true;
                     }
-                    catch(Exception ex){
-                        log.error(ex);
-                        dataPrimaFascicolazione = null;
+                }
+            break;
+            
+            case "Dete":
+                if (getCanSendDete()){
+                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+                        res = true;
                     }
-
-                    PubblicazioneIoda pubblicazione = null;
-                    log.debug("VERSABILE: parte di replaceplaceholder");
-                    switch (getStringFromJsonObject(gddocRicaricato.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
-                        case "in":
-                            log.debug("VERSABILE: IN");
-                            if (dataPrimaFascicolazione != null){
-                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
-                                res = true;
-                            }
-                        break;
-
-                        case "out":
-                            log.debug("VERSABILE: OUT");
-                            if (dataPrimaFascicolazione != null){
-                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
-                                res = true;
-                            }
-                        break;
-
-                        case "Dete":
-                            log.debug("VERSABILE: DETE");
-                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
-                            if (pubblicazione != null && dataPrimaFascicolazione != null){
-                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
-                                res = true;
-                            }
-                        break;
-
-                        case "Deli":
-                            log.debug("VERSABILE: DELI");
-                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
-                            if (pubblicazione != null && dataPrimaFascicolazione != null){
-                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
-                                res = true;
-                            }
-                        break;
-                    }    
                 }
-                else{
-                    log.debug("isVersabile: documento non idoneo");
-                    res = false;
+            break;
+            
+            case "Deli":
+                if (getCanSendDeli()){
+                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+                        res = true;
+                    }
                 }
-
-                if (res){
-                    setIdoneitaVersamento(idOggettoOrigine);
+            break;
+         
+            case "RegistroRepertorio":
+                if (getCanSendRegistroGiornaliero()){
+                    
+                    if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
+                        res = true;
+                    }
+                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
+                        res = true;
+                    }
+                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
+                        res = true;
+                    }
+                    else {
+                        res = false;
+                    }
                 }
-            }
+            break;
+            
+            default:
+                res = false;
         }
-        else{
-            res = false;
-        }
-        
+        log.debug("funzione isVersabile: fine con risultato " + res);
         return res;
     }
+    
+//    private boolean isVersabileOLD(GdDoc gdDoc) throws VersatoreParerException, SQLException, Exception{
+//        
+//        //return true;
+//        
+//        log.debug("isVersabile: inizio");
+//        boolean res = false;
+//        
+//        // se il gddoc è già idoneo allora ritorno subito la versabilità e non faccio altro
+//        if (gdDoc.getDatiParerGdDoc().getIdoneoVersamento()){
+//            log.debug("isVersabile: documento già idoneo");
+//            return true;
+//        }
+//        
+//        String result = null;
+//        
+//        // se esistono dati specifici controllo, altrimenti non è sicuramente idoneo
+//        if(gdDoc.getDatiParerGdDoc() != null){
+//            
+//            // chiedo all'applicazione se idoneo
+//            log.debug("isVersabile: controllo movimentazione");
+//            switch (getStringFromJsonObject(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
+//                case "in":
+//                    if(getCanSendPicoEntrata()){
+//                        log.debug("isVersabile: PE");
+//                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);       
+//                    }
+//                    else{
+//                        return false;
+//                    }
+//                break;
+//
+//                case "out":
+//                    if(getCanSendPicoUscita()){
+//                        log.debug("isVersabile: PU");
+//                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
+//                    }
+//                    else{
+//                     return false;   
+//                    }
+//                break;
+//
+//                case "Dete":
+//                    if(getCanSendDete()){
+//                        log.debug("isVersabile: DETE");
+//                        result = sendGdDocToApplication(ApplicationParams.getIndeDeteIdoneitaParerUri(), gdDoc);   
+//                    }
+//                    else{
+//                        return false;
+//                    }
+//                break;
+//
+//                case "Deli":
+//                    if(getCanSendDeli()){
+//                        log.debug("isVersabile: DELI");
+//                        result = sendGdDocToApplication(ApplicationParams.getIndeDeliIdoneitaParerUri(), gdDoc);
+//                    }
+//                    else{
+//                        return false;
+//                    }
+//                break;
+//
+//                case "RegistroRepertorio":
+//                    log.debug("isVersabile: REGISTRO REPERTORIO");
+//                    if (getCanSendRegistroGiornaliero()){
+//
+//                        if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
+//                            return true;
+//                        }
+//                        else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
+//                            return true;
+//                        }
+//                        else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
+//                            return true;
+//                        }
+//                        else {
+//                            return false;
+//                        }
+//                    }
+//                break;
+//
+//                default:
+//                    res = false;
+//            }
+//
+//            
+//            if(result != null){
+//                // parsing del risultato proveniente dalle applicazioni (esclusi registri repertori che hanno una gestione diversa, vedi sopra nello switch)
+//                JSONObject json = (JSONObject) JSONValue.parse(result);
+//
+//                String idOggettoOrigine = (String) json.get("id_oggetto");
+//                log.debug("isVersabile: valore idOggettoOrigine -> " + idOggettoOrigine);
+//                String idoneo = (String) json.get("idoneo");
+//                log.debug("isVersabile: valore idoneo -> " + idoneo);
+//
+//                // se l'applicazione reputa idoneo il documento
+//                if(idoneo.equalsIgnoreCase("true")){    
+//                    log.debug("isVersabile: documento idoneo per l'applicazione");
+//
+//                    // l'applicazione ha già effettuato un updategddoc quindi aggiorno solo il campo idoneità sui dati parer del gddoc
+//                    // quindi lo ricarico
+//                    GdDoc gddocRicaricato = getGdDocById(gdDoc.getId());
+//                    log.debug("VERSABILE: gddoc ricaricato");
+//
+//                    // sistema la fascicolazione
+//                    Fascicolazione primaFascicolazione = null;
+//                    DateTime dataPrimaFascicolazione = null;
+//                    try{
+//                        primaFascicolazione = ordinaFascicolazioni(gddocRicaricato.getFascicolazioni()).get(0);
+//                        log.debug("VERSABILE: prima fascicolazione settata");
+//                        dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
+//                        log.debug("VERSABILE: data prima fascicolazione settata");
+//                    }
+//                    catch(Exception ex){
+//                        log.error(ex);
+//                        dataPrimaFascicolazione = null;
+//                    }
+//
+//                    PubblicazioneIoda pubblicazione = null;
+//                    log.debug("VERSABILE: parte di replaceplaceholder");
+//                    switch (getStringFromJsonObject(gddocRicaricato.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
+//                        case "in":
+//                            log.debug("VERSABILE: IN");
+//                            if (dataPrimaFascicolazione != null){
+//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
+//                                res = true;
+//                            }
+//                        break;
+//
+//                        case "out":
+//                            log.debug("VERSABILE: OUT");
+//                            if (dataPrimaFascicolazione != null){
+//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
+//                                res = true;
+//                            }
+//                        break;
+//
+//                        case "Dete":
+//                            log.debug("VERSABILE: DETE");
+//                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
+//                            if (pubblicazione != null && dataPrimaFascicolazione != null){
+//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
+//                                res = true;
+//                            }
+//                        break;
+//
+//                        case "Deli":
+//                            log.debug("VERSABILE: DELI");
+//                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
+//                            if (pubblicazione != null && dataPrimaFascicolazione != null){
+//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
+//                                res = true;
+//                            }
+//                        break;
+//                    }    
+//                }
+//                else{
+//                    log.debug("isVersabile: documento non idoneo");
+//                    res = false;
+//                }
+//
+//                if (res){
+//                    setIdoneitaVersamento(idOggettoOrigine);
+//                }
+//            }
+//        }
+//        else{
+//            res = false;
+//        }
+//        
+//        return res;
+//    }
     
 //      da buttare  
 //    private void doUpdateGdDoc(GdDoc gdDoc) throws SQLException, VersatoreParerException, Exception{
@@ -1658,22 +1781,22 @@ public class VersatoreParer implements Job {
 //        return res;
 //    }
     
-    private String sendGdDocToApplication(String uri, GdDoc gdDoc){
-        String result = null;
-        try {
-            Map<String, String> params = new HashMap<>();
-            String jsonStr = gdDoc.getJSONString();
-            
-            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
-            params.put("gddoc", jsonStr);
-            
-            result = UtilityFunctions.sendHttpMessage(uri, null, null, params, "POST");
-            
-        } catch (IOException | SendHttpMessageException ex) {
-            log.error("errore in sendGdDocToApplication: " + ex);
-        }
-        return result;
-    }
+//    private String sendGdDocToApplication(String uri, GdDoc gdDoc){
+//        String result = null;
+//        try {
+//            Map<String, String> params = new HashMap<>();
+//            String jsonStr = gdDoc.getJSONString();
+//            
+//            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
+//            params.put("gddoc", jsonStr);
+//            
+//            result = UtilityFunctions.sendHttpMessage(uri, null, null, params, "POST");
+//            
+//        } catch (IOException | SendHttpMessageException ex) {
+//            log.error("errore in sendGdDocToApplication: " + ex);
+//        }
+//        return result;
+//    }
         
     // ripiazza i segna posto con valori reali
     private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, PubblicazioneIoda pubblicazione) throws SQLException, NamingException{
@@ -1926,6 +2049,14 @@ public class VersatoreParer implements Job {
     public void setTokenApplicazione(String tokenApplicazione) {
         this.tokenApplicazione = tokenApplicazione;
     }
+    
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
  
     public String getVersione() {
         return versione;
@@ -2005,6 +2136,171 @@ public class VersatoreParer implements Job {
 
     public void setDateTo(String dateTo) {
         this.dateTo = dateTo;
+    }
+    
+    /**
+     * Controlla che il servizio non sia stato già eseguito oggi. 
+     * Per farlo legge la data di fine dalla tabella bds_tools.servizi
+     * @param dbConn
+     * @return "true" se il servizio non è stato eseguito oggi, "false" altrimenti
+     * @throws SQLException 
+     */
+    private boolean nonFattoOggi(Connection dbConn) throws SQLException {
+        String query = ""
+                + "select data_fine "
+                + "from bds_tools.servizi "
+                + "where nome_servizio = ? and id_applicazione = ?";
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
+            ps.setString(1, getClass().getSimpleName());
+            ps.setString(2, ID_APPLICAZIONE);
+            log.debug(String.format("eseguo la query: %s", ps.toString()));
+            ResultSet res = ps.executeQuery();
+            if (res.next()) {
+                Date date = null;
+                try{
+                    date = res.getDate(1);
+                    if (date != null){
+                        log.debug(String.format("data letta: %s", date));
+
+                        //in milliseconds
+                        long diff = System.currentTimeMillis() - date.getTime();
+                        long diffDays = diff / (24 * 60 * 60 * 1000);
+
+                        return diffDays > 0;
+                    }
+                    else{
+                        return false;
+                    }
+                }
+                catch(Exception ex){
+                    log.debug("nonFattoOggi - errore nel reperimento della data_fine: " + ex);
+                    return false;
+                }
+                
+            }
+            else
+                throw new SQLException(String.format("servizio %s dell'applicazione %s non trovato", getClass().getSimpleName(), ID_APPLICAZIONE));
+        }
+    }
+    
+    /**
+     * Controlla che l'ora sia maggiore di quella indicata dal parametro cron nello schedulatore conf json. 
+     * @return "true" se l'ora è maggiore di quella su cron (a  ora uguale si guardano i minuti), "false" altrimenti
+     */
+    private boolean oraLancioIdonea() throws ParseException {
+        
+        boolean result = false;
+        
+        java.util.Date dataInConf;
+        CronExpression cronExpression;
+          
+        cronExpression = new CronExpression(getRole());
+        dataInConf = cronExpression.getNextValidTimeAfter(new java.util.Date());
+        LocalDateTime now = LocalDateTime.now();
+                
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(dataInConf);  
+        int oraDB = cal.get(Calendar.HOUR_OF_DAY);
+        int minutiDB = cal.get(Calendar.MINUTE);
+        
+        log.debug("ora letta da db: " + oraDB);
+        log.debug("minuti letti db: " + minutiDB);
+        
+        log.debug("ora attuale: " + now.getHour());
+        log.debug("minuti attuali: " + now.getMinute());
+        
+        if (now.getHour() == oraDB){
+            if (now.getMinute() > minutiDB){
+                System.out.println("può partire");
+                result = true;
+            }
+            else{
+                System.out.println("non può partire");
+                result = false;
+            }
+        }
+        else if(now.getHour() > oraDB){
+            System.out.println("può partire");
+            result = true;
+        }
+        else{
+            System.out.println("non può partire");
+            result = false;
+        }
+        return result;
+    }
+    
+    
+    // controlla se i servizi attivi sulle aplicazioni di calcolo idoneità parer hanno finito
+    private boolean serviziApplicativiFiniti(Connection dbConn) throws SQLException {
+        
+        boolean serviziFiniti = true;
+        boolean serviziPicoDeteDeliAttivi = false;
+        
+        String query = ""
+                + "select id_applicazione, data_fine "
+                + "from bds_tools.servizi "
+                + "where nome_servizio = ? and attivo != 0";
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
+            ps.setString(1, SERVIZIO_IDONEITA);
+            log.debug(String.format("eseguo la query: %s", ps.toString()));
+            ResultSet res = ps.executeQuery();
+            
+            
+            
+            while (res.next()) {
+                serviziPicoDeteDeliAttivi = true;
+                String id_applicazione = res.getString(1);
+
+                try{
+                    Date date = res.getDate(2);
+                    if(date == null){
+                        log.debug("servizio idoneita_parer_pico non finito");
+                        serviziFiniti = serviziFiniti && false;    
+                    }
+                }
+                catch(Exception ex){
+                    log.debug("servizio idoneita_parer su applicazione " + id_applicazione + "non ancora finito");
+                    serviziFiniti = serviziFiniti && false;
+                }
+            }
+            if (!serviziPicoDeteDeliAttivi){
+                serviziFiniti = true;
+            }
+                
+            return serviziFiniti;
+        }
+    }
+    
+    
+    /**
+     * aggiorna le date di avvio, termine del servizio, per aggiorarne solo una passare null all'altra
+     * @param dataInizio
+     * @param dataFine
+     * @throws SQLException 
+     */
+    private void updateDataInizioDataFine(Connection dbConn, Timestamp dataInizio, Timestamp dataFine) throws SQLException {
+        String query = ""
+                + "UPDATE bds_tools.servizi "
+                + "SET "
+                + "data_inizio = coalesce(?, data_inizio), "
+                + "data_fine = ? "
+                + "where nome_servizio = ? and id_applicazione = ?";
+        
+        
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
+            int index = 1;
+            ps.setTimestamp(index++, dataInizio);
+            ps.setTimestamp(index++, dataFine);
+            ps.setString(index++, getClass().getSimpleName());
+            ps.setString(index++, ID_APPLICAZIONE);
+            
+            log.debug(String.format("eseguo la query: %s...", ps.toString()));
+            int res = ps.executeUpdate();
+            if (res == 0)
+                throw new SQLException("errore nell'aggiornamento delle date inizio/fine, l'update ha tornato 0");
+        }
     }
     
     // trasformo la classificazione nella rappresentazione accettata dal PaER
