@@ -93,11 +93,7 @@ public class VersatoreParer implements Job {
     private String idApplicazione, tokenApplicazione;
     private String prefix;
     
-    private final String ID_APPLICAZIONE = "gedi";
-    private final String APPLICAZIONE_PICO = "pico";
-    private final String APPLICAZIONE_DETE = "dete";
-    private final String APPLICAZIONE_DELI = "deli";
-    
+    private final String ID_APPLICAZIONE = "gedi";    
     private final String SERVIZIO_IDONEITA = "IdoneitaParerService";
     
     
@@ -2239,17 +2235,22 @@ public class VersatoreParer implements Job {
     private boolean serviziApplicativiFiniti(Connection dbConn) throws SQLException {
         
         boolean serviziFiniti = true;
+        boolean serviziPicoDeteDeliAttivi = false;
         
-        String queryPico = ""
+        String query = ""
                 + "select id_applicazione, data_fine "
                 + "from bds_tools.servizi "
                 + "where nome_servizio = ? and attivo != 0";
         
-        try (PreparedStatement ps = dbConn.prepareStatement(queryPico)) {
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
             ps.setString(1, SERVIZIO_IDONEITA);
             log.debug(String.format("eseguo la query: %s", ps.toString()));
             ResultSet res = ps.executeQuery();
+            
+            
+            
             while (res.next()) {
+                serviziPicoDeteDeliAttivi = true;
                 String id_applicazione = res.getString(1);
 
                 try{
@@ -2263,9 +2264,11 @@ public class VersatoreParer implements Job {
                     log.debug("servizio idoneita_parer su applicazione " + id_applicazione + "non ancora finito");
                     serviziFiniti = serviziFiniti && false;
                 }
-                
-                
             }
+            if (!serviziPicoDeteDeliAttivi){
+                serviziFiniti = true;
+            }
+                
             return serviziFiniti;
         }
     }
