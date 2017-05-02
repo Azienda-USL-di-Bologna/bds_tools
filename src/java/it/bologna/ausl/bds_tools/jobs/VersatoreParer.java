@@ -95,39 +95,58 @@ public class VersatoreParer implements Job {
     
     private final String ID_APPLICAZIONE = "gedi";    
     private final String SERVIZIO_IDONEITA = "IdoneitaParerService";
+    private final String NOME_SERVIZIO = "VersatoreParer";
     
     
     
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
-
-        
         
         try (Connection dbConn = UtilityFunctions.getDBConnection();) {
-            // controllo se il servizio è già stato eseguito oggi
-            if (nonFattoOggi(dbConn)) {
-                // controllo se l'ora è maggiore di quella indicata
-                if (serviziApplicativiFiniti(dbConn)) {
-                    updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
-                    doJob(context);
-                    updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
-                }
-                else{
-                    log.info("servizi calcolo idoneita applicazioni non tutti finiti");
+            
+            
+            if(versamentoRichiestoFuoriServizio(context)){
+                log.info("servizio versamento chiamato a volere");
+                doJob(context);
+                log.info("Versatore ParER Finished");
+            }
+            else{
+                // parte schedulata, controllo se il servizio è già stato eseguito oggi
+                if (nonFattoOggi(dbConn)) {
+                    // controllo se l'ora è maggiore di quella indicata
+                    if (serviziApplicativiFiniti(dbConn)) {
+                        updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
+                        doJob(context);
+                        updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
+                    }
+                    else{
+                        log.info("servizi calcolo idoneita applicazioni non tutti finiti");
+                        log.debug("Versatore ParER Finished");
+                    }
+                }   
+                else {
+                    log.info("servizio versatore ParER già eseguito oggi");
                     log.debug("Versatore ParER Finished");
                 }
             }
-            else {
-                log.info("servizio versatore ParER già eseguito oggi");
-                log.debug("Versatore ParER Finished");
-            }
-            
         }
         catch (Exception ex) {
             log.error("Errore nel servizio di versatore al ParER: ", ex);
             log.debug("Versatore ParER Finished");
         }
+        
+    }
+    
+    public boolean versamentoRichiestoFuoriServizio(JobExecutionContext context){
+        log.info("versamentoRichiestoFuoriServizio");
+        String data = context.getJobDetail().getJobDataMap().getString(NOME_SERVIZIO);
+        if (data != null && !data.equals("")){
+            log.info("data != null -> servizio chiamato a volere");
+            return true;
+        }
+        log.info("data = null -> parte il servizio schedulato");
+        return false;
     }
     
     public void doJob(JobExecutionContext context){   
@@ -137,7 +156,7 @@ public class VersatoreParer implements Job {
         String content = dataMap.getString("VersatoreParer");  
         
         log.debug("contenuto come versamento - a volere - : " + content);
-        log.debug("ambiente: " + getAmbiente());
+        //log.debug("ambiente: " + getAmbiente());
         
         // setto parametri di sessione versamento
         Map<String, String> idGuidINDE = setStartSessioneVersamento();
@@ -166,17 +185,7 @@ public class VersatoreParer implements Job {
                 if (idSessioneVersamento != null && !idSessioneVersamento.equals("")){
 
                     boolean isVersabile = false;         
-// --------------- per test --------------------         
-//
-//                    // Ji_j2A?]O6cff-_@[NiY non foglia
-//                    // `?71,[j(Fx/SXigr0-;G test generico
-//                    // G>WJlH^^1^73T?YzJo5i vecchio PU ok per sottrarre titoli documento
-//                    
-//                    // documento pu con titolo esterno Z{)wiNrQ<w^j)vWZVYP,
-//                    
-//                    //GdDoc gddoc = getGdDocById("`?71,[j(Fx/SXigr0-;G");
-//                    GdDoc gddoc = getGdDocById("Z{)wiNrQ<w^j)vWZVYP,");
-// --------------- fine per test --------------------                            
+                           
                     log.debug("numero di gddoc da versare: " + gdDocList.size());
 
                     // ottengo l'oggetto GdDoc completo
