@@ -106,14 +106,14 @@ public class Uploader extends HttpServlet {
             String server = (String) metaData.get("server");
             Boolean forceDownload = true;
             try {
-                forceDownload = (Boolean) metaData.get("force_download");
+                forceDownload = Boolean.parseBoolean((String) metaData.get("force_download"));
             } catch (Exception ex) {
                 log.warn("force_download non passato. Settato al valore di default: " + forceDownload);
             }
 
             Boolean deleteToken = true;
             try {
-                deleteToken = (Boolean) metaData.get("delete_token");
+                deleteToken = Boolean.parseBoolean((String) metaData.get("deletetoken"));
             } catch (Exception ex) {
                 log.warn("delete_token non passato. Settato al valore di default: " + deleteToken);
             }
@@ -154,7 +154,7 @@ public class Uploader extends HttpServlet {
                 redis.set(token, downloaderParams.toJSONString());
                 redis.expire(token, TOKEN_TIMEOUT);
 
-                String downloaderLink = baseDownloaderUrl + "?token=" + token + "&delete_token=" + deleteToken.toString();
+                String downloaderLink = baseDownloaderUrl + "?token=" + token + "&deletetoken=" + deleteToken.toString();
 
                 JSONObject fileLinkResult = new JSONObject();
                 fileLinkResult.put(FILE_NAME_KEY, fileName);
