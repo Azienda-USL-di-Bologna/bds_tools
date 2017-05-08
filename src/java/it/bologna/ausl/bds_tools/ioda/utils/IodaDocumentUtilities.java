@@ -1420,13 +1420,15 @@ public class IodaDocumentUtilities {
     public void updateDatiParerGdDoc(Connection dbConn, DatiParerGdDoc datiParer, GdDoc gdDocEsterno) throws SQLException {
 
         boolean datiPresenti = false;
+        // si è deciso che se un documento è già idoneo, deve continuare ad esserlo
+        boolean giaIdoneo = false;
         String idGdDoc;
 
         if (gdDocEsterno == null) {
             idGdDoc = gdDoc.getId();
             // controlla se esistono già i dati pro ParER
             String sql
-                    = "SELECT id_dato_parer_gddoc "
+                    = "SELECT id_dato_parer_gddoc, idoneo_versamento "
                     + "FROM gd.dati_parer_gddoc "
                     + "WHERE id_gddoc = ? ";
 
@@ -1437,6 +1439,7 @@ public class IodaDocumentUtilities {
                 log.debug("eseguita");
 
                 if (res.next()) {
+                    giaIdoneo = res.getInt("idoneo_versamento") != 0;
                     datiPresenti = true;
                 }
             }
@@ -1495,7 +1498,9 @@ public class IodaDocumentUtilities {
                 if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
                     ps.setInt(index++, 1);
                 } else {
-                    ps.setInt(index++, 0);
+                    // se è già idoneo non lo risetto a 0
+                    if (!giaIdoneo)
+                        ps.setInt(index++, 0);
                 }
 
                 ps.setString(index++, gdDoc.getId());
