@@ -30,6 +30,7 @@ import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -49,6 +50,7 @@ import java.util.Random;
 import javax.naming.NamingException;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
@@ -168,7 +170,8 @@ public class VersatoreParer implements Job {
             ArrayList<String> gdDocList = null;  
             
             if (content != null && !content.equals("")){
-                gdDocList = getIdGdDocFromString(content);
+                gdDocList = getIdFromGuid(getIdGdDocFromString(content));
+                
             }
             else{
                 // sono nella modalità schedulata
@@ -1038,6 +1041,36 @@ public class VersatoreParer implements Job {
         
         return res;
     }
+    
+    // trasforma da guid_gddoc a id_gddoc
+    public static ArrayList<String> getIdFromGuid(ArrayList<String> list) throws SQLException {
+        
+        ArrayList<String> idList = new ArrayList<>();
+        
+        String guidList = "'" + StringUtils.join(list, "','") + "'";
+        
+        String sqlText
+                = "SELECT  id_gddoc "
+                + "FROM " + ApplicationParams.getGdDocsTableName()+ " "
+                + "WHERE guid_gddoc in (" + guidList + ") ";
+        
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(sqlText)
+        ){
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
+            while (res.next()) {
+                idList.add(res.getString("id_gddoc"));
+            }
+        }
+        catch (SQLException | NamingException ex) {
+            log.fatal("errore nel reperire id_gdoc da guid_gddoc " + ex);
+        }
+        return idList;
+    }
+    
     
     private String getDescrizioneRiferimentoTemporale(String tipoDocumento){
         String res = null;
