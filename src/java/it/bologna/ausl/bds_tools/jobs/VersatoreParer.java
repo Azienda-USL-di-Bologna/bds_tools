@@ -30,7 +30,6 @@ import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.sql.Array;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -100,14 +99,21 @@ public class VersatoreParer implements Job {
     private final String NOME_SERVIZIO = "VersatoreParer";
     
     
-    
+    /**
+     * Questo è il metodo di partenza che determina se il servizio deve girare perchè
+     * chiamato dallo schedulatore o perchè è stata fatta una richiesta "a volere".
+     * Dopo i controlli ci accesso il metodo doJob(...) si incaricherà di gestire l'invio
+     * del/i documento/i al ParER.
+     * @param context è il contesto che arriva dallo schedulatore
+     * @throws JobExecutionException 
+     */
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         log.debug("Versatore ParER Started");
         
         try (Connection dbConn = UtilityFunctions.getDBConnection();) {
-            
-            
+       
+            // controllo se è un verasmento "a volere" fuori dalla schedulazione
             if(versamentoRichiestoFuoriServizio(context)){
                 log.info("servizio versamento chiamato a volere");
                 doJob(context);
@@ -115,12 +121,15 @@ public class VersatoreParer implements Job {
             }
             else{
                 // parte schedulata, controllo se il servizio è già stato eseguito oggi
+                log.info("servizio versamento schedulato");
+                
                 if (nonFattoOggi(dbConn)) {
-                    // controllo se l'ora è maggiore di quella indicata
+                    // controllo che i servizi applicativi (attivi) che forniscono dati per l'invio al ParER sono terminati
                     if (serviziApplicativiFiniti(dbConn)) {
                         updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
                         doJob(context);
                         updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
+                        log.info("Versatore ParER Finished");
                     }
                     else{
                         log.info("servizi calcolo idoneita applicazioni non tutti finiti");
@@ -140,6 +149,13 @@ public class VersatoreParer implements Job {
         
     }
     
+    /**
+     * determina, in base al contesto passato, se il servizio è chiamato dallo schedulatore 
+     * oppure "a volere"
+     * @param context
+     * @return true: se servizio è stato richiesto "a volere"
+     *         false: se servizio è stato richiesto dallo schedulatore
+     */
     public boolean versamentoRichiestoFuoriServizio(JobExecutionContext context){
         log.info("versamentoRichiestoFuoriServizio");
         String data = context.getJobDetail().getJobDataMap().getString(NOME_SERVIZIO);
@@ -151,47 +167,46 @@ public class VersatoreParer implements Job {
         return false;
     }
     
+    /**
+     * reperisce i gddoc da versare, completa i dati mancanti e li invia al ParER
+     * @param context 
+     */
     public void doJob(JobExecutionContext context){   
         
-        // estraggo se ci sono i dati passati al servizio quando lo lancio manualmente
+        // estrazione dei dati passati al servizio (se ci sono) se è stato richiesto un versamento "a volere"
         JobDataMap dataMap = context.getJobDetail().getJobDataMap();
         String content = dataMap.getString("VersatoreParer");  
         
         log.debug("contenuto come versamento - a volere - : " + content);
-        //log.debug("ambiente: " + getAmbiente());
         
-        // setto parametri di sessione versamento
+        // setta parametri di sessione versamento (id e guid di INDE)
         Map<String, String> idGuidINDE = setStartSessioneVersamento();
         String idSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_ID_PARAM_NAME);
         String guidSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_GUID_PARAM_NAME);
         
         try {
-            // ottengo i gddoc che possono essere versati
+            // gddocs che possono essere versati
             ArrayList<String> gdDocList = null;  
             
             if (content != null && !content.equals("")){
+                // sono nella modalità "a volere"
                 gdDocList = getIdFromGuid(getIdGdDocFromString(content));
-                
             }
             else{
                 // sono nella modalità schedulata
                 gdDocList = getIdGdDocDaVersate();
             }
             
-            // se ho qualche gddoc da versare
+            // se la lista dei gddocs da versare non è nulla o vuota allora si procede a versarli
             if (gdDocList != null && gdDocList.size() > 0){
             
-                // inizio sessione di versamento
-//                Map<String, String> idGuidINDE = setStartSessioneVersamento();
-//                String idSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_ID_PARAM_NAME);
-//                String guidSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_GUID_PARAM_NAME);
+                // verifica se si ha l'id di versameno di INDE da scrivere poi nella tabella 'gd.gddocs_sessioni_versamento'
                 if (idSessioneVersamento != null && !idSessioneVersamento.equals("")){
 
+                    log.debug("numero di gddoc da versare: " + gdDocList.size());
                     boolean isVersabile = false;         
                            
-                    log.debug("numero di gddoc da versare: " + gdDocList.size());
-
-                    // ottengo l'oggetto GdDoc completo
+                    // reperimento dell'oggetto GdDoc vero e proprio (comprese le sue collection)
                     for (String idGdDoc : gdDocList) {
                         
                         GdDoc gddoc = null;
@@ -208,8 +223,9 @@ public class VersatoreParer implements Job {
                             gdSessioneVersamento.setIdGdDoc(idGdDoc);
                             gdSessioneVersamento.setXmlVersato(null);
                             gdSessioneVersamento.setEsito("ERRORE");
+                            // il valore di codice errore = 0 è stato scelto arbitrariamente perchè diverso dagli errori che ritornano dal ParER
                             gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
-                            gdSessioneVersamento.setDescrizioneErrore("fallita ricostruzione del gddoc con errore: " + e.toString());
+                            gdSessioneVersamento.setDescrizioneErrore("fallita ricostruzione del gddoc con errore: " + e);
                             saveVersamento(gdSessioneVersamento, idGdDoc);
                             continue;
                         }
@@ -361,6 +377,11 @@ public class VersatoreParer implements Job {
         }
     }
     
+    /**
+     * estrae gli igGdDoc dalla stringa passata
+     * @param str
+     * @return array di idGdDoc
+     */
     private ArrayList getIdGdDocFromString(String str){        
         JSONArray jsonResultArray=(JSONArray)JSONValue.parse(str);
         ArrayList<String> result=new ArrayList<>();
@@ -370,6 +391,10 @@ public class VersatoreParer implements Job {
         return result;
     }
     
+    /**
+     * crea una stringa da inserire nella query per filtrare le tipologie documento ammesse al versamento
+     * @return la stringa da inserire nella stringa sql
+     */
     private String getCodiciAbilitati(){
         String res = "";
         ArrayList<String> codici = new ArrayList<>();
@@ -411,12 +436,17 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    /**
+     * Estrae la lista dei GdDoc che possono essere versati nella sessione corrente al ParER
+     * @returnarray degli idGdDoc dei gddoc da versare
+     * @throws SQLException
+     * @throws NamingException
+     * @throws VersatoreParerException 
+     */
     private ArrayList<String> getIdGdDocDaVersate() throws SQLException, NamingException, VersatoreParerException{
         
         String query = null;
         ArrayList<String> res = new ArrayList<>();
-        
-        
         
         if (getLimit() > 0){
             query = 
@@ -494,6 +524,12 @@ public class VersatoreParer implements Job {
         return res;
     }
  
+    /**
+     * Salva i dati parer gddoc e inserisce il record di versamento effettuato nella tabella 'gd.gddocs_sessioni_versamento'
+     * @param g
+     * @param gddoc
+     * @param datiParer 
+     */
     private void saveVersamentoAndGdDocInTransaction(GdDocSessioneVersamento g, GdDoc gddoc, DatiParerGdDoc datiParer){
                 
         String query = 
@@ -528,9 +564,7 @@ public class VersatoreParer implements Job {
             ps.setString(index++, g.getDescrizioneErrore());
             ps.setString(index++, g.getRapportoVersamento());
             ps.setString(index++, guidInde);
-            
-                                    
-            //log.debug("PrepareStatment: " + ps);                      
+                                 
             int rowsUpdated = ps.executeUpdate();
             log.debug("eseguita");
             if (rowsUpdated == 0){
@@ -547,6 +581,11 @@ public class VersatoreParer implements Job {
         }
     }
     
+    /**
+     * Inserisce il record nella tabella 'gd.gddocs_sessioni_versamento'
+     * @param g
+     * @param idGdDoc 
+     */
     private void saveVersamento(GdDocSessioneVersamento g, String idGdDoc){
                 
         String query = 
@@ -596,6 +635,10 @@ public class VersatoreParer implements Job {
         }
     }
     
+    /**
+     * imposta l'inizio della sessione versamento
+     * @return id e guid INDE della sessione di versamento appena iniziata
+     */
     private Map<String, String> setStartSessioneVersamento(){
         
         Map<String, String> res = null;
@@ -638,9 +681,11 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    /**
+     * imposta la fine della sessione versamento
+     * @param idSessioneVersamento 
+     */
     private void setStopSessioneVersamento(String idSessioneVersamento){
-        
-        String res = null;
         
         String query = 
             "UPDATE " + ApplicationParams.getSessioniVersamentoParerTableName() + " " +
@@ -667,6 +712,17 @@ public class VersatoreParer implements Job {
         }
     }
     
+    /**
+     * A partire dal GdDoc costruisce i Params per il mestiere che si occuperà di fare l'invio al ParER del documento
+     * @param gdDoc
+     * @return oggetto Params da passare al mestiere
+     * @throws UnsupportedEncodingException
+     * @throws SQLException
+     * @throws NamingException
+     * @throws DatatypeConfigurationException
+     * @throws JAXBException
+     * @throws ParseException 
+     */
     private SendToParerParams getSendToParerParams(GdDoc gdDoc) throws UnsupportedEncodingException, SQLException, NamingException, DatatypeConfigurationException, JAXBException, ParseException{
         log.debug("inizio funzione getSendToParerParams");
         
@@ -675,36 +731,45 @@ public class VersatoreParer implements Job {
         String idUnitaDocumentaria, tipoDocumento, dataDocumento;
         String forzaCollegamento, forzaAccettazione, forzaConservazione;
         int ordinePresentazione = 1;
-        
         DatiSpecifici datiSpecifici;
         ProfiloArchivistico profiloArchivistico;
         
         // determina se usare id fake dell'unità documentale oppure i reali
         if (getUseFakeId()){
+            // utilizza un numero FAKE
             log.debug("utilizzo di id fake");
             Random randomGenerator = new Random();
             idUnitaDocumentaria = String.valueOf(randomGenerator.nextInt(100000000));
         }
         else{
+            // utilizza il numero di protocollazione REALE
              log.debug("utilizzo di id reale");
             idUnitaDocumentaria = gdDoc.getNumeroRegistrazione();
         }
         log.debug("idUnitaDocumentaria: " + idUnitaDocumentaria);
         
+        // ottiene xml specifico vero e proprio
         datiSpecifici = getDatiSpecifici(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "xmlpart");
         log.debug("datiSpecifici settati");
+        
+        // setta il tipo documento in base alla movimentazione
         tipoDocumento = getTipoDocumentoUnitaDocumentaria(gdDoc, "movimentazione");
         log.debug("tipoDocumento settato: " + tipoDocumento);
+        
+        // estrae la data del documento
         dataDocumento = getStringDateParer(gdDoc.getDataRegistrazione());
         log.debug("dataDocumento impostata: " + dataDocumento);
         
+        // imposta le forzature di versamento
         forzaConservazione = getStringBoolean(gdDoc.getDatiParerGdDoc().getForzaConservazione());
         forzaAccettazione = getStringBoolean(gdDoc.getDatiParerGdDoc().getForzaAccettazione());
         forzaCollegamento = getStringBoolean(gdDoc.getDatiParerGdDoc().getForzaCollegamento());
         
+        // crea il profilo archivistico
         profiloArchivistico = createProfiloArchivistico(gdDoc);
         log.debug("profiloArchivistico creato");
         
+        // ottieni gli array degli IdentityFile di Allegati, Annessi, Annotazioni
         ArrayList<IdentityFile> arrayIdentityFileAllegati = getArrayIdentityFileFromJson(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "allegatidentityfile");
         ArrayList<IdentityFile> arrayIdentityFileAnnessi = getArrayIdentityFileFromJson(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "annessidentityfile");
         ArrayList<IdentityFile> arrayIdentityFileAnnotazioni = getArrayIdentityFileFromJson(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "annotazionidentityfile");
@@ -900,6 +965,13 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    /**
+     * Creazione del profilo archivistico a partire dal GdDoc
+     * @param gdDoc
+     * @return ProfiloArchivistico calcolato
+     * @throws SQLException
+     * @throws NamingException 
+     */
     private ProfiloArchivistico createProfiloArchivistico(GdDoc gdDoc) throws SQLException, NamingException{
         log.debug("creazione del profilo archivistico");
         
@@ -1034,7 +1106,11 @@ public class VersatoreParer implements Job {
         return res;
     }
 
-    // trasformo la classificazione nella rappresentazione accettata dal PaER
+    /**
+     * Trasformo la classificazione nella rappresentazione accettata dal PaER
+     * @param c
+     * @return classificazione separata da '.' anzichè da '/'
+     */
     private String getClassificaParerByString(String c){
         
         String res = c.replaceAll("/", ".");
@@ -1042,7 +1118,12 @@ public class VersatoreParer implements Job {
         return res;
     }
     
-    // trasforma da guid_gddoc a id_gddoc
+    /**
+     * Ottiene Id a partire da Guid (INDE)
+     * @param list di guid di GdDoc
+     * @return lista di idGdDoc
+     * @throws SQLException 
+     */
     public static ArrayList<String> getIdFromGuid(ArrayList<String> list) throws SQLException {
         
         ArrayList<String> idList = new ArrayList<>();
@@ -1071,7 +1152,11 @@ public class VersatoreParer implements Job {
         return idList;
     }
     
-    
+    /**
+     * Ottiene la descrizione del riferimento temporale
+     * @param tipoDocumento
+     * @return la descrizione scelta
+     */
     private String getDescrizioneRiferimentoTemporale(String tipoDocumento){
         String res = null;
         
@@ -1096,6 +1181,12 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    /**
+     * Parse da String a JSON
+     * @param str
+     * @param key
+     * @return JSONObject
+     */
     private JSONObject getJson(String str, String key){
         return (JSONObject) JSONValue.parse(str);
     }
@@ -1105,6 +1196,12 @@ public class VersatoreParer implements Job {
         return (String) jsonXmlSpecifico.get(key);
     }
     
+    /**
+     * Traduzione dalla String ad un array di IdentityFile
+     * @param str
+     * @param key
+     * @return array di IdenityFile
+     */
     private ArrayList<IdentityFile> getArrayIdentityFileFromJson(String str, String key){
         ArrayList<IdentityFile> res = null;
         JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(str);
@@ -1125,6 +1222,12 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    /**
+     * Traduzione dalla String ad un array di InfoDocumento
+     * @param str
+     * @param key
+     * @return array di IdenityFile
+     */
     private ArrayList<InfoDocumento> getArrayInfoDocumentoFromJson(String str, String key){
         ArrayList<InfoDocumento> res = null;
         JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(str);
@@ -1155,7 +1258,14 @@ public class VersatoreParer implements Job {
         }
         return res;
     }
-       
+    
+    /**
+     * In base alla movimentazione nei parametri specifici, setta la keyword concordata con il ParER
+     * per indicare il tipo dell'unità documentaria
+     * @param gddoc
+     * @param key
+     * @return keyword concordata
+     */
     private String getTipoDocumentoUnitaDocumentaria(GdDoc gddoc, String key){
         
         String res = null;
@@ -1198,15 +1308,21 @@ public class VersatoreParer implements Job {
         return res;
     }
     
-    // restituisce una mappa contene id di INDE
+    /**
+     * Restituisce una mappa contene id di INDE
+     * @return
+     * @throws IOException
+     * @throws MalformedURLException
+     * @throws SendHttpMessageException 
+     */
     private Map<String, String> getIndeId() throws IOException, MalformedURLException, SendHttpMessageException {
             
         Map<String, String> result =  new HashMap<>();
         
-        // contruisco la mappa dei parametri per la servlet (va passato solo un parametro che è il numero di id da generare)
+        // contruisce la mappa dei parametri per la servlet (va passato solo un parametro che è il numero di id da generare)
         Map<String, byte[]> params = new HashMap<>();
 
-        // ottengo un docid
+        // ottene un docid
         int idNumber = 1; 
         params.put(GENERATE_INDE_NUMBER_PARAM_NAME, String.valueOf(idNumber).getBytes());
 
@@ -1220,6 +1336,11 @@ public class VersatoreParer implements Job {
         return result;
     }
  
+    /**
+     * Ottiene il formato delle date conforme allo standard del ParER
+     * @param data
+     * @return la stringa con la data formattata opportunamente
+     */
     private String getStringDateParer(DateTime data){
         DecimalFormat mFormat= new DecimalFormat("00");
         int gg = data.getDayOfMonth();
@@ -1239,13 +1360,24 @@ public class VersatoreParer implements Job {
         return String.valueOf(b).toUpperCase();
     }
     
-    // funzione di estrazione stringa da JSONObject
+    /**
+     * Funzione di estrazione stringa da JSONObject
+     * @param xmlSpecifico
+     * @param key
+     * @return 
+     */
     private String getStringFromJsonObject(String xmlSpecifico, String key){
         JSONObject jsonObject = (JSONObject) JSONValue.parse(xmlSpecifico);
         return (String) jsonObject.get(key);
     }
     
-    // funzione di estrazione stringa da JSONObject
+    /**
+     * Funzione di estrazione dei dati specifici da xml specifico
+     * @param xmlSpecifico
+     * @param key
+     * @return oggetto DatiSpecifici
+     * @throws UnsupportedEncodingException 
+     */
     private DatiSpecifici getDatiSpecifici(String xmlSpecifico, String key) throws UnsupportedEncodingException{
         JSONObject jsonObject = (JSONObject) JSONValue.parse(xmlSpecifico);
         String strDatiSpecifici = (String) jsonObject.get(key);
@@ -1253,6 +1385,11 @@ public class VersatoreParer implements Job {
         return DatiSpecifici.parser(strDatiSpecifici);
     }
 
+    /**
+     * Ottiene l'array dei titoli del documento fuori fascicolazione (per il pregresso)
+     * @param xmlSpecifico
+     * @return 
+     */
     private ArrayList<String> getArrayTitoliDocumento(String xmlSpecifico){
         ArrayList<String> res = null;
         JSONObject jsonXmlSpecifico = (JSONObject) JSONValue.parse(xmlSpecifico);
@@ -1269,13 +1406,19 @@ public class VersatoreParer implements Job {
         return res;
     }
        
-    /* crea l'oggetto GdDoc con le collection:
-    * CLASSIFICAZIONI esclusi i fascicoli speciali
-    * PUBBLICAZIONI solo quelle effettivamente pubblicate all'albo
-    */
+    
+    /**
+     * Ottiene l'oggetto GdDoc con le collection: 
+     *  -> CLASSIFICAZIONI esclusi i fascicoli speciali
+     *  -> PUBBLICAZIONI solo quelle effettivamente pubblicate all'albo
+     * @param idGdDoc
+     * @return il GdDoc caricato
+     * @throws SQLException
+     * @throws NamingException
+     * @throws NotAuthorizedException
+     * @throws IodaDocumentException 
+     */
     private GdDoc getGdDocById(String idGdDoc) throws SQLException, NamingException, NotAuthorizedException, IodaDocumentException{
-        
-        
         
         GdDoc gdDoc = null;
         
@@ -1294,17 +1437,26 @@ public class VersatoreParer implements Job {
         return gdDoc;    
     }
     
+    /**
+     * Controlla se ci sono i dati mancanti che verranno inseriti al posto dei segnaposti nei dati specifici.
+     * Se tutto è ok allora il gddoc è pronto per essere versato
+     * @param gddoc
+     * @return
+     * @throws SQLException
+     * @throws NamingException 
+     */
     private boolean isVersabile(GdDoc gddoc) throws SQLException, NamingException{
         
         log.debug("funzione isVersabile: inizio");
         boolean res = false;
         
-        // se il gddoc è già idoneo allora ritorno subito la versabilità e non faccio altro
+        // se il gddoc non è già idoneo allora si ritorna la non versabilità
         if (!gddoc.getDatiParerGdDoc().getIdoneoVersamento()){
             log.debug("funzione isVersabile: documento non idoneo");
             return false;
         }
         
+        // calcolo della prima fascicolazione
         Fascicolazione primaFascicolazione = null;
         DateTime dataPrimaFascicolazione = null;
         try{
@@ -1316,7 +1468,7 @@ public class VersatoreParer implements Job {
             dataPrimaFascicolazione = null;
         }
         
-        
+        // in base alla movimentazione del documento
         switch (getStringFromJsonObject(gddoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
             
             case "in":
@@ -1381,466 +1533,15 @@ public class VersatoreParer implements Job {
         log.debug("funzione isVersabile: fine con risultato " + res);
         return res;
     }
-    
-//    private boolean isVersabileOLD(GdDoc gdDoc) throws VersatoreParerException, SQLException, Exception{
-//        
-//        //return true;
-//        
-//        log.debug("isVersabile: inizio");
-//        boolean res = false;
-//        
-//        // se il gddoc è già idoneo allora ritorno subito la versabilità e non faccio altro
-//        if (gdDoc.getDatiParerGdDoc().getIdoneoVersamento()){
-//            log.debug("isVersabile: documento già idoneo");
-//            return true;
-//        }
-//        
-//        String result = null;
-//        
-//        // se esistono dati specifici controllo, altrimenti non è sicuramente idoneo
-//        if(gdDoc.getDatiParerGdDoc() != null){
-//            
-//            // chiedo all'applicazione se idoneo
-//            log.debug("isVersabile: controllo movimentazione");
-//            switch (getStringFromJsonObject(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
-//                case "in":
-//                    if(getCanSendPicoEntrata()){
-//                        log.debug("isVersabile: PE");
-//                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);       
-//                    }
-//                    else{
-//                        return false;
-//                    }
-//                break;
-//
-//                case "out":
-//                    if(getCanSendPicoUscita()){
-//                        log.debug("isVersabile: PU");
-//                        result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
-//                    }
-//                    else{
-//                     return false;   
-//                    }
-//                break;
-//
-//                case "Dete":
-//                    if(getCanSendDete()){
-//                        log.debug("isVersabile: DETE");
-//                        result = sendGdDocToApplication(ApplicationParams.getIndeDeteIdoneitaParerUri(), gdDoc);   
-//                    }
-//                    else{
-//                        return false;
-//                    }
-//                break;
-//
-//                case "Deli":
-//                    if(getCanSendDeli()){
-//                        log.debug("isVersabile: DELI");
-//                        result = sendGdDocToApplication(ApplicationParams.getIndeDeliIdoneitaParerUri(), gdDoc);
-//                    }
-//                    else{
-//                        return false;
-//                    }
-//                break;
-//
-//                case "RegistroRepertorio":
-//                    log.debug("isVersabile: REGISTRO REPERTORIO");
-//                    if (getCanSendRegistroGiornaliero()){
-//
-//                        if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
-//                            return true;
-//                        }
-//                        else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
-//                            return true;
-//                        }
-//                        else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
-//                            return true;
-//                        }
-//                        else {
-//                            return false;
-//                        }
-//                    }
-//                break;
-//
-//                default:
-//                    res = false;
-//            }
-//
-//            
-//            if(result != null){
-//                // parsing del risultato proveniente dalle applicazioni (esclusi registri repertori che hanno una gestione diversa, vedi sopra nello switch)
-//                JSONObject json = (JSONObject) JSONValue.parse(result);
-//
-//                String idOggettoOrigine = (String) json.get("id_oggetto");
-//                log.debug("isVersabile: valore idOggettoOrigine -> " + idOggettoOrigine);
-//                String idoneo = (String) json.get("idoneo");
-//                log.debug("isVersabile: valore idoneo -> " + idoneo);
-//
-//                // se l'applicazione reputa idoneo il documento
-//                if(idoneo.equalsIgnoreCase("true")){    
-//                    log.debug("isVersabile: documento idoneo per l'applicazione");
-//
-//                    // l'applicazione ha già effettuato un updategddoc quindi aggiorno solo il campo idoneità sui dati parer del gddoc
-//                    // quindi lo ricarico
-//                    GdDoc gddocRicaricato = getGdDocById(gdDoc.getId());
-//                    log.debug("VERSABILE: gddoc ricaricato");
-//
-//                    // sistema la fascicolazione
-//                    Fascicolazione primaFascicolazione = null;
-//                    DateTime dataPrimaFascicolazione = null;
-//                    try{
-//                        primaFascicolazione = ordinaFascicolazioni(gddocRicaricato.getFascicolazioni()).get(0);
-//                        log.debug("VERSABILE: prima fascicolazione settata");
-//                        dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
-//                        log.debug("VERSABILE: data prima fascicolazione settata");
-//                    }
-//                    catch(Exception ex){
-//                        log.error(ex);
-//                        dataPrimaFascicolazione = null;
-//                    }
-//
-//                    PubblicazioneIoda pubblicazione = null;
-//                    log.debug("VERSABILE: parte di replaceplaceholder");
-//                    switch (getStringFromJsonObject(gddocRicaricato.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
-//                        case "in":
-//                            log.debug("VERSABILE: IN");
-//                            if (dataPrimaFascicolazione != null){
-//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
-//                                res = true;
-//                            }
-//                        break;
-//
-//                        case "out":
-//                            log.debug("VERSABILE: OUT");
-//                            if (dataPrimaFascicolazione != null){
-//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, null);
-//                                res = true;
-//                            }
-//                        break;
-//
-//                        case "Dete":
-//                            log.debug("VERSABILE: DETE");
-//                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
-//                            if (pubblicazione != null && dataPrimaFascicolazione != null){
-//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
-//                                res = true;
-//                            }
-//                        break;
-//
-//                        case "Deli":
-//                            log.debug("VERSABILE: DELI");
-//                            pubblicazione = getEffettivaPubblicazione(gddocRicaricato.getPubblicazioni());
-//                            if (pubblicazione != null && dataPrimaFascicolazione != null){
-//                                replacePlaceholder(gddocRicaricato, dataPrimaFascicolazione, pubblicazione);
-//                                res = true;
-//                            }
-//                        break;
-//                    }    
-//                }
-//                else{
-//                    log.debug("isVersabile: documento non idoneo");
-//                    res = false;
-//                }
-//
-//                if (res){
-//                    setIdoneitaVersamento(idOggettoOrigine);
-//                }
-//            }
-//        }
-//        else{
-//            res = false;
-//        }
-//        
-//        return res;
-//    }
-    
-//      da buttare  
-//    private void doUpdateGdDoc(GdDoc gdDoc) throws SQLException, VersatoreParerException, Exception{
-//        log.debug("VERSABILE: fai update gddoc");
-//        LockUtilities lock = null;
-//        lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
-//        log.debug("VERSABILE: lock settato");
-//        try (
-//            Connection dbConnection = UtilityFunctions.getDBConnection();
-//        ) {
-//            dbConnection.setAutoCommit(false);
-//            IodaDocumentUtilities idu = new IodaDocumentUtilities(gdDoc, Document.DocumentOperationType.UPDATE, "");
-//            lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
-//
-//            int times = 0;
-//            boolean updateComplete = false;
-//            while (!updateComplete && times < ApplicationParams.getResourceLockedMaxRetryTimes()) {
-//                if (lock.getLock()) {
-//                    idu.updateGdDoc(dbConnection, null);
-//                    dbConnection.commit();
-//                    updateComplete = true;
-//                }
-//                Thread.sleep(ApplicationParams.getResourceLockedSleepMillis());
-//                times++;
-//            }
-//            if (!updateComplete) {
-//                //dare eccezione per risorsa non disponibile
-//                log.debug("VERSABILE: Risorsa non disponibile perchè occupata da un altro processo. Riprovare più tardi");
-//                String message = "Risorsa non disponibile perchè occupata da un altro processo. Riprovare più tardi";
-//                throw new ResourceNotAvailableException(message);
-//            }
-//        }
-//        catch (Exception ex) {
-//            log.error("errore nella gestione del gdddoc: ", ex);
-//            //dbConn.rollback();
-//            throw new VersatoreParerException(ex);
-//        }
-//        finally {
-//            //dbConne.close();
-//            if (lock != null)
-//                lock.deleteLock(false);
-//        }
-//        log.debug("VERSABILE: fine updategddoc");
-//    }
-    
-    private void setIdoneitaVersamento(String idOggettoOrigine){
-        log.debug("VERSABILE: setIdoneitaVersamento");
-        String query = 
-            "UPDATE " + ApplicationParams.getDatiParerGdDocTableName() + " " +
-            "SET idoneo_versamento = 1 " + 
-            "WHERE id_gddoc = (SELECT id_gddoc FROM " + ApplicationParams.getGdDocsTableName() + " WHERE id_oggetto_origine = ?) ";
-        
-        try (
-            Connection dbConnection = UtilityFunctions.getDBConnection();
-            PreparedStatement ps = dbConnection.prepareStatement(query)
-        ) {  
-            int index = 1;
-            ps.setString(index++, idOggettoOrigine);
-            
-            log.debug("VERSABILE eseguo la query: " + ps.toString() + " ...");
-            int result = ps.executeUpdate();
-            if (result <= 0)
-                throw new SQLException("Errore inserimento data fine sessione versamento ParER");
-            if (result == 0)
-                throw new SQLException("data fine non inserita");
-        } catch (SQLException | NamingException ex) {
-            log.fatal("errore inserimento data_fine nella tabella sessioni_versamento_parer: " + ex);
-        }
-        log.debug("VERSABILE: fine setIdoneitaVersamento");
-    } 
-    
+          
     /**
-     * Controlla se il GdDoc è versabile oppure no
-     * @param dbConn connessione
-     * @param gddoc gdDoc da esaminare
-     * @return ritorna true se il gddoc è versabile al ParER ed effettua un updategddoc, altrimenti ritorna false
+     * rimpiazza, nell'xml specifico, i segnaposti messi dalle applicazione con i valori reali
+     * @param gddoc
+     * @param dataPrimaFascicolazione
+     * @param pubblicazione
      * @throws SQLException
      * @throws NamingException 
      */
-//    private boolean isVersabileAndUpdateGdDoc(Connection dbConn, GdDoc gdDoc) throws SQLException, NamingException, Exception{
-//        
-//        boolean res = false;
-//        IodaDocumentUtilities idu;
-//        LockUtilities lock = null;
-//        
-//        
-//        // se il gddoc è già idoneo allora ritorno subito la versabilità e non faccio altro
-//        if (!gdDoc.getDatiParerGdDoc().getIdoneoVersamento()){
-//            return true;
-//        }
-//        
-//        /** qui è il caso in cui il parametro di idoneità è FALSE **/
-//        
-//        // chiedo all'applicazione se idoneo e mi restituisce un bag
-//        switch (getStringFromJsonObject(gdDoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
-//            case "in":
-//                String result = sendGdDocToApplication(ApplicationParams.getIndePicoIdoneitaParerUri(), gdDoc);
-//                
-//            break;
-//            
-//            case "out":
-//            break;
-//            
-//            case "Dete":
-//            break;
-//            
-//            case "Deli":
-//            break;
-//         
-//            case "RegistroRepertorio":
-//                if (getCanSendRegistroGiornaliero()){
-//                    
-//                    if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
-//                        res = true;
-//                    }
-//                    else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
-//                        res = true;
-//                    }
-//                    else if (gdDoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
-//                        res = true;
-//                    }
-//                    else {
-//                        res = false;
-//                    }
-//                }
-//            break;
-//            
-//            default:
-//                res = false;
-//        }
-//            // se bag è NO non faccio altro e restituisco FALSE
-//            // se bag è SI gli faccio un updateGdDoc sul GdDoc tornato, finisce di popolare xmlSpecifico con placeHolder e setta idoneo a true e ritorna TRUE
-//            
-//        
-//        lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
-//        //-----------------------------------------------------------------------------------
-//        
-//        try {
-//            dbConn.setAutoCommit(false);
-//            idu = new IodaDocumentUtilities(gdDoc, Document.DocumentOperationType.UPDATE, prefix);
-//            lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
-//                
-//            int times = 0;
-//            boolean updateComplete = false;
-//            while (!updateComplete && times < ApplicationParams.getResourceLockedMaxRetryTimes()) {
-//                if (lock.getLock()) {
-//                    idu.updateGdDoc(dbConn, null);
-//                    dbConn.commit();
-//                    updateComplete = true;
-//                }
-//                Thread.sleep(ApplicationParams.getResourceLockedSleepMillis());
-//                times++;
-//            }
-//            if (!updateComplete) {
-//                //dare eccezione per risorsa non disponibile
-//                String message = "Risorsa non disponibile perchè occupata da un altro processo. Riprovare più tardi";
-//                throw new ResourceNotAvailableException(message);
-//            }
-//        }
-//        catch (Exception ex) {
-//            log.error("errore nella gestione del gdddoc: ", ex);
-//            dbConn.rollback();
-//            throw new VersatoreParerException(ex);
-//        }
-//        finally {
-//            dbConn.close();
-//            if (lock != null)
-//                lock.deleteLock(false);
-//        }
-//        
-//        
-//        //-----------------------------------------------------------------------------------
-//        
-//        
-//        
-//
-////        try {
-////            Map<String, String> params = new HashMap<>();
-////            String jsonStr = gddoc.getJSONString();
-////            
-////            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
-////            params.put("gddoc", jsonStr);
-////            
-////            String result = UtilityFunctions.sendHttpMessage(ApplicationParams.getIndePicoIdoneitaParerUri(), null, null, params, "POST");
-////            
-////            //log.debug("risutato_versabile: " + result);
-////        } catch (IOException | SendHttpMessageException ex) {
-////            
-////        } 
-//        
-//        Fascicolazione primaFascicolazione = null;
-//        DateTime dataPrimaFascicolazione = null;
-//        try{
-//            primaFascicolazione = ordinaFascicolazioni(gddoc.getFascicolazioni()).get(0);
-//            dataPrimaFascicolazione = primaFascicolazione.getDataFascicolazione();
-//        }
-//        catch(Exception ex){
-//            log.error(ex);
-//            dataPrimaFascicolazione = null;
-//        }
-//        
-//        
-//        switch (getStringFromJsonObject(gddoc.getDatiParerGdDoc().getXmlSpecifico(), "movimentazione")) {
-//            
-//            case "in":
-//                // il gddoc è versabile se sono passati almeno 7 giorni
-//                Days d = Days.daysBetween(gddoc.getDataRegistrazione(), DateTime.now());
-//                int giorni = d.getDays();
-//                
-//                if (getCanSendPicoEntrata() && giorni > 7){
-//                    if (dataPrimaFascicolazione != null){
-//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
-//                        res = true;
-//                    }
-//                }
-//            break;
-//            
-//            case "out":
-//                if (getCanSendPicoUscita()){
-//                    if (dataPrimaFascicolazione != null){
-//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
-//                        res = true;
-//                    }
-//                }
-//            break;
-//            
-//            case "Dete":
-//                if (getCanSendDete()){
-//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
-//                    if (pubblicazione != null && dataPrimaFascicolazione != null){
-//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
-//                        res = true;
-//                    }
-//                }
-//            break;
-//            
-//            case "Deli":
-//                if (getCanSendDeli()){
-//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
-//                    if (pubblicazione != null && dataPrimaFascicolazione != null){
-//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
-//                        res = true;
-//                    }
-//                }
-//            break;
-//         
-//            case "RegistroRepertorio":
-//                if (getCanSendRegistroGiornaliero()){
-//                    
-//                    if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGPICO") && getCanSendRgPico()){
-//                        res = true;
-//                    }
-//                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDETE") && getCanSendRgDete()) {
-//                        res = true;
-//                    }
-//                    else if (gddoc.getCodiceRegistro().equalsIgnoreCase("RGDELI") && getCanSendRgDeli()) {
-//                        res = true;
-//                    }
-//                    else {
-//                        res = false;
-//                    }
-//                }
-//            break;
-//            
-//            default:
-//                res = false;
-//        }
-//        return res;
-//    }
-    
-//    private String sendGdDocToApplication(String uri, GdDoc gdDoc){
-//        String result = null;
-//        try {
-//            Map<String, String> params = new HashMap<>();
-//            String jsonStr = gdDoc.getJSONString();
-//            
-//            jsonStr = URLEncoder.encode(jsonStr, "UTF-8");
-//            params.put("gddoc", jsonStr);
-//            
-//            result = UtilityFunctions.sendHttpMessage(uri, null, null, params, "POST");
-//            
-//        } catch (IOException | SendHttpMessageException ex) {
-//            log.error("errore in sendGdDocToApplication: " + ex);
-//        }
-//        return result;
-//    }
-        
-    // ripiazza i segna posto con valori reali
     private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, PubblicazioneIoda pubblicazione) throws SQLException, NamingException{
         
         // prendo xml specifico
@@ -1879,6 +1580,13 @@ public class VersatoreParer implements Job {
         updateDatiParerGdDoc(dpg, gddoc);
     }
     
+    /**
+     * esegue l'aggiornamento dei dati parer gddoc nella tabella 'gd.dati_parer_gddoc'
+     * @param datiParer
+     * @param gddoc
+     * @throws SQLException
+     * @throws NamingException 
+     */
     private void updateDatiParerGdDoc(DatiParerGdDoc datiParer, GdDoc gddoc) throws SQLException, NamingException{
         
         String sqlText = 
@@ -1935,6 +1643,11 @@ public class VersatoreParer implements Job {
         }
     }
     
+    /**
+     * ordina le fascicolazione in modo ASC
+     * @param fascicolazioni
+     * @return fascicolazioni ordinate ASC
+     */
     private List<Fascicolazione> ordinaFascicolazioni(List<Fascicolazione> fascicolazioni){
         
         List<Fascicolazione> res = null;
@@ -1962,6 +1675,11 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    /**
+     * estrae la prima pubblicazione (in orodine cronologico) effettiva
+     * @param pubblicazioni
+     * @return prima pubblicazione effettiva
+     */
     private PubblicazioneIoda getEffettivaPubblicazione(List<PubblicazioneIoda> pubblicazioni){
         
         PubblicazioneIoda res = null;
@@ -1991,11 +1709,21 @@ public class VersatoreParer implements Job {
         return res;
     }
     
+    /**
+     * converte il DateTime con un pattern passato
+     * @param dateTime
+     * @param pattern
+     * @return data in form adi stringa
+     */
     private String toIsoDateFormatString(DateTime dateTime, String pattern){
         DateTimeFormatter dtfOut = DateTimeFormat.forPattern(pattern);
         return dtfOut.print(dateTime);
     }
-            
+
+    /**
+     * metodi get/get dei parametri inseriti nel conf.json
+     */
+    
     public boolean getCanSendPicoUscita() {
         return canSendPicoUscita;
     }
@@ -2229,51 +1957,56 @@ public class VersatoreParer implements Job {
      * Controlla che l'ora sia maggiore di quella indicata dal parametro cron nello schedulatore conf json. 
      * @return "true" se l'ora è maggiore di quella su cron (a  ora uguale si guardano i minuti), "false" altrimenti
      */
-    private boolean oraLancioIdonea() throws ParseException {
-        
-        boolean result = false;
-        
-        java.util.Date dataInConf;
-        CronExpression cronExpression;
-          
-        cronExpression = new CronExpression(getRole());
-        dataInConf = cronExpression.getNextValidTimeAfter(new java.util.Date());
-        LocalDateTime now = LocalDateTime.now();
-                
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(dataInConf);  
-        int oraDB = cal.get(Calendar.HOUR_OF_DAY);
-        int minutiDB = cal.get(Calendar.MINUTE);
-        
-        log.debug("ora letta da db: " + oraDB);
-        log.debug("minuti letti db: " + minutiDB);
-        
-        log.debug("ora attuale: " + now.getHour());
-        log.debug("minuti attuali: " + now.getMinute());
-        
-        if (now.getHour() == oraDB){
-            if (now.getMinute() > minutiDB){
-                System.out.println("può partire");
-                result = true;
-            }
-            else{
-                System.out.println("non può partire");
-                result = false;
-            }
-        }
-        else if(now.getHour() > oraDB){
-            System.out.println("può partire");
-            result = true;
-        }
-        else{
-            System.out.println("non può partire");
-            result = false;
-        }
-        return result;
-    }
+//    private boolean oraLancioIdonea() throws ParseException {
+//        
+//        boolean result = false;
+//        
+//        java.util.Date dataInConf;
+//        CronExpression cronExpression;
+//          
+//        cronExpression = new CronExpression(getRole());
+//        dataInConf = cronExpression.getNextValidTimeAfter(new java.util.Date());
+//        LocalDateTime now = LocalDateTime.now();
+//                
+//        Calendar cal = Calendar.getInstance();
+//        cal.setTime(dataInConf);  
+//        int oraDB = cal.get(Calendar.HOUR_OF_DAY);
+//        int minutiDB = cal.get(Calendar.MINUTE);
+//        
+//        log.debug("ora letta da db: " + oraDB);
+//        log.debug("minuti letti db: " + minutiDB);
+//        
+//        log.debug("ora attuale: " + now.getHour());
+//        log.debug("minuti attuali: " + now.getMinute());
+//        
+//        if (now.getHour() == oraDB){
+//            if (now.getMinute() > minutiDB){
+//                System.out.println("può partire");
+//                result = true;
+//            }
+//            else{
+//                System.out.println("non può partire");
+//                result = false;
+//            }
+//        }
+//        else if(now.getHour() > oraDB){
+//            System.out.println("può partire");
+//            result = true;
+//        }
+//        else{
+//            System.out.println("non può partire");
+//            result = false;
+//        }
+//        return result;
+//    }
     
     
-    // controlla se i servizi attivi sulle aplicazioni di calcolo idoneità parer hanno finito
+    /**
+     * Controlla se i servizi attivi del calcolo idoneità pro parer abbiano finito
+     * @param dbConn
+     * @return true se tutti i servizi attivi sono terminati; false altrimenti
+     * @throws SQLException 
+     */
     private boolean serviziApplicativiFiniti(Connection dbConn) throws SQLException {
         
         boolean serviziFiniti = true;
@@ -2288,8 +2021,6 @@ public class VersatoreParer implements Job {
             ps.setString(1, SERVIZIO_IDONEITA);
             log.debug(String.format("eseguo la query: %s", ps.toString()));
             ResultSet res = ps.executeQuery();
-            
-            
             
             while (res.next()) {
                 serviziPicoDeteDeliAttivi = true;
@@ -2310,14 +2041,15 @@ public class VersatoreParer implements Job {
             if (!serviziPicoDeteDeliAttivi){
                 serviziFiniti = true;
             }
-                
             return serviziFiniti;
         }
     }
     
     
     /**
-     * aggiorna le date di avvio, termine del servizio, per aggiorarne solo una passare null all'altra
+     * aggiorna le date di avvio e terminazione del servizio; 
+     * quando un servizio inizia a girare sarà settata la data di inizio a now() e la data fine a null
+     * qundo un servizio termina mette la data di fine a now()
      * @param dataInizio
      * @param dataFine
      * @throws SQLException 
