@@ -35,6 +35,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLType;
 import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -1501,6 +1502,8 @@ public class IodaDocumentUtilities {
                     // se è già idoneo non lo risetto a 0
                     if (!giaIdoneo)
                         ps.setInt(index++, 0);
+                    else
+                        ps.setNull(index++, Types.INTEGER);
                 }
 
                 ps.setString(index++, gdDoc.getId());
