@@ -1491,21 +1491,31 @@ public class VersatoreParer implements Job {
             
             case "Dete":
                 if (getCanSendDete()){
-                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
-                    if (pubblicazione != null && dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+                    List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
+                    if (pubblicazioni != null && dataPrimaFascicolazione != null) {
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazioni);
                         res = true;
                     }
+//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+//                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+//                        res = true;
+//                    }
                 }
             break;
             
             case "Deli":
                 if (getCanSendDeli()){
-                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
-                    if (pubblicazione != null && dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+                    List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
+                    if (pubblicazioni != null && dataPrimaFascicolazione != null) {
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazioni);
                         res = true;
                     }
+//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+//                    if (pubblicazione != null && dataPrimaFascicolazione != null){
+//                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
+//                        res = true;
+//                    }
                 }
             break;
          
@@ -1542,7 +1552,7 @@ public class VersatoreParer implements Job {
      * @throws SQLException
      * @throws NamingException 
      */
-    private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, PubblicazioneIoda pubblicazione) throws SQLException, NamingException{
+    private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, List<PubblicazioneIoda> pubblicazioni) throws SQLException, NamingException{
         
         // prendo xml specifico
         String xmlSpecifico = gddoc.getDatiParerGdDoc().getXmlSpecifico();
@@ -1550,6 +1560,7 @@ public class VersatoreParer implements Job {
         // pattern prescelto per la rappresentazione della data
         String patternData = "yyyy-MM-dd";
         
+        PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(pubblicazioni);
         // gestione segnaposto pubblicazioni
         if (pubblicazione != null){
           
@@ -1567,6 +1578,17 @@ public class VersatoreParer implements Job {
                 xmlSpecifico = xmlSpecifico.replace("[CONTROLLOREGIONALE]", "SI");
             }
             xmlSpecifico = xmlSpecifico.replace("[PUBBESECUTIVITA]", pubblicazione.getEsecutivita());
+        }
+        
+        // Seconda pubblicazione
+        pubblicazioni.remove(pubblicazione);
+        if (pubblicazioni.size() > 0) {
+            pubblicazione = getEffettivaPubblicazione(pubblicazioni);
+            
+            xmlSpecifico = xmlSpecifico.replace("[NUMERORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getNumeroPubblicazione()));
+            xmlSpecifico = xmlSpecifico.replace("[ANNORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getAnnoPubblicazione()));
+            xmlSpecifico = xmlSpecifico.replace("[INIZIORIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
+            xmlSpecifico = xmlSpecifico.replace("[FINERIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
         }
         
         // gestione segnaposto fascicolazioni
