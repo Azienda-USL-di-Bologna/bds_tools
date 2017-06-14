@@ -1561,18 +1561,17 @@ public class VersatoreParer implements Job {
         String patternData = "yyyy-MM-dd";
         
         PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(pubblicazioni);
-        // gestione segnaposto pubblicazioni
+        // gestione segnaposto prima pubblicazione (o pubblicazione con controllo regionale, quindi con esecutività = inattesa)
         if (pubblicazione != null){
           
             xmlSpecifico = xmlSpecifico.replace("[NUMEROPUBBLICAZIONE]", String.valueOf(pubblicazione.getNumeroPubblicazione()));
             xmlSpecifico = xmlSpecifico.replace("[ANNOPUBBLICAZIONE]", String.valueOf(pubblicazione.getAnnoPubblicazione()));
             xmlSpecifico = xmlSpecifico.replace("[INIZIOPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
             xmlSpecifico = xmlSpecifico.replace("[FINEPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
-            xmlSpecifico = xmlSpecifico.replace("[FINEPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
             
             if (pubblicazione.getEsecutivita().equalsIgnoreCase("esecutiva")){
                 xmlSpecifico = xmlSpecifico.replace("[CONTROLLOREGIONALE]", "NO");
-                xmlSpecifico = xmlSpecifico.replace("[DATAESECUTIVITA]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
+                //xmlSpecifico = xmlSpecifico.replace("[DATAESECUTIVITA]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
             }
             else{
                 xmlSpecifico = xmlSpecifico.replace("[CONTROLLOREGIONALE]", "SI");
@@ -1590,6 +1589,8 @@ public class VersatoreParer implements Job {
             xmlSpecifico = xmlSpecifico.replace("[INIZIORIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
             xmlSpecifico = xmlSpecifico.replace("[FINERIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
         }
+        
+        xmlSpecifico = xmlSpecifico.replace("[DATAESECUTIVITA]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
         
         // gestione segnaposto fascicolazioni
         if (dataPrimaFascicolazione != null){
@@ -1715,7 +1716,7 @@ public class VersatoreParer implements Job {
                 for (PubblicazioneIoda pubblicazioneIoda : pubblicazioni) {
                     if(pubblicazioneIoda.getAnnoPubblicazione() != null && pubblicazioneIoda.getAnnoPubblicazione() != 0 
                             && pubblicazioneIoda.getNumeroPubblicazione() != null && pubblicazioneIoda.getNumeroPubblicazione() != 0
-                            && pubblicazioneIoda.getDataDefissione() == null && pubblicazioneIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO){
+                            && pubblicazioneIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO){
                         res = pubblicazioneIoda;
                         break;
                     }
