@@ -1561,6 +1561,7 @@ public class VersatoreParer implements Job {
         String patternData = "yyyy-MM-dd";
         
         PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(pubblicazioni);
+        
         // gestione segnaposto prima pubblicazione (o pubblicazione con controllo regionale, quindi con esecutività = inattesa)
         if (pubblicazione != null){
           
@@ -1577,17 +1578,17 @@ public class VersatoreParer implements Job {
                 xmlSpecifico = xmlSpecifico.replace("[CONTROLLOREGIONALE]", "SI");
             }
             xmlSpecifico = xmlSpecifico.replace("[PUBBESECUTIVITA]", pubblicazione.getEsecutivita());
-        }
-        
-        // Seconda pubblicazione
-        pubblicazioni.remove(pubblicazione);
-        if (pubblicazioni.size() > 0) {
-            pubblicazione = getEffettivaPubblicazione(pubblicazioni);
             
-            xmlSpecifico = xmlSpecifico.replace("[NUMERORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getNumeroPubblicazione()));
-            xmlSpecifico = xmlSpecifico.replace("[ANNORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getAnnoPubblicazione()));
-            xmlSpecifico = xmlSpecifico.replace("[INIZIORIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
-            xmlSpecifico = xmlSpecifico.replace("[FINERIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
+            // Seconda pubblicazione
+            pubblicazioni.remove(pubblicazione);
+            if (pubblicazioni != null && pubblicazioni.size() > 0) {
+                pubblicazione = getEffettivaPubblicazione(pubblicazioni);
+
+                xmlSpecifico = xmlSpecifico.replace("[NUMERORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getNumeroPubblicazione()));
+                xmlSpecifico = xmlSpecifico.replace("[ANNORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getAnnoPubblicazione()));
+                xmlSpecifico = xmlSpecifico.replace("[INIZIORIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
+                xmlSpecifico = xmlSpecifico.replace("[FINERIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
+            }
         }
         
         xmlSpecifico = xmlSpecifico.replace("[DATAESECUTIVITA]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
