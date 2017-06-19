@@ -1589,9 +1589,10 @@ public class VersatoreParer implements Job {
                 xmlSpecifico = xmlSpecifico.replace("[INIZIORIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
                 xmlSpecifico = xmlSpecifico.replace("[FINERIPUBBLICAZIONE]", toIsoDateFormatString(pubblicazione.getDataAl(), patternData));
             }
+            xmlSpecifico = xmlSpecifico.replace("[DATAESECUTIVITA]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
         }
         
-        xmlSpecifico = xmlSpecifico.replace("[DATAESECUTIVITA]", toIsoDateFormatString(pubblicazione.getDataDal(), patternData));
+        
         
         // gestione segnaposto fascicolazioni
         if (dataPrimaFascicolazione != null){
