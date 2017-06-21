@@ -855,7 +855,9 @@ public class VersatoreParer implements Job {
                                                     infoAllegato.getTipoStruttura(),
                                                     infoAllegato.getTipoDocumentoSecondario(),
                                                     "Contenuto",
-                                                    "FILE");
+                                                    "FILE",
+                                                    dataDocumento,
+                                                    getDescrizioneRiferimentoTemporale(tipoDocumento));
                 
                 log.debug("allegato con ordine " + ordinePresentazione + "inserito con guid: " + infoAllegato.getGuid());
             }
@@ -882,7 +884,9 @@ public class VersatoreParer implements Job {
                                                     infoAnnesso.getTipoStruttura(),
                                                     infoAnnesso.getTipoDocumentoSecondario(),
                                                     "Contenuto",
-                                                    "FILE");
+                                                    "FILE",
+                                                    null,
+                                                    null);
                 
                 log.debug("annesso con ordine " + ordinePresentazione + "inserito con guid: " + infoAnnesso.getGuid());
             }
@@ -909,7 +913,9 @@ public class VersatoreParer implements Job {
                                                     infoAnnotazione.getTipoStruttura(),
                                                     infoAnnotazione.getTipoDocumentoSecondario(),
                                                     "Contenuto",
-                                                    "FILE");
+                                                    "FILE",
+                                                    null,
+                                                    null);
                 
                 log.debug("annotazione con ordine " + ordinePresentazione + "inserita con guid: " + infoAnnotazione.getGuid());
             }
