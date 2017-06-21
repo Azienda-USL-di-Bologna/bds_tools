@@ -59,7 +59,7 @@ public class Schedulatore extends HttpServlet {
     public void init() throws ServletException {
         super.init();
         log.info("Inizio avvio Schedulatore");
-
+        log.info("isSchedulatoreActive: " + ApplicationParams.isSchedulatoreActive());
         active = ApplicationParams.isSchedulatoreActive();
 
         // questo va cambiato con il parsing del json letto dai parametri pubblici
@@ -73,7 +73,7 @@ public class Schedulatore extends HttpServlet {
             prop.put("org.quartz.scheduler.instanceName", "BabelScheduler");
             prop.put("org.quartz.threadPool.threadCount", "3");
             prop.put("org.quartz.jobStore.class", "org.quartz.simpl.RAMJobStore");
-            System.out.println("Schedulo");
+            log.info("Schedulo");
 
             sf.initialize(prop);
             sched = sf.getScheduler();
