@@ -1480,7 +1480,7 @@ public class VersatoreParer implements Job {
             case "in":
                 if (getCanSendPicoEntrata()){
                     if (dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null, false);
                         res = true;
                     }
                 }
@@ -1489,7 +1489,7 @@ public class VersatoreParer implements Job {
             case "out":
                 if (getCanSendPicoUscita()){
                     if (dataPrimaFascicolazione != null){
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null);
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null, false);
                         res = true;
                     }
                 }
@@ -1499,10 +1499,10 @@ public class VersatoreParer implements Job {
                 if (getCanSendDete()){
                     List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
                     if (pubblicazioni != null && dataPrimaFascicolazione != null) {
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazioni);
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazioni, false);
                         res = true;
                     }
-//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+//                    PubblicazioneIoda pubblicazione = getPrimaPubblicazione(gddoc.getPubblicazioni());
 //                    if (pubblicazione != null && dataPrimaFascicolazione != null){
 //                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
 //                        res = true;
@@ -1514,10 +1514,10 @@ public class VersatoreParer implements Job {
                 if (getCanSendDeli()){
                     List<PubblicazioneIoda> pubblicazioni = gddoc.getPubblicazioni();
                     if (pubblicazioni != null && dataPrimaFascicolazione != null) {
-                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazioni);
+                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazioni, false);
                         res = true;
                     }
-//                    PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(gddoc.getPubblicazioni());
+//                    PubblicazioneIoda pubblicazione = getPrimaPubblicazione(gddoc.getPubblicazioni());
 //                    if (pubblicazione != null && dataPrimaFascicolazione != null){
 //                        replacePlaceholder(gddoc, dataPrimaFascicolazione, pubblicazione);
 //                        res = true;
@@ -1558,7 +1558,7 @@ public class VersatoreParer implements Job {
      * @throws SQLException
      * @throws NamingException 
      */
-    private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, List<PubblicazioneIoda> pubblicazioni) throws SQLException, NamingException{
+    private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, List<PubblicazioneIoda> pubblicazioni, boolean prendiPubblicazioneEsecutiva) throws SQLException, NamingException{
         
         // prendo xml specifico
         String xmlSpecifico = gddoc.getDatiParerGdDoc().getXmlSpecifico();
@@ -1566,7 +1566,7 @@ public class VersatoreParer implements Job {
         // pattern prescelto per la rappresentazione della data
         String patternData = "yyyy-MM-dd";
         
-        PubblicazioneIoda pubblicazione = getEffettivaPubblicazione(pubblicazioni);
+        PubblicazioneIoda pubblicazione = getPrimaPubblicazione(pubblicazioni, prendiPubblicazioneEsecutiva);
         
         // gestione segnaposto prima pubblicazione (o pubblicazione con controllo regionale, quindi con esecutività = inattesa)
         if (pubblicazione != null){
@@ -1588,7 +1588,7 @@ public class VersatoreParer implements Job {
             // Seconda pubblicazione
             pubblicazioni.remove(pubblicazione);
             if (pubblicazioni != null && pubblicazioni.size() > 0) {
-                pubblicazione = getEffettivaPubblicazione(pubblicazioni);
+                pubblicazione = getPrimaPubblicazione(pubblicazioni, prendiPubblicazioneEsecutiva);
 
                 xmlSpecifico = xmlSpecifico.replace("[NUMERORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getNumeroPubblicazione()));
                 xmlSpecifico = xmlSpecifico.replace("[ANNORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getAnnoPubblicazione()));
@@ -1707,11 +1707,12 @@ public class VersatoreParer implements Job {
     }
     
     /**
-     * estrae la prima pubblicazione (in orodine cronologico) effettiva
+     * se prendiPrimaEsecutiva = FALSE: estrae la prima pubblicazione (in orodine cronologico) indipendentemente dall'esecutività
+     * se prendiPrimaEsecutiva = TRUE: estrae la prima pubblicazione (in orodine cronologico) dove esecutività = ESECUTIVA
      * @param pubblicazioni
      * @return prima pubblicazione effettiva
      */
-    private PubblicazioneIoda getEffettivaPubblicazione(List<PubblicazioneIoda> pubblicazioni){
+    private PubblicazioneIoda getPrimaPubblicazione(List<PubblicazioneIoda> pubblicazioni, boolean prendiPrimaEsecutiva){
         
         PubblicazioneIoda res = null;
         
@@ -1722,11 +1723,23 @@ public class VersatoreParer implements Job {
                 Collections.sort(pubblicazioni);
                 
                 for (PubblicazioneIoda pubblicazioneIoda : pubblicazioni) {
-                    if(pubblicazioneIoda.getAnnoPubblicazione() != null && pubblicazioneIoda.getAnnoPubblicazione() != 0 
-                            && pubblicazioneIoda.getNumeroPubblicazione() != null && pubblicazioneIoda.getNumeroPubblicazione() != 0
-                            && pubblicazioneIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO){
-                        res = pubblicazioneIoda;
-                        break;
+                    
+                    if(prendiPrimaEsecutiva){
+                        if(pubblicazioneIoda.getAnnoPubblicazione() != null && pubblicazioneIoda.getAnnoPubblicazione() != 0 
+                                && pubblicazioneIoda.getNumeroPubblicazione() != null && pubblicazioneIoda.getNumeroPubblicazione() != 0
+                                && pubblicazioneIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO
+                                && pubblicazioneIoda.getEsecutivita().equalsIgnoreCase("esecutiva")){
+                            res = pubblicazioneIoda;
+                            break;
+                        }
+                    }
+                    else{
+                        if(pubblicazioneIoda.getAnnoPubblicazione() != null && pubblicazioneIoda.getAnnoPubblicazione() != 0 
+                                && pubblicazioneIoda.getNumeroPubblicazione() != null && pubblicazioneIoda.getNumeroPubblicazione() != 0
+                                && pubblicazioneIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO){
+                            res = pubblicazioneIoda;
+                            break;
+                        }
                     }
                 }
             }
