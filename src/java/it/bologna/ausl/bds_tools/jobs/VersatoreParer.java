@@ -821,6 +821,11 @@ public class VersatoreParer implements Job {
         
         log.debug("unita documentaria creata");
         
+        PubblicazioneIoda pubblicazioneEsecutiva = getPrimaPubblicazione(gdDoc.getPubblicazioni(), false);
+        if(tipoDocumento.equals("DELIBERAZIONE")){
+            dataDocumento = getStringDateParer(pubblicazioneEsecutiva.getDataEsecutivita());
+        }
+        
         unitaDocumentaria.addDocumentoPrincipale(gdDoc.getIdOggettoOrigine(), 
                                                 tipoDocumentoPrincipale,
                                                 autoreProfiloDocumento,
@@ -885,8 +890,8 @@ public class VersatoreParer implements Job {
                                                     infoAnnesso.getTipoDocumentoSecondario(),
                                                     "Contenuto",
                                                     "FILE",
-                                                    null,
-                                                    null);
+                                                    dataDocumento,
+                                                    getDescrizioneRiferimentoTemporale(tipoDocumento));
                 
                 log.debug("annesso con ordine " + ordinePresentazione + "inserito con guid: " + infoAnnesso.getGuid());
             }
