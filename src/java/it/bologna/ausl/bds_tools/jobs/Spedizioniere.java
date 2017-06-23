@@ -1521,11 +1521,16 @@ public class Spedizioniere implements Job{
                     log.debug("dataInizio = " + dataInizio);
                     Timestamp ora = new Timestamp(new Date().getTime());
                     log.debug("Ora: " + ora);
-                    Long giorni =  getDays(dataInizio, ora);
-                    log.debug("Controllo consegna giorni differenza: " + giorni);
-                    if (giorni != null) {
+//                    Long giorni =  getDays(dataInizio, ora);
+                    Duration duration = new Duration(new DateTime(dataInizio.getTime()), new DateTime(ora.getTime()));
+                    Long differenzaOre = duration.getStandardHours();
+//                    Long differenzaMinuti = duration.getStandardMinutes();
+//                    log.debug("Controllo consegna giorni differenza: " + giorni);
+                    log.debug("Controllo consegna ore differenza: " + differenzaOre);
+//                    log.debug("Controllo consegna minuti differenza: " + differenzaMinuti);
+                    if (differenzaOre != null) {
 
-                        if(giorni >= 1){ // Se il controlloSpedizione() è stato effettuato almeno un giorno fa
+                        if(differenzaOre >= 2){ // Se il controlloSpedizione() è stato effettuato almeno due ore fa
                             log.debug("Controllo consegna will start soon...");
                             log.debug("Setting data inizio...");
                             setDataInizio();
