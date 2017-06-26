@@ -1565,13 +1565,15 @@ public class VersatoreParer implements Job {
      */
     private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, List<PubblicazioneIoda> pubblicazioni, boolean prendiPubblicazioneEsecutiva) throws SQLException, NamingException{
         
+        List<PubblicazioneIoda> pubblicazioniClone = (List<PubblicazioneIoda>) ((ArrayList) pubblicazioni).clone();
+
         // prendo xml specifico
         String xmlSpecifico = gddoc.getDatiParerGdDoc().getXmlSpecifico();
         
         // pattern prescelto per la rappresentazione della data
         String patternData = "yyyy-MM-dd";
         
-        PubblicazioneIoda pubblicazione = getPrimaPubblicazione(pubblicazioni, prendiPubblicazioneEsecutiva);
+        PubblicazioneIoda pubblicazione = getPrimaPubblicazione(pubblicazioniClone, prendiPubblicazioneEsecutiva);
         
         // gestione segnaposto prima pubblicazione (o pubblicazione con controllo regionale, quindi con esecutività = inattesa)
         if (pubblicazione != null){
@@ -1591,9 +1593,9 @@ public class VersatoreParer implements Job {
             xmlSpecifico = xmlSpecifico.replace("[PUBBESECUTIVITA]", pubblicazione.getEsecutivita());
             
             // Seconda pubblicazione
-            pubblicazioni.remove(pubblicazione);
-            if (pubblicazioni != null && pubblicazioni.size() > 0) {
-                pubblicazione = getPrimaPubblicazione(pubblicazioni, prendiPubblicazioneEsecutiva);
+            pubblicazioniClone.remove(pubblicazione);
+            if (pubblicazioniClone != null && pubblicazioniClone.size() > 0) {
+                pubblicazione = getPrimaPubblicazione(pubblicazioniClone, prendiPubblicazioneEsecutiva);
 
                 xmlSpecifico = xmlSpecifico.replace("[NUMERORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getNumeroPubblicazione()));
                 xmlSpecifico = xmlSpecifico.replace("[ANNORIPUBBLICAZIONE]", String.valueOf(pubblicazione.getAnnoPubblicazione()));
