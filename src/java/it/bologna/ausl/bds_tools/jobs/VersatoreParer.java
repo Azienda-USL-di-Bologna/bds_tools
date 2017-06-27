@@ -823,7 +823,9 @@ public class VersatoreParer implements Job {
         
         PubblicazioneIoda pubblicazioneEsecutiva = getPrimaPubblicazione(gdDoc.getPubblicazioni(), false);
         if(tipoDocumento.equals("DELIBERAZIONE")){
-            dataDocumento = getStringDateParer(pubblicazioneEsecutiva.getDataEsecutivita());
+//            Si è scelto di prendere DATA_DAL e non DATA_ESECUTIVITA perchè si era concordato che la data di riferimento temporale 
+//            per la delibera è la data della prima pubblicazione (indipendentemente dalla sua esecutività)
+            dataDocumento = getStringDateParer(pubblicazioneEsecutiva.getDataDal());
         }
         
         unitaDocumentaria.addDocumentoPrincipale(gdDoc.getIdOggettoOrigine(), 

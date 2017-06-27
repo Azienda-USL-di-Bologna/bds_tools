@@ -550,7 +550,7 @@
         <servlet-name>GetGdDocProIdoneita</servlet-name>
         <url-pattern>/ioda/api/document/GetGdDocProIdoneita</url-pattern>
     </servlet-mapping>
-    <!--<context-param>
+<!--    <context-param>
         <param-name>schedulatore.active</param-name>
         <param-value>true</param-value>
     </context-param>-->
