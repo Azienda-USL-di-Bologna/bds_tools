@@ -1567,7 +1567,10 @@ public class VersatoreParer implements Job {
      */
     private void replacePlaceholder(GdDoc gddoc, DateTime dataPrimaFascicolazione, List<PubblicazioneIoda> pubblicazioni, boolean prendiPubblicazioneEsecutiva) throws SQLException, NamingException{
         
-        List<PubblicazioneIoda> pubblicazioniClone = (List<PubblicazioneIoda>) ((ArrayList) pubblicazioni).clone();
+        List<PubblicazioneIoda> pubblicazioniClone = null;
+        if (pubblicazioni != null) {
+            pubblicazioniClone = (List<PubblicazioneIoda>) ((ArrayList) pubblicazioni).clone();
+        }
 
         // prendo xml specifico
         String xmlSpecifico = gddoc.getDatiParerGdDoc().getXmlSpecifico();
