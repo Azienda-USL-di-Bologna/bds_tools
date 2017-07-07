@@ -1490,7 +1490,7 @@ public class VersatoreParer implements Job {
                         dataPrimaFascicolazione = gddoc.getDataRegistrazione();
                     }
                     replacePlaceholder(gddoc, dataPrimaFascicolazione, null, false);
-//                        res = true;
+                        res = true;
 //                    if (dataPrimaFascicolazione != null){
 //                        replacePlaceholder(gddoc, dataPrimaFascicolazione, null, false);
 //                        res = true;
