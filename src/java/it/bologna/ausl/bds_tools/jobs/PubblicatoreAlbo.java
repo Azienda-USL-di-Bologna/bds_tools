@@ -4,11 +4,14 @@ import it.bologna.ausl.balboclient.BalboClient;
 import it.bologna.ausl.balboclient.classes.AllegatoPubblicazione;
 import it.bologna.ausl.balboclient.classes.Pubblicazione;
 import it.bologna.ausl.balboclient.classes.PubblicazioneAlbo;
+import it.bologna.ausl.balboclient.classes.PubblicazioneCommittente;
 import it.bologna.ausl.balboclient.classes.PubblicazioneTrasparenza;
+import it.bologna.ausl.bds_tools.exceptions.PubblicatoreException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.Registro;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
+import it.bologna.ausl.ioda.iodaobjectlibrary.DatiProfiloCommittente;
 import it.bologna.ausl.ioda.iodaobjectlibrary.GdDoc;
 import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
 import it.bologna.ausl.ioda.iodaobjectlibrary.SottoDocumento;
@@ -16,7 +19,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -97,16 +99,34 @@ public class PubblicatoreAlbo implements Job {
                 });
                 for (PubblicazioneIoda pubbIoda : pubblicazioniGdDoc) {
                     log.debug("pubblicazione: " + pubbIoda.toString());
-                    if (pubbIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO) {
-                        pubblicaSuBalboAndUpdatePubbIoda(dbConn, gddoc, sottodocumenti, registroGddoc, pubbIoda);
-                    } else {
-                        if (possoPubblicare(dbConn, gddoc.getId(), pubbIoda)) {
-                            pubblicaTrasparenzaSuBalboAndUpdatePubbIoda(dbConn, gddoc, registroGddoc, pubbIoda);
-                        }
-                        else {
-                            log.info("pubblicazione trasparenza non possibile perché il documento non è stato ancora pubblicato all'albo");
-                        }
+                    switch (pubbIoda.getTipologia()) {
+                        case ALBO:
+                            pubblicaSuBalboAndUpdatePubbIoda(dbConn, gddoc, sottodocumenti, registroGddoc, pubbIoda);
+                            break;
+                        case POLITICO:
+                        case DIRIGENTE:
+                            if (possoPubblicare(dbConn, gddoc.getId(), pubbIoda))
+                                pubblicaTrasparenzaSuBalboAndUpdatePubbIoda(dbConn, gddoc, registroGddoc, pubbIoda);
+                            else
+                                log.info("pubblicazione trasparenza non possibile perché il documento non è stato ancora pubblicato all'albo");
+                            break;
+                        case COMMITTENTE:
+                            if (possoPubblicare(dbConn, gddoc.getId(), pubbIoda))
+                                pubblicaCommittenteSuBalboAndUpdatePubbIoda(dbConn, gddoc, sottodocumenti, registroGddoc, pubbIoda);
+                            break;
+                        default:
+                            log.error(String.format("tipologia pubblicazione %s non prevista", pubbIoda.getTipologia()));
                     }
+//                    if (pubbIoda.getTipologia() == PubblicazioneIoda.Tipologia.ALBO) {
+//                        pubblicaSuBalboAndUpdatePubbIoda(dbConn, gddoc, sottodocumenti, registroGddoc, pubbIoda);
+//                    } else {
+//                        if (possoPubblicare(dbConn, gddoc.getId(), pubbIoda)) {
+//                            pubblicaTrasparenzaSuBalboAndUpdatePubbIoda(dbConn, gddoc, registroGddoc, pubbIoda);
+//                        }
+//                        else {
+//                            log.info("pubblicazione trasparenza non possibile perché il documento non è stato ancora pubblicato all'albo");
+//                        }
+//                    }
 
                     // se tutto è ok faccio il commit
                     dbConn.commit();
@@ -147,8 +167,18 @@ public class PubblicatoreAlbo implements Job {
         }
     }
 
+    /**
+     * se la pubblicazione da fare (di. solito "provvedimento") necessità della previa pubblicazione all'albo, controllo che questa esista
+     * @param dbConn
+     * @param idGdDoc
+     * @param pubblicazioneCorrente
+     * @return "true" se la pubblicazione corrente NON necessità di previa pubblicazione albo;
+     *         "true" se la pubblicazione corrente necessità di previa pubblicazione albo e questa viene trovata.
+     *         "false" se la pubblicazione corrente necessità di previa pubblicazione albo e questa NON viene trovata.
+     * @throws SQLException 
+     */
     private boolean possoPubblicare(Connection dbConn, String idGdDoc, PubblicazioneIoda pubblicazioneCorrente) throws SQLException {
-        boolean possoPubblicare = false;
+        boolean possoPubblicare;
         log.info("controllo se posso pubblicare");
         if (pubblicazioneCorrente.isPubblicaSoloSePubblicatoAlbo()) {
             //possoPubblicare = pubblicazioniGdDoc.stream().anyMatch(p -> p.getNumeroPubblicazione() != null && p.getTipologia() == PubblicazioneIoda.Tipologia.ALBO);
@@ -309,6 +339,82 @@ public class PubblicatoreAlbo implements Job {
         log.info("update pubblicazione ioda locale per l'inserimento del numero e l'anno...");
         pubbIoda.setNumeroPubblicazione(pubblicazioneTrasparenza.getNumeroPubblicazione());
         pubbIoda.setAnnoPubblicazione(pubblicazioneTrasparenza.getAnnoPubblicazione());
+        pubbIoda.setPubblicatore(PUBBLICATORE);
+
+        IodaDocumentUtilities.UpdatePubblicazioneById(dbConn, pubbIoda.getId(), pubbIoda);
+        log.info("update pubblicazione ioda locale per l'inserimento del numero e l'anno completato");
+    }
+
+    private void pubblicaCommittenteSuBalboAndUpdatePubbIoda(Connection dbConn, GdDoc gddoc, List<SottoDocumento> sottodocumenti, Registro registroGddoc, PubblicazioneIoda pubbIoda) throws NamingException, ServletException, SQLException, PubblicatoreException {
+        DatiProfiloCommittente datiProfiloCommittente = IodaDocumentUtilities.getDatiProfiloCommittente(dbConn, gddoc.getIdOggettoOrigine());
+        if (datiProfiloCommittente == null)
+            throw new PubblicatoreException("dati del profilo committente non trovati");
+
+        PubblicazioneCommittente pubblicazioneCommittente = new PubblicazioneCommittente();
+        pubblicazioneCommittente.setArticolazione(gddoc.getNomeStrutturaFirmatario());        
+        pubblicazioneCommittente.setCodiceRegistro(registroGddoc.getCodiceRegistro());
+        pubblicazioneCommittente.setRegistro(registroGddoc.getDescPubbAlbo());
+        pubblicazioneCommittente.setNumeroRegistro(gddoc.getNumeroRegistrazione());
+        pubblicazioneCommittente.setAnnoRegistro(gddoc.getAnnoRegistrazione());
+        pubblicazioneCommittente.setDataRegistrazione(gddoc.getDataRegistrazione().toDate());
+        pubblicazioneCommittente.setOggetto(UtilityFunctions.fixXhtml(gddoc.getOggetto()));
+        pubblicazioneCommittente.setAggiudicatario(datiProfiloCommittente.getAggiudicatario());
+        pubblicazioneCommittente.setCheckFornitoreRequisitiGenerali(datiProfiloCommittente.getCheckFornitoreRequisitiGenerali());
+        pubblicazioneCommittente.setCheckFornitoreRequisitiProfessionali(datiProfiloCommittente.getCheckFornitoreRequisitiProfessionali());
+        pubblicazioneCommittente.setCig(datiProfiloCommittente.getCig());
+        pubblicazioneCommittente.setCigAzienda(datiProfiloCommittente.getCigAzienda());
+        pubblicazioneCommittente.setCodiceProfiloCommittente(PubblicazioneCommittente.CodiceProfiloCommittente.fromString(datiProfiloCommittente.getCodiceProfiloCommittente()));
+        pubblicazioneCommittente.setTestoProfiloCommittente(datiProfiloCommittente.getTestoProfiloCommittente());
+        
+        DateTime dataAggiudicazione = datiProfiloCommittente.getDataAggiudicazione();
+        if (dataAggiudicazione != null) {
+            pubblicazioneCommittente.setDataAggiudicazione(dataAggiudicazione.toDate());
+        }
+        pubblicazioneCommittente.setFornitore(datiProfiloCommittente.getFornitore());
+        pubblicazioneCommittente.setImporto(datiProfiloCommittente.getImporto());
+        pubblicazioneCommittente.setOggettoAffidamento(datiProfiloCommittente.getOggettoAffidamento());
+        pubblicazioneCommittente.setOperatoriEconomiciInviati(datiProfiloCommittente.getOperatoriEconomiciInviati());
+        pubblicazioneCommittente.setOperatoriEconomiciOfferenti(datiProfiloCommittente.getOperatoriEconomiciOfferenti());
+        pubblicazioneCommittente.setProcedura(datiProfiloCommittente.getProcedura());
+        pubblicazioneCommittente.setRagioniSceltaFornitore(datiProfiloCommittente.getRagioniSceltaFornitore());
+        pubblicazioneCommittente.setTipologiaGara(datiProfiloCommittente.getTipologiaGara());
+        
+        // devo pubblicare solo i sotto documenti che hanno il flag "pubblicazione_albo" restituito da isPubblicazioneAlbo (mi aspetto che sia solo la stampa unica), se ne trovo zero o più di 1 dò errore
+        // filtro solo i sottoducumenti da pubblicare
+        List<SottoDocumento> sottoDocumentiDaPubblicare = 
+                sottodocumenti.stream().filter(s -> s.isPubblicazioneAlbo()).collect(Collectors.toList());
+        
+        if (sottoDocumentiDaPubblicare == null || sottoDocumentiDaPubblicare.isEmpty()) {
+            String message = "nessun sottodocumento da pubblicare";
+            log.error(message);
+            throw new PubblicatoreException(message);
+        }
+        else if (sottoDocumentiDaPubblicare.size() > 1) {
+            String message = "troppi sottodocumenti da pubblicare, me ne aspetto solo uno";
+            log.error(message);
+            throw new PubblicatoreException(message);
+        }
+        
+        // setto i dati del sottodocumento sulla pubblicazione
+        for (SottoDocumento s : sottoDocumentiDaPubblicare) {
+            log.info(String.format("inserimento dei dati per la visualizzazione della stampa unica: nomeDocumento: %s codiceDocumento: %s ...",s.getNome(), s.getCodiceSottoDocumento()));
+            pubblicazioneCommittente.setNomeDocumento(s.getNome());
+            pubblicazioneCommittente.setCodiceDocumento(s.getCodiceSottoDocumento());
+        }
+
+        try {
+            log.info("pubblicazione effettiva su balbo committente...");
+            log.info("pubblicazioneTrasparenza: " + pubblicazioneCommittente.toString());
+            pubblicazioneCommittente = balboClient.pubblicaCommittente(pubblicazioneCommittente);
+        }
+        catch (org.springframework.web.client.HttpClientErrorException ex) {
+            log.error("errore nella pubblicazione committente", ex.getResponseBodyAsString());
+            throw ex;
+        }
+
+        log.info("update pubblicazione ioda locale per l'inserimento del numero e l'anno...");
+        pubbIoda.setNumeroPubblicazione(pubblicazioneCommittente.getNumeroPubblicazione());
+        pubbIoda.setAnnoPubblicazione(pubblicazioneCommittente.getAnnoPubblicazione());
         pubbIoda.setPubblicatore(PUBBLICATORE);
 
         IodaDocumentUtilities.UpdatePubblicazioneById(dbConn, pubbIoda.getId(), pubbIoda);
