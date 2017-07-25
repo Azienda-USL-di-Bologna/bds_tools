@@ -2236,7 +2236,7 @@ public class IodaDocumentUtilities {
                 datiProfiloCommittente.setCig(result.getString("cig"));
                 datiProfiloCommittente.setCigAzienda(result.getString("cig_azienda"));
                 datiProfiloCommittente.setCodiceProfiloCommittente(result.getString("codice"));
-                datiProfiloCommittente.setCodiceProfiloCommittente(result.getString("testo"));
+                datiProfiloCommittente.setTestoProfiloCommittente(result.getString("testo"));
                 Timestamp dataAggiudicazione = result.getTimestamp("data_aggiudicazione");
                 if (dataAggiudicazione != null)
                     datiProfiloCommittente.setDataAggiudicazione(new DateTime(dataAggiudicazione.getTime()));

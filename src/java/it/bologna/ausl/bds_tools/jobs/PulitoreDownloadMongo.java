@@ -9,6 +9,7 @@ import it.bologna.ausl.mongowrapper.MongoWrapper;
 import java.util.Calendar;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -17,6 +18,7 @@ import org.quartz.JobExecutionException;
  *
  * @author andrea
  */
+@DisallowConcurrentExecution
 public class PulitoreDownloadMongo implements Job {
 
     private static final Logger log = LogManager.getLogger(PulitoreDownloadMongo.class);

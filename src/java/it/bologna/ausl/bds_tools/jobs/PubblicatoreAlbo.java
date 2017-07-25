@@ -30,6 +30,7 @@ import javax.servlet.ServletException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joda.time.DateTime;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -38,12 +39,14 @@ import org.quartz.JobExecutionException;
  *
  * @author andrea
  */
+@DisallowConcurrentExecution
 public class PubblicatoreAlbo implements Job {
 
     private static final Logger log = LogManager.getLogger(PubblicatoreAlbo.class);
     private static final String TIPO_PROVVEDIMENTO_NON_RILEVANTE = "non_rilevante";
     private static final String PUBBLICATORE = "balbo";
     private static final BalboClient balboClient = new BalboClient(ApplicationParams.getBalboServiceURI());
+//    private static final BalboClient balboClient = new BalboClient("http://localhost:10000/");
 
     //private int intervalDays;
 //    public PubblicatoreAlbo() {
@@ -403,9 +406,11 @@ public class PubblicatoreAlbo implements Job {
         }
 
         try {
+//            synchronized (sinc) {
             log.info("pubblicazione effettiva su balbo committente...");
             log.info("pubblicazioneTrasparenza: " + pubblicazioneCommittente.toString());
             pubblicazioneCommittente = balboClient.pubblicaCommittente(pubblicazioneCommittente);
+//            }
         }
         catch (org.springframework.web.client.HttpClientErrorException ex) {
             log.error("errore nella pubblicazione committente", ex.getResponseBodyAsString());
