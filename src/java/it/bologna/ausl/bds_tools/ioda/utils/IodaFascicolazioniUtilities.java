@@ -322,8 +322,13 @@ public class IodaFascicolazioniUtilities {
                    try{
                         dataAssegnazione = DateTime.parse(dataStr, formatter);
                     } catch(Exception e){
-                        formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-                        dataAssegnazione = DateTime.parse(dataStr, formatter);
+                        try {
+                            formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+                            dataAssegnazione = DateTime.parse(dataStr, formatter);
+                        } catch(Exception ex) {
+                            formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+                            dataAssegnazione = DateTime.parse(dataStr, formatter);
+                        }
                     } 
                 }
                 else{
