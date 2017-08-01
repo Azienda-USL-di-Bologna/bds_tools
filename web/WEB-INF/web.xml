@@ -297,6 +297,14 @@
         <param-value>bds_tools.tipi_provvedimento</param-value>
     </context-param>
     <context-param>
+        <param-name>TipiProfiloCommittenteTableName</param-name>
+        <param-value>bds_tools.tipi_profilo_committente</param-value>
+    </context-param>
+    <context-param>
+        <param-name>DatiProfiloCommittenteTableName</param-name>
+        <param-value>bds_tools.dati_profilo_committente</param-value>
+    </context-param>
+    <context-param>
         <param-name>SpedizioniPecGlobaleTableName</param-name>
         <param-value>bds_tools.spedizioni_pec_globale</param-value>
     </context-param>
@@ -553,8 +561,8 @@
 <!--    <context-param>
         <param-name>schedulatore.active</param-name>
         <param-value>true</param-value>
-    </context-param>-->
-        
+    </context-param>
+        -->
     <filter>
         <filter-name>CorsFilter</filter-name>
         <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>

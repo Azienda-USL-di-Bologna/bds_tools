@@ -55,6 +55,8 @@ public class ApplicationParams {
     private static String pubblicazioniBalboTableName;
     private static String metadatiTrasparenzaTableName;
     private static String tipiProvveddimentoTableName;
+    private static String tipiProfiloCommittenteTableName;
+    private static String datiProfiloCommittenteTableName;
 //    private static String pubblicazioniAlboQueryInsertPubblicazione;
 //    private static String pubblicazioniAlboQueryUpdatePubblicazione;
 
@@ -115,6 +117,8 @@ public class ApplicationParams {
         pubblicazioniBalboTableName = context.getInitParameter("PubblicazioniBalboTableName");
         metadatiTrasparenzaTableName = context.getInitParameter("MetadatiTrasparenzaTableName");
         tipiProvveddimentoTableName = context.getInitParameter("TipiProvveddimentoTableName");
+        tipiProfiloCommittenteTableName = context.getInitParameter("TipiProfiloCommittenteTableName");
+        datiProfiloCommittenteTableName = context.getInitParameter("DatiProfiloCommittenteTableName");
 //        pubblicazioniAlboQueryInsertPubblicazione = context.getInitParameter("PubblicazioniAlboQueryInsertPubblicazione");
 //        pubblicazioniAlboQueryUpdatePubblicazione = context.getInitParameter("PubblicazioniAlboQueryUpdatePubblicazione");
         
@@ -315,6 +319,14 @@ public class ApplicationParams {
 
     public static String getTipiProvveddimentoTableName() {
         return tipiProvveddimentoTableName;
+    }
+
+    public static String getTipiProfiloCommittenteTableName() {
+        return tipiProfiloCommittenteTableName;
+    }
+
+    public static String getDatiProfiloCommittenteTableName() {
+        return datiProfiloCommittenteTableName;
     }
 
 

@@ -8,6 +8,7 @@ import it.bologna.ausl.bds_tools.utils.Registro;
 import it.bologna.ausl.bds_tools.utils.SupportedFile;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.DatiParerGdDoc;
+import it.bologna.ausl.ioda.iodaobjectlibrary.DatiProfiloCommittente;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Document;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolazione;
 import it.bologna.ausl.ioda.iodaobjectlibrary.Fascicolo;
@@ -2075,6 +2076,7 @@ public class IodaDocumentUtilities {
                 + "g.oggetto, "
                 + "g.tipo_oggetto_origine, "
                 + "g.stato_gd_doc, "
+                + "a.prefix, "
                 + "json_agg(row_to_json(p.*) order by p.id) AS pubblicazioni, "
                 + "t.descrizione "
                 + "FROM " + ApplicationParams.getGdDocsTableName() + " g "
@@ -2088,7 +2090,7 @@ public class IodaDocumentUtilities {
                 + "AND g.tipo_gddoc = ? "
                 + "GROUP BY g.id_gddoc, g.applicazione, g.codice, g.codice_registro, g.data_gddoc, g.data_registrazione, g.data_ultima_modifica, "
                 + "g.id_oggetto_origine, g.nome_gddoc, g.nome_struttura_firmatario, g.numero_registrazione, g.oggetto, g.tipo_gddoc, g.tipo_oggetto_origine, "
-                + "g.stato_gd_doc, t.descrizione "
+                + "g.stato_gd_doc, t.descrizione, a.prefix "
                 + "ORDER BY min(p.id)";
 
         PreparedStatement s = null;
@@ -2108,7 +2110,18 @@ public class IodaDocumentUtilities {
                 gdDocToCreate.setCodiceRegistro(result.getString("codice_registro"));
                 gdDocToCreate.setData(new DateTime(result.getTimestamp("data_gddoc").getTime()));
                 gdDocToCreate.setDataRegistrazione(new DateTime(result.getTimestamp("data_registrazione").getTime()));
-                gdDocToCreate.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                
+                // devo togliere l'eventuale prefisso ("babel_suite_" di solito) dall'idOggettoOrigine
+                String idOggettoOrigineWithPrefix = result.getString("id_oggetto_origine");
+                if (idOggettoOrigineWithPrefix != null && !idOggettoOrigineWithPrefix.isEmpty()) {
+                    String idOggettoOrigine;
+                    String prefix = result.getString("prefix");
+                    if (prefix != null && !prefix.isEmpty())
+                        idOggettoOrigine = idOggettoOrigineWithPrefix.substring(prefix.length());
+                    else
+                        idOggettoOrigine = idOggettoOrigineWithPrefix;
+                    gdDocToCreate.setIdOggettoOrigine(idOggettoOrigine);
+                }
                 gdDocToCreate.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
                 gdDocToCreate.setNumeroRegistrazione(result.getString("numero_registrazione"));
                 gdDocToCreate.setOggetto(result.getString("oggetto"));
@@ -2170,5 +2183,78 @@ public class IodaDocumentUtilities {
         }
 
         return listaGddocs;
+    }
+
+    /**
+     * Legge dal DB i dati del profilo committente relativi al id (guid) dell'oggetto (Protocollo, Delibera, Determina) passato
+     * @param dbConn la connessione al DB da usare
+     * @param idOggettoOrigine l'id (guid) dell'oggetto (Protocollo, Delibera, Determina)
+     * @return i dati del profilo committente relativi al id (guid) dell'oggetto (Protocollo, Delibera, Determina) passato
+     * @throws SQLException 
+     */
+    public static DatiProfiloCommittente getDatiProfiloCommittente(Connection dbConn, String idOggettoOrigine) throws SQLException {
+        String sqlText = 
+                "SELECT "
+                + "d.id, "
+                + "d.tipologia_gara, "
+                + "d.cig, "
+                + "d.cig_azienda, "
+                + "d.importo, "
+                + "d.fornitore, "
+                + "d.ragioni_scelta_fornitore, "
+                + "d.check_fornitore_requisiti_generali, "
+                + "d.check_fornitore_requisiti_professionali, "
+                + "d.procedura, "
+                + "d.oggetto_affidamento, "
+                + "d.operatori_economici_inviati, "
+                + "d.operatori_economici_offerenti, "
+                + "d.aggiudicatario, "
+                + "d.operatori_economici_offerenti, "
+                + "d.data_aggiudicazione, "
+                + "d.guid_oggetto, "
+                + "t.codice, "
+                + "t.testo "
+                + "FROM " + ApplicationParams.getDatiProfiloCommittenteTableName() + " d "
+                + "INNER JOIN " + ApplicationParams.getTipiProfiloCommittenteTableName()+ " t on d.fk_tipo_profilo_committente = t.id "
+                + "WHERE d.guid_oggetto = ?";
+
+        DatiProfiloCommittente datiProfiloCommittente = null;
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText);) {
+            ps.setString(1, idOggettoOrigine);
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+            log.debug("eseguita");
+           
+            //Inizio a ciclare sugli elementi trovati....
+            if (result.next()) {
+                datiProfiloCommittente = new DatiProfiloCommittente();
+                datiProfiloCommittente.setId(result.getInt("id"));
+                datiProfiloCommittente.setAggiudicatario(result.getString("aggiudicatario"));
+                datiProfiloCommittente.setCheckFornitoreRequisitiGenerali(result.getInt("check_fornitore_requisiti_generali") != 0);
+                datiProfiloCommittente.setCheckFornitoreRequisitiProfessionali(result.getInt("check_fornitore_requisiti_professionali") != 0);
+                datiProfiloCommittente.setCig(result.getString("cig"));
+                datiProfiloCommittente.setCigAzienda(result.getString("cig_azienda"));
+                datiProfiloCommittente.setCodiceProfiloCommittente(result.getString("codice"));
+                datiProfiloCommittente.setTestoProfiloCommittente(result.getString("testo"));
+                Timestamp dataAggiudicazione = result.getTimestamp("data_aggiudicazione");
+                if (dataAggiudicazione != null)
+                    datiProfiloCommittente.setDataAggiudicazione(new DateTime(dataAggiudicazione.getTime()));
+                datiProfiloCommittente.setFornitore(result.getString("fornitore"));
+                datiProfiloCommittente.setGuidOggetto(result.getString("guid_oggetto"));
+                datiProfiloCommittente.setImporto(result.getFloat("importo"));
+                datiProfiloCommittente.setOggettoAffidamento(result.getString("oggetto_affidamento"));
+                datiProfiloCommittente.setOperatoriEconomiciInviati(result.getString("operatori_economici_inviati"));
+                datiProfiloCommittente.setOperatoriEconomiciOfferenti(result.getString("operatori_economici_offerenti"));
+                datiProfiloCommittente.setProcedura(result.getString("procedura"));
+                datiProfiloCommittente.setRagioniSceltaFornitore(result.getString("ragioni_scelta_fornitore"));
+                datiProfiloCommittente.setTipologiaGara(result.getString("tipologia_gara"));
+            }
+            if (result.next()) {
+                log.error("troppi oggetto trovati, mi aspettavo una sola riga");
+                throw new SQLException("troppi oggetto trovati, mi aspettavo una sola riga");
+            }
+        }
+        return datiProfiloCommittente;
     }
 }
