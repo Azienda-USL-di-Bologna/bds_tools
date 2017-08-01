@@ -1189,39 +1189,111 @@ public class Spedizioniere implements Job{
                     
                 } else if (spStatus.getStatus() == SpedizioniereStatus.Status.ERROR) { // NEL CASO DI STATO DI ERRORE
                     log.debug("Dentro ERROR");
+                    boolean aggiornaSpedizione = true;
                     if(ricevuteMsg != null && ricevuteMsg.size() > 0){
                         String ricevutaFromDb = "SELECT id " +
-                                            "FROM " + ApplicationParams.getRicevutePecTableName() + " " +
-                                            "WHERE uuid=?";
-                    
-                    for (SpedizioniereRecepit spedizioniereRecepit : ricevuteMsg) { // PER OGNI RICEVUTA CONTROLLO SE è PRESENTE NEL DB
-                        log.debug("Dentro FOR dell' ERROR");
-                        try (
-                            Connection dbConnection = UtilityFunctions.getDBConnection();
-                            PreparedStatement ps = dbConnection.prepareStatement(ricevutaFromDb)
-                        ) {
-                            ps.setString(1, spedizioniereRecepit.getUuid());
-                            log.debug("eseguo la query per verificare se la ricevuta esiste già: " + ps.toString());
-                            ResultSet ricevutaResultSet = ps.executeQuery(); // OTTENGO LA RICEVUTA DAL DB
+                                                "FROM " + ApplicationParams.getRicevutePecTableName() + " " +
+                                                "WHERE uuid=?";
+                        
+                        String ricevutePreavvisoQuery = "SELECT id, data_inserimento, uuid " +
+                                                        "FROM " + ApplicationParams.getRicevutePecTableName() + " " + 
+                                                        "WHERE id_spedizione_pec_globale=? AND tipo=?";
+                        
+                        String insertRicevuta = "INSERT INTO " + ApplicationParams.getRicevutePecTableName() +
+                                                        "(tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data_inserimento, descrizione, id_spedizione_pec_globale) " +
+                                                        "VALUES (?::bds_tools.tipo_ricevuta, ?, ?, ?, now(), ?, ?)";
+                        
+                        
+                        for (SpedizioniereRecepit spedizioniereRecepit : ricevuteMsg) { // PER OGNI RICEVUTA CONTROLLO SE è PRESENTE NEL DB
+                            log.debug("Dentro FOR dell' ERROR");
+                            if (spedizioniereRecepit.getTipo() == TipoRicevuta.PREAVVISO_ERRORE_CONSEGNA) {
+                                try (
+                                    Connection conn = UtilityFunctions.getDBConnection();
+                                    PreparedStatement ps = conn.prepareStatement(ricevutePreavvisoQuery)
+                                ) {
+                                    ps.setInt(1, res.getInt("id"));
+                                    ps.setString(2, TipoRicevuta.PREAVVISO_ERRORE_CONSEGNA.toString());
+                                    log.debug("Query preavvisi: " + ps);
+                                    ResultSet resPreavvisi = ps.executeQuery();
+                                    if (resPreavvisi.next()) {
+                                        resPreavvisi.beforeFirst();
+                                        while (resPreavvisi.next()) {                                        
+                                            if (!resPreavvisi.getString("uuid").equals(spedizioniereRecepit.getUuid())) {
+                                                try (
+                                                    Connection settaUuid = UtilityFunctions.getDBConnection();
+                                                    PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
+                                                ) {
+                                                    prepared.setString(1, spedizioniereRecepit.getTipo().name());
+                                                    prepared.setString(2, spedizioniereRecepit.getUuid());
+                                                    prepared.setString(3, res.getString("id_oggetto_origine"));
+                                                    prepared.setString(4, res.getString("tipo_oggetto_origine"));
+                                                    prepared.setString(5, res.getString("descrizione_oggetto"));
+                                                    prepared.setLong(6, id);
 
-                            // QUERY CHE SCRIVE SUL DB LA RICEVUTA 
-                            String insertRicevuta = "INSERT INTO " + ApplicationParams.getRicevutePecTableName() +
-                                                    "(tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data_inserimento, descrizione, id_spedizione_pec_globale) " +
-                                                    "VALUES (?::bds_tools.tipo_ricevuta, ?, ?, ?, now(), ?, ?)";
-                            // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
-                            if (ricevutaResultSet == null || !ricevutaResultSet.next()) {
-                                log.debug("Dentro idRicevuta == null");
+                                                    log.debug("esecuzione query di inserimento della ricevuta: " + prepared.toString());
+                                                    prepared.executeUpdate();
+                                                } catch (NamingException ex) {
+                                                    log.debug("Errore: ", ex.getMessage());
+                                                    throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
+                                                }
+                                            }else{
+                                                Timestamp dataInserimento = resPreavvisi.getTimestamp("data_inserimento");
+                                                Timestamp ora = new Timestamp(new Date().getTime());
+                                                Long giorniTrascorsi = getDays(ora, dataInserimento);
+                                                if (giorniTrascorsi < expired) {
+                                                    aggiornaSpedizione = false;
+                                                }
+                                            }
+                                        }
+                                    }else{
+                                        aggiornaSpedizione = false;
+                                        try (
+                                            Connection settaUuid = UtilityFunctions.getDBConnection();
+                                            PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
+                                        ) {
+                                            prepared.setString(1, spedizioniereRecepit.getTipo().name());
+                                            prepared.setString(2, spedizioniereRecepit.getUuid());
+                                            prepared.setString(3, res.getString("id_oggetto_origine"));
+                                            prepared.setString(4, res.getString("tipo_oggetto_origine"));
+                                            prepared.setString(5, res.getString("descrizione_oggetto"));
+                                            prepared.setLong(6, id);
+
+                                            log.debug("esecuzione query di inserimento della ricevuta: " + prepared.toString());
+                                            prepared.executeUpdate();
+                                        } catch (NamingException ex) {
+                                            log.debug("Errore: ", ex.getMessage());
+                                            throw new SpedizioniereException("Errore nell'insert delle ricevute", ex);
+                                        }
+                                    }
+                                    
+                                } catch (NamingException ex) {
+                                    log.debug("Eccezione aggiornamento stato email expired: ", ex);
+                                }
+                            }
+                            try (
+                                Connection dbConnection = UtilityFunctions.getDBConnection();
+                                PreparedStatement ps = dbConnection.prepareStatement(ricevutaFromDb)
+                            ) {
+                                ps.setString(1, spedizioniereRecepit.getUuid());
+                                log.debug("eseguo la query per verificare se la ricevuta esiste già: " + ps.toString());
+                                ResultSet ricevutaResultSet = ps.executeQuery(); // OTTENGO LA RICEVUTA DAL DB
+
+                                // QUERY CHE SCRIVE SUL DB LA RICEVUTA 
+                                
+                                // SE SUL DB NON è PRESENTE LA RICEVUTA LA SCRIVO
+                                if (ricevutaResultSet == null || !ricevutaResultSet.next()) {
+                                    log.debug("Dentro idRicevuta == null");
                                     try (
                                         Connection settaUuid = UtilityFunctions.getDBConnection();
                                         PreparedStatement prepared = settaUuid.prepareStatement(insertRicevuta)
                                     ) {
-    //                                    if(spStatus.getStatus() == Status.ACCEPTED){
-    //                                        log.debug(" IF Status accepted");
-    //                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_ACCETTAZIONE.toString());
-    //                                    }else{
-    //                                        log.debug("else");
-    //                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_CONSEGNA.toString());
-    //                                    }
+        //                                    if(spStatus.getStatus() == Status.ACCEPTED){
+        //                                        log.debug(" IF Status accepted");
+        //                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_ACCETTAZIONE.toString());
+        //                                    }else{
+        //                                        log.debug("else");
+        //                                        prepared.setString(1, TipiRicevutaOLD.RICEVUTA_CONSEGNA.toString());
+        //                                    }
                                         prepared.setString(1, spedizioniereRecepit.getTipo().name());
                                         prepared.setString(2, spedizioniereRecepit.getUuid());
                                         prepared.setString(3, res.getString("id_oggetto_origine"));
@@ -1242,21 +1314,23 @@ public class Spedizioniere implements Job{
                             }
                         }
                     }
-                    log.debug("Verra eseguito update");
-                    String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                    "SET stato=?::bds_tools.stati_spedizione, verifica_timestamp= now() " +
-                                    "WHERE id = ?";
-                    try (
-                        Connection conn = UtilityFunctions.getDBConnection();
-                        PreparedStatement ps = conn.prepareStatement(query)
-                    ) {
-                        ps.setString(1, StatiSpedizione.ERRORE_CONSEGNA.toString());
-                        ps.setLong(2, id);
-                        log.debug("Query: " + ps);
-                        ps.executeUpdate();
-                    } catch (NamingException ex) {
-                        log.debug("eccezione aggiornamento stato ERRORE nella funzione controllaRicevuta()", ex);
-                    }
+                    if (aggiornaSpedizione) {
+                        log.debug("Verra eseguito update");
+                        String query =  "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
+                                        "SET stato=?::bds_tools.stati_spedizione, verifica_timestamp= now() " +
+                                        "WHERE id = ?";
+                        try (
+                            Connection conn = UtilityFunctions.getDBConnection();
+                            PreparedStatement ps = conn.prepareStatement(query)
+                        ) {
+                            ps.setString(1, StatiSpedizione.ERRORE_CONSEGNA.toString());
+                            ps.setLong(2, id);
+                            log.debug("Query: " + ps);
+                            ps.executeUpdate();
+                        } catch (NamingException ex) {
+                            log.debug("eccezione aggiornamento stato ERRORE nella funzione controllaRicevuta()", ex);
+                        }
+                    } 
                 }
             } catch (Exception ex) {
                 try {
