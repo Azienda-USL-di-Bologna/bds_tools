@@ -546,12 +546,16 @@ public class IodaDocumentUtilities {
 
                 Timestamp dataRegistrazione = result.getTimestamp("data_registrazione");
                 if (dataRegistrazione != null) {
-                    gdDoc.setDataRegistrazione(new DateTime(dataRegistrazione.getTime(), DateTimeZone.UTC));
+                    // gdm: commentato perché sminchiava le date (considerava la data come timezone +0 invece che come +2)
+//                    gdDoc.setDataRegistrazione(new DateTime(dataRegistrazione.getTime(), DateTimeZone.UTC));
+                    gdDoc.setDataRegistrazione(new DateTime(dataRegistrazione.getTime(), DateTimeZone.getDefault()));
                 }
 
                 Timestamp dataUltimaModifica = result.getTimestamp("data_ultima_modifica");
                 if (dataUltimaModifica != null) {
-                    gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime(), DateTimeZone.UTC));
+                    // gdm: commentato perché sminchiava le date (considerava la data come timezone +0 invece che come +2)
+//                    gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime(), DateTimeZone.UTC));
+                    gdDoc.setDataUltimaModifica(new DateTime(dataUltimaModifica.getTime(), DateTimeZone.getDefault()));
                 }
 
                 gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
