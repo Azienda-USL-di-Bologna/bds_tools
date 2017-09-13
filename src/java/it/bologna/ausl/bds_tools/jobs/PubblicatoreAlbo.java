@@ -400,9 +400,9 @@ public class PubblicatoreAlbo implements Job {
         
         // setto i dati del sottodocumento sulla pubblicazione
         for (SottoDocumento s : sottoDocumentiDaPubblicare) {
+            AllegatoPubblicazione allegatoPubblicazione = new AllegatoPubblicazione(s.getNome(), s.getCodiceSottoDocumento());
             log.info(String.format("inserimento dei dati per la visualizzazione della stampa unica: nomeDocumento: %s codiceDocumento: %s ...",s.getNome(), s.getCodiceSottoDocumento()));
-            pubblicazioneCommittente.setNomeDocumento(s.getNome());
-            pubblicazioneCommittente.setCodiceDocumento(s.getCodiceSottoDocumento());
+            pubblicazioneCommittente.addAllegato(allegatoPubblicazione);
         }
 
         try {
