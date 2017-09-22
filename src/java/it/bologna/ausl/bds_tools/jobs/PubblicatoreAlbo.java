@@ -408,7 +408,7 @@ public class PubblicatoreAlbo implements Job {
         try {
 //            synchronized (sinc) {
             log.info("pubblicazione effettiva su balbo committente...");
-            log.info("pubblicazioneTrasparenza: " + pubblicazioneCommittente.toString());
+            log.info("pubblicazioneCommittente: " + pubblicazioneCommittente.toString());
             pubblicazioneCommittente = balboClient.pubblicaCommittente(pubblicazioneCommittente);
 //            }
         }
