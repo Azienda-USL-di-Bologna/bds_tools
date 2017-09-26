@@ -750,18 +750,18 @@ public class IodaDocumentUtilities {
                             ResultSet resTipoProfiloCommittente = psTipoProfiloCommittente.executeQuery();
                             while (resTipoProfiloCommittente.next()) {
                                 p.setTipoProfiloCommittente(resTipoProfiloCommittente.getString("id"));
-                                p.setDescrizione("Profilo committente: " + resTipoProfiloCommittente.getString("descrizione"));
+                                p.setDescrizionePaginaPubblicazione(resTipoProfiloCommittente.getString("pagina_pubblicazione"));
                             }
                         }
                         break;
                         
                     case DIRIGENTE:
                     case POLITICO:
-                        p.setDescrizione(p.getTipoProvvedimentoTrasparenza());
+                        p.setDescrizionePaginaPubblicazione(p.getTipoProvvedimentoTrasparenza());
                         break;
                         
                     case ALBO:
-                        p.setDescrizione("Pubblicazione albo");
+                        p.setDescrizionePaginaPubblicazione("Pubblicazione albo");
                         break;
 
                 }
