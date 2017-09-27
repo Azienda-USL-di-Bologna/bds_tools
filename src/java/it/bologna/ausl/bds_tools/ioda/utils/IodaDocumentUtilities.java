@@ -738,7 +738,7 @@ public class IodaDocumentUtilities {
                 switch (p.getTipologia()) {
                     case COMMITTENTE:
                         String sqlTipoProfiloCommittenteText
-                                = "SELECT t.descrizione, t.id "
+                                = "SELECT t.pagina_pubblicazione, t.id "
                                 + "FROM " + ApplicationParams.getTipiProfiloCommittenteTableName() + " t "
                                 + "JOIN " + ApplicationParams.getDatiProfiloCommittenteTableName() + " d "
                                 + "ON t.id = d.fk_tipo_profilo_committente "
@@ -761,7 +761,7 @@ public class IodaDocumentUtilities {
                         break;
                         
                     case ALBO:
-                        p.setDescrizionePaginaPubblicazione("Pubblicazione albo");
+                        p.setDescrizionePaginaPubblicazione("Albo");
                         break;
 
                 }
