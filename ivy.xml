@@ -35,6 +35,6 @@
         <dependency org="com.google.code.gson" name="gson" rev="2.6.2"/>
         <dependency org="org.slf4j" name="slf4j-api" rev="1.7.21"/>
         <dependency org="org.apache.tomcat" name="juli" rev="6.0.26"/>
-        
+        <dependency org="org.bouncycastle" name="bcpkix-jdk15on" rev="1.58"/>
     </dependencies>
 </ivy-module>
