@@ -36,5 +36,6 @@
         <dependency org="org.slf4j" name="slf4j-api" rev="1.7.21"/>
         <dependency org="org.apache.tomcat" name="juli" rev="6.0.26"/>
         <dependency org="org.bouncycastle" name="bcpkix-jdk15on" rev="1.58"/>
+        <dependency org="org.apache.httpcomponents" name="httpmime" rev="4.5.3"/>
     </dependencies>
 </ivy-module>
