@@ -1197,7 +1197,7 @@ public class Spedizioniere implements Job{
                         
                         String ricevutePreavvisoQuery = "SELECT id, data_inserimento, uuid " +
                                                         "FROM " + ApplicationParams.getRicevutePecTableName() + " " + 
-                                                        "WHERE id_spedizione_pec_globale=? AND tipo=?";
+                                                        "WHERE id_spedizione_pec_globale=? AND tipo=?::bds_tools.tipo_ricevuta";
                         
                         String insertRicevuta = "INSERT INTO " + ApplicationParams.getRicevutePecTableName() +
                                                         "(tipo, uuid, id_oggetto_origine, tipo_oggetto_origine, data_inserimento, descrizione, id_spedizione_pec_globale) " +
