@@ -4,19 +4,21 @@
             xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
     <info organisation="myorg" module="mymodule"/>
     <dependencies>
-        <dependency org="org.apache.logging.log4j" name="log4j-core" rev="2.+"/>
-        <dependency org="org.apache.logging.log4j" name="log4j-api" rev="2.+"/>
+        <dependency org="org.apache.logging.log4j" name="log4j-core" rev="2.9.1"/>
+        <dependency org="org.apache.logging.log4j" name="log4j-api" rev="2.9.1"/>
+        <dependency org="org.apache.commons" name="commons-lang3" rev="3.6"/>
         <dependency org="org.mongodb" name="mongo-java-driver" rev="2.+"/>
         <dependency org="commons-io" name="commons-io" rev="latest.release"/>
         <dependency org="com.googlecode.json-simple" name="json-simple" rev="1.+"/>
         <dependency org="redis.clients" name="jedis" rev="2.9.0"/>
-        <dependency org="org.quartz-scheduler" name="quartz" rev="2.2.+"/>
+        <dependency org="org.quartz-scheduler" name="quartz" rev="2.3.+"/>
         <dependency org="joda-time" name="joda-time" rev="2.5"/>
         <dependency org="com.fasterxml.jackson.core" name="jackson-annotations" rev="2.4.+"/>
         <dependency org="com.fasterxml.jackson.core" name="jackson-databind" rev="2.4.+"/>
         <dependency org="com.fasterxml.jackson.core" name="jackson-core" rev="2.4.+"/>
         <dependency org="com.fasterxml.jackson.datatype" name="jackson-datatype-joda" rev="2.4.+"/>
-        <dependency org="org.apache.tika" name="tika-java7" rev="1.+"/>
+        <!--<dependency org="org.apache.tika" name="tika-java7" rev="1.+"/>-->
+        <dependency org="org.apache.tika" name="tika-core" rev="1.16"/>
         <dependency org="org.apache.poi" name="poi-ooxml" rev="3.13"/>
         <dependency org="org.springframework" name="spring-web" rev="4.1.7.RELEASE">
             <exclude matcher="regexp" org="javax.servlet" module="javax.servlet-api"/>
@@ -24,7 +26,7 @@
         </dependency>
 <!--        <dependency org="org.apache.commons" name="commons-dbcp2" rev="2.1.1"/>-->
         <dependency org="org.apache.httpcomponents" name="fluent-hc" rev="4.3.6"/>
-        <dependency org="org.apache.httpcomponents" name="httpclient-cache" rev="4.3.6"/>
+        <dependency org="org.apache.httpcomponents" name="httpclient-cache" rev="4.5.3"/>
         <dependency org="net.sf.jtidy" name="jtidy" rev="r938"/>
         <dependency org="javax.mail" name="javax.mail-api" rev="1.5.5"/>
         
@@ -33,6 +35,7 @@
         <dependency org="com.google.code.gson" name="gson" rev="2.6.2"/>
         <dependency org="org.slf4j" name="slf4j-api" rev="1.7.21"/>
         <dependency org="org.apache.tomcat" name="juli" rev="6.0.26"/>
-        
+        <dependency org="org.bouncycastle" name="bcpkix-jdk15on" rev="1.58"/>
+        <dependency org="org.apache.httpcomponents" name="httpmime" rev="4.5.3"/>
     </dependencies>
 </ivy-module>

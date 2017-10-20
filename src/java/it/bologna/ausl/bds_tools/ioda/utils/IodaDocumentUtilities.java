@@ -120,7 +120,7 @@ public class IodaDocumentUtilities {
             }
         }
     }
-    
+
     public IodaDocumentUtilities(GdDoc gdDoc, Document.DocumentOperationType operation, String prefixIds) throws UnknownHostException, MongoException, MongoWrapperException, IOException, MalformedURLException, SendHttpMessageException, IodaDocumentException {
         this(operation, prefixIds);
         this.gdDoc = gdDoc;
@@ -370,7 +370,8 @@ public class IodaDocumentUtilities {
      *
      * @param dbConn connessione al db da usare
      * @param doc un oggetto SimpleDocument che rappresenta il GdDoc da caricare
-     * @param collections una mappa Map<String, Boolean> con indicate le collection da caricare
+     * @param collections una mappa Map<String, Boolean> con indicate le
+     * collection da caricare
      * @param prefix il prefisso dell'applicazione
      * @return un oggetto GdDoc rapprestato dall'idOggettoOrigine e
      * tipoOggettoOrigine presente nel SimpleDocument all'interno della
@@ -619,29 +620,30 @@ public class IodaDocumentUtilities {
         if (soloNumerate) {
             sqlText
                     = "SELECT  "
-                    +   "p.numero_pubblicazione, "
-                    +   "p.anno_pubblicazione, "
-                    +   "p.data_dal, "
-                    +   "p.data_al, "
-                    +   "p.pubblicatore, "
-                    +   "p.esecutivita, "
-                    +   "p.esecutiva, "
-                    +   "p.data_defissione, "
-                    +   "p.data_esecutivita, "
-                    +   "p.tipologia, "
-                    +   "p.pubblica_solo_se_pubblicato_albo, "
-                    +   "pb.uuid_relata, "
-                    +   "p.id "
+                    + "p.numero_pubblicazione, "
+                    + "p.anno_pubblicazione, "
+                    + "p.data_dal, "
+                    + "p.data_al, "
+                    + "p.pubblicatore, "
+                    + "p.esecutivita, "
+                    + "p.esecutiva, "
+                    + "p.data_defissione, "
+                    + "p.data_esecutivita, "
+                    + "p.tipologia, "
+                    + "p.pubblica_solo_se_pubblicato_albo, "
+                    + "pb.uuid_relata, "
+                    + "p.id "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p "
-                    +   "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
-                    +       "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
-                    +           "AND p.tipologia = ? "
+                    + "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
+                    + "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
+                    + "AND p.tipologia = pb.tipologia "
+                    //                    +           "AND p.tipologia = ? "
                     + "WHERE p.id_gddoc = ? "
-                    +   "AND p.numero_pubblicazione IS NOT NULL "
-                    +   "AND p.numero_pubblicazione > 0 "
-                    +   "AND p.anno_pubblicazione IS NOT NULL "
-                    +   "AND p.anno_pubblicazione > 0 "
-                    +   "AND p.tipologia = ? "
+                    + "AND p.numero_pubblicazione IS NOT NULL "
+                    + "AND p.numero_pubblicazione > 0 "
+                    + "AND p.anno_pubblicazione IS NOT NULL "
+                    + "AND p.anno_pubblicazione > 0 "
+                    //                    +   "AND p.tipologia = ? "
                     + "ORDER BY p.id";
 //                    c'era la riga di sotto prima ma vogliamo le pubblicazioni in ordine (sia quelle dell'albo che di balbo) 
 //                    in modo che l'ultima pubblicazione ritornata sia effettivamente l'ultima pubblicazione del documento
@@ -649,25 +651,26 @@ public class IodaDocumentUtilities {
         } else {
             sqlText
                     = "SELECT  "
-                    +   "p.numero_pubblicazione, "
-                    +   "p.anno_pubblicazione, "
-                    +   "p.data_dal, "
-                    +   "p.data_al, "
-                    +   "p.pubblicatore, "
-                    +   "p.esecutivita, "
-                    +   "p.esecutiva, "
-                    +   "p.data_defissione, "
-                    +   "p.data_esecutivita, "
-                    +   "p.tipologia, "
-                    +   "p.pubblica_solo_se_pubblicato_albo, "
-                    +   "pb.uuid_relata, "
-                    +   "p.id "
+                    + "p.numero_pubblicazione, "
+                    + "p.anno_pubblicazione, "
+                    + "p.data_dal, "
+                    + "p.data_al, "
+                    + "p.pubblicatore, "
+                    + "p.esecutivita, "
+                    + "p.esecutiva, "
+                    + "p.data_defissione, "
+                    + "p.data_esecutivita, "
+                    + "p.tipologia, "
+                    + "p.pubblica_solo_se_pubblicato_albo, "
+                    + "pb.uuid_relata, "
+                    + "p.id "
                     + "FROM " + ApplicationParams.getPubblicazioniAlboTableName() + " p "
-                    +   "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
-                    +       "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
-                    +           "AND p.tipologia = ? "
+                    + "LEFT JOIN " + ApplicationParams.getPubblicazioniBalboTableName() + " pb "
+                    + "ON p.numero_pubblicazione = pb.numero_pubblicazione AND p.anno_pubblicazione = pb.anno_pubblicazione "
+                    + "AND p.tipologia = pb.tipologia "
+                    //                    +           "AND p.tipologia = ? "
                     + "WHERE p.id_gddoc = ? "
-                    +   "AND p.tipologia = ? "
+                    //                    +   "AND p.tipologia = ? "
                     + "ORDER BY p.id";
 //                    c'era la riga di sotto prima ma vogliamo le pubblicazioni in ordine (sia quelle dell'albo che di balbo) 
 //                    in modo che l'ultima pubblicazione ritornata sia effettivamente l'ultima pubblicazione del documento
@@ -676,9 +679,9 @@ public class IodaDocumentUtilities {
 
         List<PubblicazioneIoda> pubblicazioni = new ArrayList<>();
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
-            ps.setString(1, PubblicazioneIoda.Tipologia.ALBO.toString());
-            ps.setString(2, idGdDoc);
-            ps.setString(3, PubblicazioneIoda.Tipologia.ALBO.toString());
+//            ps.setString(1, PubblicazioneIoda.Tipologia.ALBO.toString());
+            ps.setString(1, idGdDoc);
+//            ps.setString(3, PubblicazioneIoda.Tipologia.ALBO.toString());
 
             log.debug("eseguo la query: " + ps.toString() + "...");
             ResultSet res = ps.executeQuery();
@@ -710,26 +713,63 @@ public class IodaDocumentUtilities {
                 if (dataEsecutivita != null) {
                     p.setDataEsecutivita(new DateTime(dataEsecutivita.getTime()));
                 }
-                
+
                 p.setId(res.getLong("id"));
 
-                String sqlTipoProvvedimentoText
-                        = "SELECT t.descrizione "
-                        + "FROM " + ApplicationParams.getMetadatiTrasparenzaTableName() + " m "
-                        + "JOIN " + ApplicationParams.getTipiProvveddimentoTableName() + " t "
-                        + "ON m.id_tipo_provvedimento = t.id_tipo_provvedimento "
-                        + "WHERE m.guid_oggetto = ?";
-                try (PreparedStatement psTipoProvvedimento = dbConn.prepareStatement(sqlTipoProvvedimentoText)) {
-                    psTipoProvvedimento.setString(1, idOggettoOrigine);
+                if (p.getTipologia() == PubblicazioneIoda.Tipologia.DIRIGENTE || p.getTipologia() == PubblicazioneIoda.Tipologia.POLITICO) {
 
-                    log.debug("eseguo la query: " + psTipoProvvedimento.toString() + "...");
-                    ResultSet resTipoProvvedimento = psTipoProvvedimento.executeQuery();
-                    while (resTipoProvvedimento.next()) {
-                        p.setTipoProvvedimentoTrasparenza(resTipoProvvedimento.getString("descrizione"));
+                    String sqlTipoProvvedimentoText
+                            = "SELECT t.descrizione "
+                            + "FROM " + ApplicationParams.getMetadatiTrasparenzaTableName() + " m "
+                            + "JOIN " + ApplicationParams.getTipiProvveddimentoTableName() + " t "
+                            + "ON m.id_tipo_provvedimento = t.id_tipo_provvedimento "
+                            + "WHERE m.guid_oggetto = ?";
+                    try (PreparedStatement psTipoProvvedimento = dbConn.prepareStatement(sqlTipoProvvedimentoText)) {
+                        psTipoProvvedimento.setString(1, idOggettoOrigine);
+
+                        log.debug("eseguo la query: " + psTipoProvvedimento.toString() + "...");
+                        ResultSet resTipoProvvedimento = psTipoProvvedimento.executeQuery();
+                        while (resTipoProvvedimento.next()) {
+                            p.setTipoProvvedimentoTrasparenza(resTipoProvvedimento.getString("descrizione"));
+                        }
                     }
                 }
+
+                switch (p.getTipologia()) {
+                    case COMMITTENTE:
+                        String sqlTipoProfiloCommittenteText
+                                = "SELECT t.pagina_pubblicazione, t.id "
+                                + "FROM " + ApplicationParams.getTipiProfiloCommittenteTableName() + " t "
+                                + "JOIN " + ApplicationParams.getDatiProfiloCommittenteTableName() + " d "
+                                + "ON t.id = d.fk_tipo_profilo_committente "
+                                + "WHERE d.guid_oggetto = ?";
+                        try (PreparedStatement psTipoProfiloCommittente = dbConn.prepareStatement(sqlTipoProfiloCommittenteText)) {
+                            psTipoProfiloCommittente.setString(1, idOggettoOrigine);
+
+                            log.debug("eseguo la query: " + psTipoProfiloCommittente.toString() + "...");
+                            ResultSet resTipoProfiloCommittente = psTipoProfiloCommittente.executeQuery();
+                            while (resTipoProfiloCommittente.next()) {
+                                p.setTipoProfiloCommittente(resTipoProfiloCommittente.getString("id"));
+                                p.setDescrizionePaginaPubblicazione(resTipoProfiloCommittente.getString("pagina_pubblicazione"));
+                            }
+                        }
+                        break;
+                        
+                    case DIRIGENTE:
+                    case POLITICO:
+                        p.setDescrizionePaginaPubblicazione(p.getTipoProvvedimentoTrasparenza());
+                        break;
+                        
+                    case ALBO:
+                        p.setDescrizionePaginaPubblicazione("Albo");
+                        break;
+
+                }
+
+
                 pubblicazioni.add(p);
             }
+
         }
 
         return pubblicazioni;
@@ -1314,9 +1354,9 @@ public class IodaDocumentUtilities {
             } else {
                 ps.setInt(index++, 0);
             }
-            
+
             // idoneo_versamento
-            if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
+            if (datiParer.getIdoneoVersamento() != null && datiParer.getIdoneoVersamento()) {
                 ps.setInt(index++, 1);
             } else {
                 ps.setInt(index++, 0);
@@ -1499,16 +1539,17 @@ public class IodaDocumentUtilities {
                 } else {
                     ps.setInt(index++, 0);
                 }
-                
+
                 // idoneo_versamento
-                if (datiParer.getIdoneoVersamento()!= null && datiParer.getIdoneoVersamento()) {
+                if (datiParer.getIdoneoVersamento() != null && datiParer.getIdoneoVersamento()) {
                     ps.setInt(index++, 1);
                 } else {
                     // se è già idoneo non lo risetto a 0
-                    if (!giaIdoneo)
+                    if (!giaIdoneo) {
                         ps.setInt(index++, 0);
-                    else
+                    } else {
                         ps.setNull(index++, Types.INTEGER);
+                    }
                 }
 
                 ps.setString(index++, gdDoc.getId());
@@ -1863,8 +1904,8 @@ public class IodaDocumentUtilities {
             } else {
                 ps.setNull(index++, Types.TIMESTAMP);
             }
-            
-             //data esecutivita
+
+            //data esecutivita
             if (p.getDataEsecutivita() != null) {
                 ps.setTimestamp(index++, new Timestamp(p.getDataEsecutivita().getMillis()));
             } else {
@@ -1904,7 +1945,7 @@ public class IodaDocumentUtilities {
             } else {
                 ps.setNull(index++, Types.TIMESTAMP);
             }
-            
+
             //data esecutivita
             if (p.getDataEsecutivita() != null) {
                 ps.setTimestamp(index++, new Timestamp(p.getDataEsecutivita().getMillis()));
@@ -2114,16 +2155,17 @@ public class IodaDocumentUtilities {
                 gdDocToCreate.setCodiceRegistro(result.getString("codice_registro"));
                 gdDocToCreate.setData(new DateTime(result.getTimestamp("data_gddoc").getTime()));
                 gdDocToCreate.setDataRegistrazione(new DateTime(result.getTimestamp("data_registrazione").getTime()));
-                
+
                 // devo togliere l'eventuale prefisso ("babel_suite_" di solito) dall'idOggettoOrigine
                 String idOggettoOrigineWithPrefix = result.getString("id_oggetto_origine");
                 if (idOggettoOrigineWithPrefix != null && !idOggettoOrigineWithPrefix.isEmpty()) {
                     String idOggettoOrigine;
                     String prefix = result.getString("prefix");
-                    if (prefix != null && !prefix.isEmpty())
+                    if (prefix != null && !prefix.isEmpty()) {
                         idOggettoOrigine = idOggettoOrigineWithPrefix.substring(prefix.length());
-                    else
+                    } else {
                         idOggettoOrigine = idOggettoOrigineWithPrefix;
+                    }
                     gdDocToCreate.setIdOggettoOrigine(idOggettoOrigine);
                 }
                 gdDocToCreate.setNomeStrutturaFirmatario(result.getString("nome_struttura_firmatario"));
@@ -2190,15 +2232,19 @@ public class IodaDocumentUtilities {
     }
 
     /**
-     * Legge dal DB i dati del profilo committente relativi al id (guid) dell'oggetto (Protocollo, Delibera, Determina) passato
+     * Legge dal DB i dati del profilo committente relativi al id (guid)
+     * dell'oggetto (Protocollo, Delibera, Determina) passato
+     *
      * @param dbConn la connessione al DB da usare
-     * @param idOggettoOrigine l'id (guid) dell'oggetto (Protocollo, Delibera, Determina)
-     * @return i dati del profilo committente relativi al id (guid) dell'oggetto (Protocollo, Delibera, Determina) passato
-     * @throws SQLException 
+     * @param idOggettoOrigine l'id (guid) dell'oggetto (Protocollo, Delibera,
+     * Determina)
+     * @return i dati del profilo committente relativi al id (guid) dell'oggetto
+     * (Protocollo, Delibera, Determina) passato
+     * @throws SQLException
      */
     public static DatiProfiloCommittente getDatiProfiloCommittente(Connection dbConn, String idOggettoOrigine) throws SQLException {
-        String sqlText = 
-                "SELECT "
+        String sqlText
+                = "SELECT "
                 + "d.id, "
                 + "d.tipologia_gara, "
                 + "d.cig, "
@@ -2219,7 +2265,7 @@ public class IodaDocumentUtilities {
                 + "t.codice, "
                 + "t.testo "
                 + "FROM " + ApplicationParams.getDatiProfiloCommittenteTableName() + " d "
-                + "INNER JOIN " + ApplicationParams.getTipiProfiloCommittenteTableName()+ " t on d.fk_tipo_profilo_committente = t.id "
+                + "INNER JOIN " + ApplicationParams.getTipiProfiloCommittenteTableName() + " t on d.fk_tipo_profilo_committente = t.id "
                 + "WHERE d.guid_oggetto = ?";
 
         DatiProfiloCommittente datiProfiloCommittente = null;
@@ -2229,7 +2275,7 @@ public class IodaDocumentUtilities {
             log.debug("eseguo la query: " + query + " ...");
             ResultSet result = ps.executeQuery();
             log.debug("eseguita");
-           
+
             //Inizio a ciclare sugli elementi trovati....
             if (result.next()) {
                 datiProfiloCommittente = new DatiProfiloCommittente();
@@ -2242,8 +2288,9 @@ public class IodaDocumentUtilities {
                 datiProfiloCommittente.setCodiceProfiloCommittente(result.getString("codice"));
                 datiProfiloCommittente.setTestoProfiloCommittente(result.getString("testo"));
                 Timestamp dataAggiudicazione = result.getTimestamp("data_aggiudicazione");
-                if (dataAggiudicazione != null)
+                if (dataAggiudicazione != null) {
                     datiProfiloCommittente.setDataAggiudicazione(new DateTime(dataAggiudicazione.getTime()));
+                }
                 datiProfiloCommittente.setFornitore(result.getString("fornitore"));
                 datiProfiloCommittente.setGuidOggetto(result.getString("guid_oggetto"));
                 datiProfiloCommittente.setImporto(result.getFloat("importo"));
