@@ -17,8 +17,9 @@ import org.apache.logging.log4j.Logger;
  * @author gdm
  */
 public class ApplicationParams {
+
     private static final Logger log = LogManager.getLogger(ApplicationParams.class);
-    
+
     private static List<SupportedFile> supportedFileList;
     private static String appId;
     private static String appToken;
@@ -57,6 +58,8 @@ public class ApplicationParams {
     private static String tipiProvveddimentoTableName;
     private static String tipiProfiloCommittenteTableName;
     private static String datiProfiloCommittenteTableName;
+    private static String fascicoliGdVicariTableName;
+    private static String struttureTableName;
 //    private static String pubblicazioniAlboQueryInsertPubblicazione;
 //    private static String pubblicazioniAlboQueryUpdatePubblicazione;
 
@@ -88,7 +91,7 @@ public class ApplicationParams {
         spedizioniPecGlobaleTableName = context.getInitParameter("SpedizioniPecGlobaleTableName");
         ricevutePecTableName = context.getInitParameter("RicevutePecTableName");
         resourceLockedMaxRetryTimes = Integer.parseInt(context.getInitParameter("ResourceLockedMaxRetryTimes"));
-        resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));     
+        resourceLockedSleepMillis = Long.parseLong(context.getInitParameter("ResourceLockedSleepMillis"));
         defaultSequenceName = context.getInitParameter("DefaultSequenceName");
         gdDocToPublishExtractionQuery = context.getInitParameter("GdDocToPublishExtractionQuery");
         gdDocUpdatePubblicato = context.getInitParameter("GdDocUpdatePubblicato");
@@ -119,13 +122,13 @@ public class ApplicationParams {
         tipiProvveddimentoTableName = context.getInitParameter("TipiProvveddimentoTableName");
         tipiProfiloCommittenteTableName = context.getInitParameter("TipiProfiloCommittenteTableName");
         datiProfiloCommittenteTableName = context.getInitParameter("DatiProfiloCommittenteTableName");
+        fascicoliGdVicariTableName = context.getInitParameter("FascicoliGdVicariTableName");
+        struttureTableName = context.getInitParameter("StruttureTableName");
 //        pubblicazioniAlboQueryInsertPubblicazione = context.getInitParameter("PubblicazioniAlboQueryInsertPubblicazione");
 //        pubblicazioniAlboQueryUpdatePubblicazione = context.getInitParameter("PubblicazioniAlboQueryUpdatePubblicazione");
-        
+
         schedulatoreActive = Boolean.parseBoolean(context.getInitParameter("schedulatore.active"));
 
-        
-        
         readAuthenticationTable(context);
 
         try {
@@ -145,29 +148,29 @@ public class ApplicationParams {
             getIndePicoIdoneitaParerUri = ConfigParams.getParam("getIndePicoIdoneitaParerUri");
             getIndeDeteIdoneitaParerUri = ConfigParams.getParam("getIndeDeteIdoneitaParerUri");
             getIndeDeliIdoneitaParerUri = ConfigParams.getParam("getIndeDeliIdoneitaParerUri");
-            schedulatoreConf= ConfigParams.getParam("schedulatoreConfJson");
+            schedulatoreConf = ConfigParams.getParam("schedulatoreConfJson");
             bdmRestBaseUri = ConfigParams.getParam("BdmRestBaseUri");
             systemPecMail = ConfigParams.getParam("SystemPecMail");
-        }
-        catch (Exception ex) {
-           log.error("errore nell'inizializzazione: ", ex);
+        } catch (Exception ex) {
+            log.error("errore nell'inizializzazione: ", ex);
         }
     }
 
     private static void readAuthenticationTable(ServletContext context) throws ServletException {
         authenticationTable = context.getInitParameter("AuthenticationTable");
-        if(authenticationTable == null || authenticationTable.equals("")) {
+        if (authenticationTable == null || authenticationTable.equals("")) {
             String message = "Manca il nome della tabella per l'autenticazione. Indicarlo nel file \"web.xml\"";
             log.error(message);
             throw new ServletException(message);
         }
     }
+
     private static void initilizeSupporetdFiles(String fileSupportatiTable) throws SQLException, NamingException {
 
-        String sqlText = "SELECT * FROM " +  fileSupportatiTable;
+        String sqlText = "SELECT * FROM " + fileSupportatiTable;
         // ottengo una connessione al db
         try (Connection dbConn = UtilityFunctions.getDBConnection();
-             PreparedStatement ps = dbConn.prepareStatement(sqlText);) {
+                PreparedStatement ps = dbConn.prepareStatement(sqlText);) {
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
@@ -215,7 +218,7 @@ public class ApplicationParams {
     public static void setRicevutePecTableName(String ricevutePecTableName) {
         ApplicationParams.ricevutePecTableName = ricevutePecTableName;
     }
-    
+
     public static String getAuthenticationTable() {
         return authenticationTable;
     }
@@ -251,8 +254,7 @@ public class ApplicationParams {
     public static String getGdDocsTableName() {
         return gdDocsTableName;
     }
-    
-    
+
     public static String getDatiParerGdDocTableName() {
         return datiParerGdDocTable;
     }
@@ -272,7 +274,7 @@ public class ApplicationParams {
     public static String getSessioniVersamentoParerTableName() {
         return sessioniVersamentoParerTableName;
     }
-    
+
     public static String getGdDatiParerGdDocTableName() {
         return datiParerGddocTableName;
     }
@@ -280,11 +282,11 @@ public class ApplicationParams {
     public static String getTitoliTableName() {
         return titoliTableName;
     }
-    
+
     public static String getTitoliVersioniTableName() {
         return titoliVersioniTableName;
     }
-    
+
     public static String getTitoliVersioniCrossTableName() {
         return titoliVersioniCrossTableName;
     }
@@ -308,7 +310,7 @@ public class ApplicationParams {
     public static String getPubblicazioniAlboTableName() {
         return pubblicazioniAlboTableName;
     }
-    
+
     public static String getPubblicazioniBalboTableName() {
         return pubblicazioniBalboTableName;
     }
@@ -329,6 +331,13 @@ public class ApplicationParams {
         return datiProfiloCommittenteTableName;
     }
 
+    public static String getFascicoliGdVicariTableName() {
+        return fascicoliGdVicariTableName;
+    }
+
+    public static String getSruttureTableName() {
+        return struttureTableName;
+    }
 
 //
 //    public static String getPubblicazioniAlboQueryInsertPubblicazione() {
@@ -338,7 +347,6 @@ public class ApplicationParams {
 //    public static String getPubblicazioniAlboQueryUpdatePubblicazione() {
 //        return pubblicazioniAlboQueryUpdatePubblicazione;
 //    }
-
     public static boolean isSchedulatoreActive() {
         return schedulatoreActive;
     }
@@ -378,15 +386,15 @@ public class ApplicationParams {
     public static String getIndePicoIdoneitaParerUri() {
         return getIndePicoIdoneitaParerUri;
     }
-    
+
     public static String getIndeDeteIdoneitaParerUri() {
         return getIndeDeteIdoneitaParerUri;
     }
-    
+
     public static String getIndeDeliIdoneitaParerUri() {
         return getIndeDeliIdoneitaParerUri;
     }
-    
+
     public static String getBdmRestBaseUri() {
         return bdmRestBaseUri;
     }
@@ -410,8 +418,8 @@ public class ApplicationParams {
     public static String getFileSupportatiTable() {
         return fileSupportatiTable;
     }
-    
-    public static String getSchedulatoreConf(){
+
+    public static String getSchedulatoreConf() {
         return schedulatoreConf;
     }
 
@@ -440,10 +448,11 @@ public class ApplicationParams {
     }
 
     /**
-     * torna un parametro pubblico in base al suo nome
-     * NB. cercare di non usare questa funzione a meno che non sia strettamente necessario
+     * torna un parametro pubblico in base al suo nome NB. cercare di non usare
+     * questa funzione a meno che non sia strettamente necessario
+     *
      * @param paramName il nome del parametro
-     * @return  il valore del parametro identificato dal nome passato
+     * @return il valore del parametro identificato dal nome passato
      */
     public static String getOtherPublicParam(String paramName) {
         return ConfigParams.getParam(paramName);

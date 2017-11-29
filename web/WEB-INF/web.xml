@@ -113,6 +113,10 @@
         <servlet-name>EndSignManager</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.EndSignManager</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>InsertFascicolo</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.InsertFascicolo</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Init</servlet-name>
         <url-pattern>/Init</url-pattern>
@@ -168,6 +172,10 @@
     <servlet-mapping>
         <servlet-name>InsertGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/insert</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>InsertFascicolo</servlet-name>
+        <url-pattern>/InsertFascicolo</url-pattern>
     </servlet-mapping>
     <resource-ref>
         <description>DB Connection</description>
@@ -327,6 +335,14 @@
     <context-param>
         <param-name>FileSupportatiTableName</param-name>
         <param-value>bds_tools.file_supportati</param-value>
+    </context-param>
+    <context-param>
+        <param-name>FascicoliGdVicariTableName</param-name>
+        <param-value>gd.fascicoli_gd_vicari</param-value>
+    </context-param>
+    <context-param>
+        <param-name>StruttureTableName</param-name>
+        <param-value>procton.strutture</param-value>
     </context-param>
     <context-param>
         <param-name>UploadGdDocMongoPath</param-name>
