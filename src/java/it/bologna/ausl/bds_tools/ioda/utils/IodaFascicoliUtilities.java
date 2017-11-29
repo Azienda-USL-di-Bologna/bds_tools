@@ -47,6 +47,7 @@ public class IodaFascicoliUtilities {
     private static final String GENERATE_INDE_NUMBER_PARAM_NAME = "generateidnumber";
     private static final String INDE_DOCUMENT_ID_PARAM_NAME = "document_id";
     public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
+    public static final String CODICE_REGISTRO_FASCICOLO = "FASCICOLO";
 
     private String gdDocTable;
     private String fascicoliTable;
@@ -581,7 +582,7 @@ public class IodaFascicoliUtilities {
 
             insertVicari(dbConn, idInde);
 
-            registraDocumento(dbConn, ps, guidInde, null);
+            registraDocumento(dbConn, ps, guidInde, CODICE_REGISTRO_FASCICOLO);
         }
     }
 
@@ -638,7 +639,7 @@ public class IodaFascicoliUtilities {
     }
 
     public String registraDocumento(Connection dbConn, PreparedStatement ps, String guid, String codiceRegistro) throws ServletException, SQLException {
-        //Registro r = Registro.getRegistro(codiceRegistro, dbConn);
-        return SetDocumentNumber.setNumber(dbConn, guid, "fascicoli");
+        Registro r = Registro.getRegistro(codiceRegistro, dbConn);
+        return SetDocumentNumber.setNumber(dbConn, guid, r.getSequenzaAssociata());
     }
 }
