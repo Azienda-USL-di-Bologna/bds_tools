@@ -508,7 +508,7 @@ public class IodaFascicoliUtilities {
         return fascicolo;
     }
 
-    public void insertFascicolo(Connection dbConn) throws IOException, MalformedURLException, SendHttpMessageException, SQLException, ServletException {
+    public String insertFascicolo(Connection dbConn) throws IOException, MalformedURLException, SendHttpMessageException, SQLException, ServletException {
 
 //        ottengo in ID di INDE
         String idInde = getIndeIdAndGuid().get(INDE_DOCUMENT_ID_PARAM_NAME);
@@ -583,6 +583,8 @@ public class IodaFascicoliUtilities {
             insertVicari(dbConn, idInde);
 
             registraDocumento(dbConn, ps, guidInde, CODICE_REGISTRO_FASCICOLO);
+
+            return guidInde;
         }
     }
 
@@ -641,5 +643,80 @@ public class IodaFascicoliUtilities {
     public String registraDocumento(Connection dbConn, PreparedStatement ps, String guid, String codiceRegistro) throws ServletException, SQLException {
         Registro r = Registro.getRegistro(codiceRegistro, dbConn);
         return SetDocumentNumber.setNumber(dbConn, guid, r.getSequenzaAssociata());
+    }
+
+    public Fascicolo getFascicolo(Connection dbConn, String guid) throws SQLException {
+
+        Fascicolo fascicolo = new Fascicolo();
+        String idFascicolo = null;
+
+        String sqlText
+                = "SELECT id_fascicolo, nome_fascicolo, numero_fascicolo, anno_fascicolo, "
+                + "stato_fascicolo, id_livello_fascicolo, id_struttura, "
+                + "id_titolo, id_utente_responsabile, id_utente_creazione, "
+                + "id_utente_responsabile_proposto, data_creazione, "
+                + "numerazione_gerarchica, "
+                + "speciale, "
+                + "id_tipo_fascicolo, codice_fascicolo, data_registrazione, "
+                + "servizio_creazione, descrizione_iter "
+                + "FROM " + getFascicoliTable() + " "
+                + "WHERE guid_fascicolo = ? ";
+
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
+            ps.setString(1, guid);
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+
+            while (result.next()) {
+                idFascicolo = result.getString("id_fascicolo");
+                fascicolo.setNomeFascicolo(result.getString("nome_fascicolo"));
+                fascicolo.setNumeroFascicolo(result.getInt("numero_fascicolo"));
+                fascicolo.setAnnoFascicolo(result.getInt("anno_fascicolo"));
+                fascicolo.setStatoFascicolo(result.getString("stato_fascicolo"));
+                fascicolo.setIdLivelloFascicolo(result.getString("id_livello_fascicolo"));
+                fascicolo.setIdStruttura(result.getString("id_struttura"));
+                fascicolo.setTitolo(result.getString("id_titolo"));
+                fascicolo.setIdUtenteResponsabile(result.getString("id_utente_responsabile"));
+                fascicolo.setIdUtenteCreazione(result.getString("id_utente_creazione"));
+                fascicolo.setIdUtenteResponsabileProposto(result.getString("id_utente_responsabile_proposto"));
+
+                Timestamp dataCreazione = result.getTimestamp("data_creazione");
+                if (dataCreazione != null) {
+                    fascicolo.setDataCreazione(new DateTime(dataCreazione.getTime()));
+                }
+
+                fascicolo.setNumerazioneGerarchica(result.getString("numerazione_gerarchica"));
+                fascicolo.setSpeciale(result.getInt("speciale"));
+                fascicolo.setIdTipoFascicolo(result.getInt("id_tipo_fascicolo"));
+                fascicolo.setCodiceFascicolo(result.getString("codice_fascicolo"));
+                Timestamp dataRegistrazione = result.getTimestamp("data_registrazione");
+                if (dataRegistrazione != null) {
+                    fascicolo.setDataRegistrazione(new DateTime(dataRegistrazione.getTime()));
+                }
+
+                fascicolo.setServizioCreazione(result.getString("servizio_creazione"));
+                fascicolo.setDescrizioneIter(result.getString("descrizione_iter"));
+            }
+        }
+
+        String sqlTextVicari
+                = "SELECT id_utente "
+                + "FROM " + getFascicoliGdVicariTable() + " "
+                + "WHERE id_fascicolo = ? ";
+
+        try (PreparedStatement ps = dbConn.prepareStatement(sqlTextVicari)) {
+            ps.setString(1, idFascicolo);
+
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+
+            while (result.next()) {
+                fascicolo.addVicario(result.getString("id_utente"));
+            }
+        }
+        return fascicolo;
     }
 }

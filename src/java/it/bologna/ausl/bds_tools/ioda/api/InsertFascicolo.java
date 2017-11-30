@@ -44,6 +44,7 @@ public class InsertFascicolo extends HttpServlet {
         IodaFascicoliUtilities fascicoliUtilities;
         Connection dbConn = null;
         PreparedStatement ps = null;
+        Fascicolo fascicoloResult;
         try {
             // leggo i parametri dalla richiesta
             IodaRequestDescriptor iodaRequest;
@@ -102,9 +103,11 @@ public class InsertFascicolo extends HttpServlet {
 
             try {
                 dbConn.setAutoCommit(false);
-                fascicoliUtilities.insertFascicolo(dbConn);
+                String guidFascicoloCreato = fascicoliUtilities.insertFascicolo(dbConn);
 
                 dbConn.commit();
+
+                fascicoloResult = fascicoliUtilities.getFascicolo(dbConn, guidFascicoloCreato);
 
             } catch (Exception ex) {
                 log.error("errore nella gestione dell'inserimento di un nuovo fascicolo: ", ex);
@@ -123,16 +126,7 @@ public class InsertFascicolo extends HttpServlet {
 
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet InsertGdDoc</title>");
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet InsertGdDoc at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
+            out.print(fascicoloResult.getJSONString());
         } catch (Exception ex) {
             log.error("errore della servlet: ", ex);
         }
