@@ -556,6 +556,8 @@ public class IodaFascicoliUtilities {
             ps.setString(index++, fascicolo.getIdUtenteCreazione());
             if (fascicolo.getIdUtenteResponsabileProposto() != null && !fascicolo.getIdUtenteResponsabileProposto().equals("")) {
                 ps.setString(index++, fascicolo.getIdUtenteResponsabileProposto());
+            } else {
+                ps.setString(index++, null);
             }
 
             // data creazione
