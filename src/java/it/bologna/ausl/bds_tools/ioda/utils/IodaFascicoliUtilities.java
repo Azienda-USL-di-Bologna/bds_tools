@@ -532,6 +532,37 @@ public class IodaFascicoliUtilities {
                 + "?, ?, "
                 + "?, ?, "
                 + "?, ?)";
+        
+        // ======================= IFFONE ====
+        // Faccio un iffone brutto perché se arrivo dall'Internauta devo ricavare id_utente tramite codice fiscale ed id_titolo tramite classificazione 
+        String codiceFiscale = "";
+        
+        if (this.fascicolo.getIdUtenteCreazione() == null || this.fascicolo.getIdUtenteCreazione().equals("")) {
+            codiceFiscale = this.fascicolo.getCodiceFiscaleUtenteCreazione();
+            this.fascicolo.setIdUtenteCreazione(getIdUtenteDaCodiceFiscale(codiceFiscale, dbConn));
+        }
+        if (this.fascicolo.getIdUtenteResponsabile() == null || this.fascicolo.getIdUtenteResponsabile().equals("")) {
+            if (codiceFiscale.equals(this.fascicolo.getCodiceFiscaleUtenteResponsabile())){
+                this.fascicolo.setIdUtenteResponsabile(this.fascicolo.getIdUtenteCreazione());
+            } else {
+                this.fascicolo.setIdUtenteResponsabile(getIdUtenteDaCodiceFiscale(this.fascicolo.getCodiceFiscaleUtenteResponsabile(), dbConn));
+            }
+        }
+        if (this.fascicolo.getIdUtenteResponsabileProposto()== null || this.fascicolo.getIdUtenteResponsabileProposto().equals("")) {
+            if (codiceFiscale.equals(this.fascicolo.getCodiceFiscaleUtenteResponsabileProposto())){
+                this.fascicolo.setIdUtenteResponsabileProposto(this.fascicolo.getIdUtenteCreazione());
+            } else {
+                this.fascicolo.setIdUtenteResponsabileProposto(getIdUtenteDaCodiceFiscale(this.fascicolo.getCodiceFiscaleUtenteResponsabileProposto(), dbConn));
+            }
+        }
+        if (this.fascicolo.getIdStruttura() == null || this.fascicolo.getIdStruttura().equals("")) {
+            this.fascicolo.setIdStruttura(getIdStrutturaDaIdUtente(this.fascicolo.getIdUtenteResponsabile(), dbConn));
+        }
+        if (this.fascicolo.getTitolo() == null || this.fascicolo.getTitolo().equals("")) {
+            this.fascicolo.setTitolo(getIdTitoloDaClassificazione(this.fascicolo.getClassificazione(), dbConn));
+        }
+        
+        // ================== FINE IFFONE ====
 
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
@@ -590,6 +621,64 @@ public class IodaFascicoliUtilities {
 
             return guidInde;
         }
+    }
+    
+    private String getIdUtenteDaCodiceFiscale(String cf, Connection dbConn) throws SQLException {
+        if(cf != null && !cf.equals("")) {
+            String q = "SELECT id_utente FROM " + getUtentiTable() + " WHERE cf = ?";
+            try (PreparedStatement ps = dbConn.prepareStatement(q)) {
+                ps.setString(1, cf);
+                log.debug("eseguo la query: " + q);
+                ResultSet res = ps.executeQuery();
+                if (!res.next()) {
+                    throw new SQLException("utente non trovato");
+                } else {
+                    return res.getString(1);
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    private String getIdTitoloDaClassificazione(String classificazione, Connection dbConn) throws SQLException {
+        if(classificazione != null && !classificazione.equals("")) {
+            String q = "SELECT id_titolo FROM " + getTitoliTable() 
+                    + " WHERE codice_titolo = ? and codice_gerarchico = ?";
+//            String codiceTitolo = classificazione.substring(classificazione.lastIndexOf("-"));
+//            String codiceGerarchico = classificazione.substring(0, classificazione.length()-2);
+            try (PreparedStatement ps = dbConn.prepareStatement(q)) {
+                ps.setString(1, classificazione.substring(classificazione.lastIndexOf("-")));
+                ps.setString(2, classificazione.substring(0, classificazione.length()-2));
+                log.debug("eseguo la query: " + q);
+                ResultSet res = ps.executeQuery();
+                if (!res.next()) {
+                    throw new SQLException("titolo non trovato");
+                } else {
+                    return res.getString(1);
+                }
+            }
+        }
+        
+        return null;
+    }
+    private String getIdStrutturaDaIdUtente(String idutente, Connection dbConn) throws SQLException {
+        if(idutente != null && !idutente.equals("")) {
+            String q = "SELECT id_struttura FROM " + getUtentiTable() 
+                    + " WHERE id_utente = ?";
+            try (PreparedStatement ps = dbConn.prepareStatement(q)) {
+                ps.setString(1, idutente);
+                log.debug("eseguo la query: " + q);
+                ResultSet res = ps.executeQuery();
+                if (!res.next()) {
+                    throw new SQLException("utente non trovato");
+                } else {
+                    return res.getString(1);
+                }
+            }
+        }
+        
+        return null;
     }
 
     public void insertVicari(Connection dbConn, String idFascicolo) throws SQLException {
