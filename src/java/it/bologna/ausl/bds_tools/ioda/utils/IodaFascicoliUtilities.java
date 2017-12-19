@@ -648,8 +648,8 @@ public class IodaFascicoliUtilities {
 //            String codiceTitolo = classificazione.substring(classificazione.lastIndexOf("-"));
 //            String codiceGerarchico = classificazione.substring(0, classificazione.length()-2);
             try (PreparedStatement ps = dbConn.prepareStatement(q)) {
-                ps.setString(1, classificazione.substring(classificazione.lastIndexOf("-")));
-                ps.setString(2, classificazione.substring(0, classificazione.length()-2));
+                ps.setString(1, classificazione.substring(classificazione.lastIndexOf("-") + 1));
+                ps.setString(2, classificazione.substring(0, classificazione.length() - 2));
                 log.debug("eseguo la query: " + q);
                 ResultSet res = ps.executeQuery();
                 if (!res.next()) {
