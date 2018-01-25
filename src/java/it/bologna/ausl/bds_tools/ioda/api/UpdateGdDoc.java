@@ -120,7 +120,7 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
             try {
                 dbConn.setAutoCommit(false);
 
-                GdDoc gdDoc = iodaUtilities.getGdDoc();
+                GdDoc gdDoc = iodaUtilities.getGdDoc(dbConn);
                 lock = new LockUtilities(gdDoc.getIdOggettoOrigine(), gdDoc.getTipoOggettoOrigine(), String.valueOf(System.currentTimeMillis()), ApplicationParams.getServerId(), ApplicationParams.getRedisHost());
                 
                 int times = 0;

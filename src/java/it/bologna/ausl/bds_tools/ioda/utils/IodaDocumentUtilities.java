@@ -135,9 +135,47 @@ public class IodaDocumentUtilities {
             }
         }
     }
-
-    public GdDoc getGdDoc() {
+    
+    public GdDoc getGdDoc() throws SQLException {
+        return getGdDoc(null);
+    }
+    
+    public GdDoc getGdDoc(Connection dbConn) throws SQLException {
+        // Per controlli precedenti so che id_oggetto_origine e tipo_oggetto_origine o li ho entrambi o nessuno dei due.
+        // Mi basta quindi controllare il tipo oggetto origine. Se è null allora devo caricare questi due campi tramite resistro, numero e anno registrazione.
+        if (dbConn != null && (gdDoc.getTipoOggettoOrigine() == null || gdDoc.getTipoOggettoOrigine().equals(""))) {
+            caricaIdETipoOggettoOrigine(dbConn);
+        }
         return gdDoc;
+    }
+    
+    private void caricaIdETipoOggettoOrigine(Connection dbConn) throws SQLException {
+        String q
+                = "SELECT id_oggetto_origine, tipo_oggetto_origine, count(*) over (partition by 1) total_rows "
+                + "FROM " + getGdDocTable() + " "
+                + "WHERE codice_registro = ? AND numero_registrazione = ? AND anno_registrazione = ?";
+
+        try (PreparedStatement ps = dbConn.prepareStatement(q)) {
+            int index = 1;
+            ps.setString(index++, gdDoc.getCodiceRegistro());
+            ps.setString(index++, gdDoc.getNumeroRegistrazione());
+            ps.setInt(index++, gdDoc.getAnno());
+            
+            
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+            
+            if (result.next()) {
+                if (result.getInt("total_rows") > 1) {
+                    throw new SQLException("Trovate più righe per questo gddoc");                 
+                }
+                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
+            } else {
+                throw new SQLException("Gddoc non trovato");
+            }
+        }
     }
 
     private JSONObject getNextIndeId() {
@@ -1233,8 +1271,8 @@ public class IodaDocumentUtilities {
             }
         }
     }
-
-    public void deleteGdDoc(Connection dbConn) throws SQLException, IodaDocumentException {
+    
+       public void deleteGdDoc(Connection dbConn) throws SQLException, IodaDocumentException {
 //        String sqlText =
 //                "SELECT numero_registrazione " +
 //                "FROM " + getGdDocTable() + " " +
