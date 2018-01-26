@@ -148,9 +148,10 @@ private static final Logger log = LogManager.getLogger(UpdateGdDoc.class);
                         if(gdDoc.getNumerazioneAutomatica() != null && gdDoc.getNumerazioneAutomatica())
                             log.info("numero assegnato: " + numero);
                         updateComplete = true;
+                    } else {
+                        Thread.sleep(ApplicationParams.getResourceLockedSleepMillis());
+                        times++;
                     }
-                    Thread.sleep(ApplicationParams.getResourceLockedSleepMillis());
-                    times++;
                 }
                 if (!updateComplete) {
                     //dare eccezione per risorsa non disponibile
