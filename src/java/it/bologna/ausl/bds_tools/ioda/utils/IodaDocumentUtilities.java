@@ -2289,6 +2289,7 @@ public class IodaDocumentUtilities {
                 + "d.cig_azienda, "
                 + "d.importo, "
                 + "d.fornitore, "
+                + "d.partita_iva_fornitore, "
                 + "d.ragioni_scelta_fornitore, "
                 + "d.check_fornitore_requisiti_generali, "
                 + "d.check_fornitore_requisiti_professionali, "
@@ -2300,6 +2301,7 @@ public class IodaDocumentUtilities {
                 + "d.operatori_economici_offerenti, "
                 + "d.data_aggiudicazione, "
                 + "d.guid_oggetto, "
+                + "d.importo_testuale, "
                 + "t.codice, "
                 + "t.testo "
                 + "FROM " + ApplicationParams.getDatiProfiloCommittenteTableName() + " d "
@@ -2338,6 +2340,8 @@ public class IodaDocumentUtilities {
                 datiProfiloCommittente.setProcedura(result.getString("procedura"));
                 datiProfiloCommittente.setRagioniSceltaFornitore(result.getString("ragioni_scelta_fornitore"));
                 datiProfiloCommittente.setTipologiaGara(result.getString("tipologia_gara"));
+                datiProfiloCommittente.setPartitaIvaCf(result.getString("partita_iva_fornitore"));
+                datiProfiloCommittente.setImportoTestuale(result.getString("importo_testuale"));
             }
             if (result.next()) {
                 log.error("troppi oggetto trovati, mi aspettavo una sola riga");
