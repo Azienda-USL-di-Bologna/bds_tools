@@ -82,6 +82,10 @@
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicoliPregressi</servlet-class>
     </servlet>
     <servlet>
+        <servlet-name>GetFascicoliUtente</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicoliUtente</servlet-class>
+    </servlet>
+    <servlet>
         <servlet-name>UpdateGdDoc</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateGdDoc</servlet-class>
     </servlet>
@@ -549,6 +553,10 @@
     <servlet-mapping>
         <servlet-name>UpdateGdDoc</servlet-name>
         <url-pattern>/ioda/api/document/update</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GetFascicoliUtente</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/getFascicoliUtente</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>AddVersamentoParer</servlet-name>

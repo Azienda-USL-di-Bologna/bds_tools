@@ -48,6 +48,9 @@ public class IodaFascicoliUtilities {
     private static final String INDE_DOCUMENT_ID_PARAM_NAME = "document_id";
     public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
     public static final String CODICE_REGISTRO_FASCICOLO = "FASCICOLO";
+    
+    public static enum GetFascicoliUtente {TIPO_FASCICOLO, SOLO_ITER}
+
 
     private String gdDocTable;
     private String fascicoliTable;
@@ -811,5 +814,99 @@ public class IodaFascicoliUtilities {
             }
         }
         return fascicolo;
+    }
+    
+    /**
+     * Questa funzione deve ritorna la lista dei fascicoli di livello 1 su cui l'utente ha un permesso almeno di modifica.
+     * Si può passare il parametro tipo fascicolo per aggiungerlo come where condition.
+     * @param dbConn
+     * @param ps
+     * @param idUtente
+     * @param tipoFascicolo
+     * @param conIter
+     * @return
+     * @throws SQLException 
+     */
+    public Fascicoli getFascicoliUtente(Connection dbConn, PreparedStatement ps, Map<String, Object> additionalData) throws SQLException {
+        
+        Fascicoli res = new Fascicoli();
+        String idUtente = researcher.getIdUtente();
+        Integer tipoFascicolo = Integer.parseInt((String) additionalData.get(GetFascicoliUtente.TIPO_FASCICOLO.toString()));
+        Boolean soloIter = Boolean.parseBoolean((String) additionalData.get(GetFascicoliUtente.SOLO_ITER.toString()));
+
+        // Preparo la query
+        String sqlText = "with strutture_utente as(\n" +
+            "	select id_struttura\n" +
+            "	from procton.utenti\n" +
+            "	where id_utente = ?\n" +
+            "	union all\n" +
+            "	select id_struttura\n" +
+            "	from procton.appartenenze_funzionali\n" +
+            "	where id_utente = ?\n" +
+            ")\n" +
+            "select f.numerazione_gerarchica, f.nome_fascicolo, f.numero_fascicolo, f.anno_fascicolo, f.stato_fascicolo, f.id_livello_fascicolo, \n" +
+            "   f.id_struttura, f.id_utente_responsabile, f.id_utente_creazione, f.id_utente_responsabile_proposto, f.data_creazione, f.numerazione_gerarchica, f.id_tipo_fascicolo, \n" +
+            "   f.data_registrazione::date, f.descrizione_iter, f.id_iter\n" +
+            "from gd.fascicoligd f  \n" +
+            "left join gd.fascicoli_gd_vicari fv on f.id_fascicolo = fv.id_fascicolo\n" +
+            "left join procton_tools.oggetti o on o.id_oggetto = f.id_fascicolo\n" +
+            "left join procton_tools.permessi p on p.id_oggetto = o.id\n" +
+            "where   \n" +
+            "f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' and f.stato_fascicolo != 'c' and id_livello_fascicolo = '1'\n" +
+            "and (id_utente_responsabile = ? or fv.id_utente = ? \n" +
+            "	or (p.id_utente = ? and p.permesso::bpchar >= 6::character(1)) \n" +
+            "	or (p.scope in (select * from strutture_utente) and p.id_utente is null and p.permesso::bpchar >= 6::character(1)))";
+        
+        // Controllo se devo aggiungere il filtro per tipoFascicolo
+        if (tipoFascicolo != 0) {
+            sqlText += " and id_tipo_fascicolo = " + tipoFascicolo;
+        }
+        
+        // Controllo se il campo iter deve essere NOT NULL
+        if (soloIter) {
+            sqlText += " and id_iter is not null";
+        }
+
+        ps = dbConn.prepareStatement(sqlText);
+        
+        int index = 1;
+        ps.setString(index++, idUtente);
+        ps.setString(index++, idUtente);
+        ps.setString(index++, idUtente);
+        ps.setString(index++, idUtente);
+        ps.setString(index++, idUtente);
+        log.debug("sql: " + ps.toString());
+
+        ResultSet results = ps.executeQuery();
+        
+        while (results.next()) {
+            Fascicolo f = new Fascicolo();
+            DateTimeFormatter formatDate = DateTimeFormat.forPattern("yyyy-MM-dd");
+
+            f.setCodiceFascicolo(results.getString("numerazione_gerarchica")); // E' la numerazione gerarchica (anche se ce l'abbiamo più sotto)
+            f.setNomeFascicolo(results.getString("nome_fascicolo"));
+            f.setNumeroFascicolo(results.getInt("numero_fascicolo"));
+            f.setAnnoFascicolo(results.getInt("anno_fascicolo"));
+            f.setStatoFascicolo(results.getString("stato_fascicolo"));
+            f.setIdLivelloFascicolo(results.getString("id_livello_fascicolo"));
+            f.setIdStruttura(results.getString("id_struttura"));
+            f.setIdUtenteResponsabile(results.getString("id_utente_responsabile"));
+            f.setIdUtenteCreazione(results.getString("id_utente_creazione"));
+            f.setIdUtenteResponsabileProposto(results.getString("id_utente_responsabile_proposto"));
+            f.setDataCreazione(DateTime.parse(results.getString("data_creazione"), formatDate));
+            f.setNumerazioneGerarchica(results.getString("numerazione_gerarchica"));
+            f.setIdTipoFascicolo(results.getInt("id_tipo_fascicolo"));
+            f.setDataRegistrazione(DateTime.parse(results.getString("data_registrazione"), formatDate));
+            f.setDescrizioneIter(results.getString("descrizione_iter"));
+            f.setIdIter(results.getInt("id_iter"));
+
+            res.addFascicolo(f);
+        }
+
+        if (res.getSize() == 0) {
+            res.createFascicoli();
+        }
+        
+        return res;
     }
 }
