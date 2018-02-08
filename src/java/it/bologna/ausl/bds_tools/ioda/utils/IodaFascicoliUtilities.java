@@ -834,7 +834,7 @@ public class IodaFascicoliUtilities {
         Integer tipoFascicolo = Integer.parseInt((String) additionalData.get(GetFascicoliUtente.TIPO_FASCICOLO.toString()));
         Boolean soloIter = Boolean.parseBoolean((String) additionalData.get(GetFascicoliUtente.SOLO_ITER.toString()));
         
-        if (idUtente == null && idUtente.equals("")) {
+        if (idUtente == null || idUtente.equals("")) {
             String q = "select id_utente, count(*) over (partition by 1) total_rows from procton.utenti where cf = ?";
             ps = dbConn.prepareStatement(q);
             ps.setString(1, (String) additionalData.get(GetFascicoliUtente.CODICE_FISCALE.toString()));
