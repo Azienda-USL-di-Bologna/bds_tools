@@ -49,7 +49,7 @@ public class IodaFascicoliUtilities {
     public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
     public static final String CODICE_REGISTRO_FASCICOLO = "FASCICOLO";
     
-    public static enum GetFascicoliUtente {TIPO_FASCICOLO, SOLO_ITER}
+    public static enum GetFascicoliUtente {TIPO_FASCICOLO, SOLO_ITER, CODICE_FISCALE}
 
 
     private String gdDocTable;
@@ -833,6 +833,22 @@ public class IodaFascicoliUtilities {
         String idUtente = researcher.getIdUtente();
         Integer tipoFascicolo = Integer.parseInt((String) additionalData.get(GetFascicoliUtente.TIPO_FASCICOLO.toString()));
         Boolean soloIter = Boolean.parseBoolean((String) additionalData.get(GetFascicoliUtente.SOLO_ITER.toString()));
+        
+        if (idUtente == null && idUtente.equals("")) {
+            String q = "select id_utente, count(*) over (partition by 1) total_rows from procton.utenti where cf = ?";
+            ps = dbConn.prepareStatement(q);
+            ps.setString(1, (String) additionalData.get(GetFascicoliUtente.CODICE_FISCALE.toString()));
+            log.debug("sql: " + ps.toString());
+            ResultSet result = ps.executeQuery();
+            if (result.next()) {
+                if (result.getInt("total_rows") > 1) {
+                    throw new SQLException("Trovate più righe per questo utente");                 
+                }
+                idUtente = result.getString("id_utente"); 
+            } else {
+                throw new SQLException("Utente non trovato");
+            }
+        }
 
         // Preparo la query
         String sqlText = "with strutture_utente as(\n" +
