@@ -953,6 +953,7 @@ public class IodaFascicoliUtilities {
                 + "join procton_tools.oggetti o on o.id = p.id_oggetto "
                 + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
                 + "where f.numerazione_gerarchica = ? and p.id_utente = ? "
+                + "and p.permesso::bpchar >= 4::character(1) "
                 + "and o.tipo_oggetto = 4"; // 4 è il tipo oggetto fascicolo
         
               
