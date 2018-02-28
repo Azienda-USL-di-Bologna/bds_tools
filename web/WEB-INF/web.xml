@@ -121,6 +121,10 @@
         <servlet-name>InsertFascicolo</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.InsertFascicolo</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>HasUserPermissionOnFascicolo</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.HasUserPermissionOnFascicolo</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Init</servlet-name>
         <url-pattern>/Init</url-pattern>
@@ -296,9 +300,9 @@
         <param-value>gd.pubblicazioni_albo</param-value>
     </context-param>
     <context-param>
-         <!--tabella delle relate compilata da balbo_bridge-->
+        <!--tabella delle relate compilata da balbo_bridge-->
         <param-name>PubblicazioniBalboTableName</param-name>
-      <param-value>gd.pubblicazioni_balbo</param-value>       
+        <param-value>gd.pubblicazioni_balbo</param-value>
     </context-param>
     <context-param>
         <param-name>MetadatiTrasparenzaTableName</param-name>
@@ -582,7 +586,11 @@
         <servlet-name>GetGdDocProIdoneita</servlet-name>
         <url-pattern>/ioda/api/document/GetGdDocProIdoneita</url-pattern>
     </servlet-mapping>
-<!--    <context-param>
+    <servlet-mapping>
+        <servlet-name>HasUserPermissionOnFascicolo</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/HasUserPermissionOnFascicolo</url-pattern>
+    </servlet-mapping>
+    <!--    <context-param>
         <param-name>schedulatore.active</param-name>
         <param-value>true</param-value>
     </context-param>
@@ -618,7 +626,7 @@
     <filter-mapping>
         <filter-name>CorsFilter</filter-name>
         <url-pattern>/*</url-pattern>
-    </filter-mapping>      
+    </filter-mapping>
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
         <welcome-file>index.html</welcome-file>

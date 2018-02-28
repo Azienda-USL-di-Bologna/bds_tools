@@ -925,4 +925,54 @@ public class IodaFascicoliUtilities {
         
         return res;
     }
+    
+    public boolean hasUserPermissionOnFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
+        String idUtente = researcher.getIdUtente();
+        boolean trovato = false;
+        if (idUtente == null || idUtente.equals("")) {
+            String q = "select id_utente, count(*) over (partition by 1) total_rows from procton.utenti where cf = ?";
+            try(PreparedStatement ps = dbConn.prepareStatement(q)){
+                ps.setString(1, (String) additionalData.get("user").toString());
+                log.debug("*************       -->       sql: " + ps.toString());
+                ResultSet result = ps.executeQuery();
+                if (result.next()) {
+                    if (result.getInt("total_rows") > 1) {
+                        throw new SQLException("Trovate più righe per questo utente");                 
+                    }
+                    idUtente = result.getString("id_utente"); 
+                } else {
+                    throw new SQLException("Utente non trovato");
+                }
+            }
+        }  
+        
+        // Scelgo tutti i permessi facendo join tra permessi, oggetti, fascicoli
+        // "WHERE" il fascicolo ha quella numerazione gerarchica 
+        // e l'utente è quello loggato coi permessi è quello loggato
+        String sql = "select p.* from procton_tools.permessi p "
+                + "join procton_tools.oggetti o on o.id = p.id_oggetto "
+                + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
+                + "where f.numerazione_gerarchica = ? and p.id_utente = ? "
+                + "and o.tipo_oggetto = 4"; // 4 è il tipo oggetto fascicolo
+        
+              
+        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            // numerazione gerarchica
+            ps.setString(1, additionalData.get("ng").toString());
+            ps.setString(2, idUtente);
+        
+        log.debug("sql: " + ps.toString());
+        ResultSet results;
+            results = ps.executeQuery();
+            if(results.next())
+                trovato = true; 
+        } 
+        catch (Exception ex) {
+            throw new SQLException("Problemi nel trovare i permessi dell'utente  " + ex);
+        }
+                
+        log.debug("trovatp: " + trovato);
+        return trovato;
+        
+    }
 }
