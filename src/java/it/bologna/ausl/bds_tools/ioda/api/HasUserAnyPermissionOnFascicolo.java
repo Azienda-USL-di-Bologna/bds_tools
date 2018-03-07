@@ -31,7 +31,7 @@ import org.apache.logging.log4j.Logger;
  *
  * @author utente
  */
-public class HasUserPermissionOnFascicolo extends HttpServlet {
+public class HasUserAnyPermissionOnFascicolo extends HttpServlet {
 private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -116,7 +116,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
                 HashMap additionalData = (HashMap) iodaReq.getAdditionalData();
 
                 // la mappa deve essere presa in realtà con iodaReq.getAdditionalData();
-                hasPermission = fascicoliUtilities.hasUserPermissionOnFascicolo(dbConn, additionalData);
+                hasPermission = fascicoliUtilities.doesUserHaveAnyPermissionOnThisFascicolo(dbConn, additionalData);
 
             }
 //            catch(SendHttpMessageException | IodaDocumentException | SQLException ex){
@@ -139,9 +139,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
             out.print(hasPermission);
         } catch (Exception ex) {
             log.error("errore della servlet: ", ex);
-        }
-        
-        
+        }     
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">

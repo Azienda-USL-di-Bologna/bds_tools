@@ -926,13 +926,11 @@ public class IodaFascicoliUtilities {
         return res;
     }
     
-    public boolean hasUserPermissionOnFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
-        String idUtente = researcher.getIdUtente();
-        boolean trovato = false;
-        if (idUtente == null || idUtente.equals("")) {
-            String q = "select id_utente, count(*) over (partition by 1) total_rows from procton.utenti where cf = ?";
+    public String getIdUtenteByCFFromAdditionalData(Connection dbConn, String cf) throws SQLException{
+        String idUtente;
+        String q = "select id_utente, count(*) over (partition by 1) total_rows from procton.utenti where cf = ?";
             try(PreparedStatement ps = dbConn.prepareStatement(q)){
-                ps.setString(1, (String) additionalData.get("user").toString());
+                ps.setString(1, cf);
                 log.debug("*************       -->       sql: " + ps.toString());
                 ResultSet result = ps.executeQuery();
                 if (result.next()) {
@@ -944,7 +942,35 @@ public class IodaFascicoliUtilities {
                     throw new SQLException("Utente non trovato");
                 }
             }
-        }  
+        return idUtente;
+    }
+    
+    
+    // ricerca un generico permesso sul fascicolo (responsabilità, vicario, permessi)
+    public boolean doesUserHaveAnyPermissionOnThisFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
+        boolean hasSomePermission = false;
+        String numerazioneGerarchica;
+        String idUtente = researcher.getIdUtente();
+        if (idUtente == null || idUtente.equals("")) 
+            idUtente  = getIdUtenteByCFFromAdditionalData(dbConn, (String) additionalData.get("user").toString());
+        
+        
+        numerazioneGerarchica = additionalData.get("ng").toString();
+        
+        hasSomePermission = isUserResponsabileFascicolo(dbConn, numerazioneGerarchica, idUtente) 
+                || isUserVicario(dbConn, numerazioneGerarchica, idUtente) 
+                || hasUserPermissionOnFascicolo(dbConn, numerazioneGerarchica, idUtente);
+        
+        log.debug("hasSomePermission: " + hasSomePermission);
+        return hasSomePermission;
+    }
+    
+    // cerca se l'utente ha permessi sul fascicolo (ricerca per numerazione_gerarchica)
+    public boolean hasUserPermissionOnFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
+        String idUtente = researcher.getIdUtente();
+        boolean trovato = false;
+        if (idUtente == null || idUtente.equals("")) 
+            idUtente  = getIdUtenteByCFFromAdditionalData(dbConn, (String) additionalData.get("user").toString());
         
         // Scelgo tutti i permessi facendo join tra permessi, oggetti, fascicoli
         // "WHERE" il fascicolo ha quella numerazione gerarchica 
@@ -975,5 +1001,165 @@ public class IodaFascicoliUtilities {
         log.debug("trovatp: " + trovato);
         return trovato;
         
+    }
+    
+    
+    // stesso metodo con firma diversa
+    public boolean hasUserPermissionOnFascicolo(Connection dbConn, String numerazioneGerarchica, String user) throws SQLException{
+        boolean hasPermission = false;
+        
+        String sql = "select p.* from procton_tools.permessi p "
+                + "join procton_tools.oggetti o on o.id = p.id_oggetto "
+                + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
+                + "where f.numerazione_gerarchica = ? and p.id_utente = ? "
+                + "and p.permesso::bpchar >= 4::character(1) "
+                + "and o.tipo_oggetto = 4"; // 4 è il tipo oggetto fascicolo
+        
+              
+        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            // numerazione gerarchica
+            ps.setString(1, numerazioneGerarchica);
+            ps.setString(2, user);
+        
+        log.debug("sql: " + ps.toString());
+        ResultSet results;
+            results = ps.executeQuery();
+            if(results.next())
+                hasPermission = true; 
+        } 
+        catch (Exception ex) {
+            throw new SQLException("Problemi nel trovare i permessi dell'utente  " + ex);
+        }
+        
+        log.debug("trovatp: " + hasPermission);
+        return hasPermission;
+    }
+    
+    // cerca se l'utente è vicario per il fascicolo (ricerca per numerazione_gerarchica)
+    public boolean isUserVicario(Connection dbConn, HashMap additionalData) throws SQLException {
+        String idUtente = researcher.getIdUtente();
+        boolean trovato = false;
+        if (idUtente == null || idUtente.equals("")) 
+            idUtente  = getIdUtenteByCFFromAdditionalData(dbConn, (String) additionalData.get("user").toString());  
+        
+        // faccio una join tra fascicoligd e fascicoli_gd_vicari e cerco se c'è l'utente
+        String sql = "select f.numerazione_gerarchica, v.id_utente "
+                + "from  gd.fascicoligd f "
+                + "join gd.fascicoli_gd_vicari v on f.id_fascicolo = v.id_fascicolo "
+                + "where f.numerazione_gerarchica = ? and v.id_utente = ? ";
+        
+              
+        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            // numerazione gerarchica
+            ps.setString(1, additionalData.get("ng").toString());
+            ps.setString(2, idUtente);
+        
+        log.debug("sql: " + ps.toString());
+        ResultSet results;
+            results = ps.executeQuery();
+            if(results.next())
+                trovato = true; 
+        } 
+        catch (Exception ex) {
+            throw new SQLException("Problemi nel cercare l'utente tra i vicari " + ex);
+        }
+                
+        log.debug("trovatp: " + trovato);
+        return trovato;
+        
+    }
+    
+    
+    // stesso metodo con firma diversa
+    public boolean isUserVicario(Connection dbConn, String numerazioneGerarchica, String user) throws SQLException{
+        boolean hasPermission = false;
+        
+        String sql = "select f.numerazione_gerarchica, v.id_utente "
+                + "from  gd.fascicoligd f "
+                + "join gd.fascicoli_gd_vicari v on f.id_fascicolo = v.id_fascicolo "
+                + "where f.numerazione_gerarchica = ? and v.id_utente = ? ";
+        
+              
+        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            // numerazione gerarchica
+            ps.setString(1, numerazioneGerarchica);
+            ps.setString(2, user);
+        
+        log.debug("sql: " + ps.toString());
+        ResultSet results;
+            results = ps.executeQuery();
+            if(results.next())
+                hasPermission = true; 
+        } 
+        catch (Exception ex) {
+            throw new SQLException("Problemi nel cercare l'utente tra i vicari " + ex);
+        }
+                
+        log.debug("hasPermission: " + hasPermission);
+        
+        return hasPermission;
+    }
+    
+    // cerca se l'utente è id_responsabile_fascicolo sulla riga del fascicolo (ricerca per numerazione_gerarchica)
+    public boolean isUserResponsabileFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
+        String idUtente = researcher.getIdUtente();
+        boolean trovato = false;
+        if (idUtente == null || idUtente.equals("")) 
+            idUtente  = getIdUtenteByCFFromAdditionalData(dbConn, (String) additionalData.get("user").toString());
+        
+        // query secca where numerazione_gerarchica = X and id_utente responsabile = Y
+        String sql = "select f.numerazione_gerarchica, v.id_utente "
+                + "from  gd.fascicoligd f "
+                + "join gd.fascicoli_gd_vicari v on f.id_fascicolo = v.id_fascicolo "
+                + "where f.numerazione_gerarchica = ? and f.id_utente_responsabile = ? ";
+        
+              
+        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            // numerazione gerarchica
+            ps.setString(1, additionalData.get("ng").toString());
+            ps.setString(2, idUtente);
+        
+        log.debug("sql: " + ps.toString());
+        ResultSet results;
+            results = ps.executeQuery();
+            if(results.next())
+                trovato = true; 
+        } 
+        catch (Exception ex) {
+            throw new SQLException("Problemi nel cercare l'utente tra i vicari " + ex);
+        }
+                
+        log.debug("trovatp: " + trovato);
+        return trovato;
+    }
+    
+    // stesso metodo con firma diversa
+    public boolean isUserResponsabileFascicolo(Connection dbConn, String numerazioneGerarchica, String user) throws SQLException{
+        boolean hasPermission = false;
+        
+        String sql = "select f.numerazione_gerarchica, v.id_utente "
+                + "from  gd.fascicoligd f "
+                + "join gd.fascicoli_gd_vicari v on f.id_fascicolo = v.id_fascicolo "
+                + "where f.numerazione_gerarchica = ? and f.id_utente_responsabile = ? ";
+        
+              
+        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            // numerazione gerarchica
+            ps.setString(1, numerazioneGerarchica);
+            ps.setString(2, user);
+        
+        log.debug("sql: " + ps.toString());
+        ResultSet results;
+            results = ps.executeQuery();
+            if(results.next())
+                hasPermission = true; 
+        } 
+        catch (Exception ex) {
+            throw new SQLException("Problemi nel cercare l'utente tra i vicari " + ex);
+        }
+                
+        log.debug("hasPermission: " + hasPermission);
+        
+        return hasPermission;
     }
 }

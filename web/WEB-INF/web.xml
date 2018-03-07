@@ -122,8 +122,8 @@
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.InsertFascicolo</servlet-class>
     </servlet>
     <servlet>
-        <servlet-name>HasUserPermissionOnFascicolo</servlet-name>
-        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.HasUserPermissionOnFascicolo</servlet-class>
+        <servlet-name>HasUserAnyPermissionOnFascicolo</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.HasUserAnyPermissionOnFascicolo</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>Init</servlet-name>
@@ -587,8 +587,8 @@
         <url-pattern>/ioda/api/document/GetGdDocProIdoneita</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
-        <servlet-name>HasUserPermissionOnFascicolo</servlet-name>
-        <url-pattern>/ioda/api/fascicolo/HasUserPermissionOnFascicolo</url-pattern>
+        <servlet-name>HasUserAnyPermissionOnFascicolo</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/HasUserAnyPermissionOnFascicolo</url-pattern>
     </servlet-mapping>
     <!--    <context-param>
         <param-name>schedulatore.active</param-name>
