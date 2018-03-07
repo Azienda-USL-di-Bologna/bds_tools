@@ -974,19 +974,22 @@ public class IodaFascicoliUtilities {
         
         // Scelgo tutti i permessi facendo join tra permessi, oggetti, fascicoli
         // "WHERE" il fascicolo ha quella numerazione gerarchica 
-        // e l'utente è quello loggato coi permessi è quello loggato
+        // e o l'utente loggato ha i permessi o ce li ha la sua struttura
+        // NB: solo la struttura di appartenenza dell'azienda
         String sql = "select p.* from procton_tools.permessi p "
                 + "join procton_tools.oggetti o on o.id = p.id_oggetto "
                 + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
-                + "where f.numerazione_gerarchica = ? and p.id_utente = ? "
+                + "join procton.utenti u on u.id_utente = ? "
+                + "join procton.strutture s on s.id_struttura = u.id_struttura "
+                + "where f.numerazione_gerarchica = ? and (p.id_utente = ? or p.scope = s.id_struttura) "
                 + "and p.permesso::bpchar >= 4::character(1) "
                 + "and o.tipo_oggetto = 4"; // 4 è il tipo oggetto fascicolo
         
               
         try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
-            // numerazione gerarchica
-            ps.setString(1, additionalData.get("ng").toString());
-            ps.setString(2, idUtente);
+            ps.setString(1, idUtente);
+            ps.setString(2, additionalData.get("ng").toString()); // numerazione gerarchica
+            ps.setString(3, idUtente);
         
         log.debug("sql: " + ps.toString());
         ResultSet results;
@@ -1008,18 +1011,24 @@ public class IodaFascicoliUtilities {
     public boolean hasUserPermissionOnFascicolo(Connection dbConn, String numerazioneGerarchica, String user) throws SQLException{
         boolean hasPermission = false;
         
+        // Scelgo tutti i permessi facendo join tra permessi, oggetti, fascicoli
+        // "WHERE" il fascicolo ha quella numerazione gerarchica 
+        // e o l'utente loggato ha i permessi o ce li ha la sua struttura
+        // NB: solo la struttura di appartenenza dell'azienda
         String sql = "select p.* from procton_tools.permessi p "
                 + "join procton_tools.oggetti o on o.id = p.id_oggetto "
                 + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
-                + "where f.numerazione_gerarchica = ? and p.id_utente = ? "
+                + "join procton.utenti u on u.id_utente = ? "
+                + "join procton.strutture s on s.id_struttura = u.id_struttura "
+                + "where f.numerazione_gerarchica = ? and (p.id_utente = ? or p.scope = s.id_struttura) "
                 + "and p.permesso::bpchar >= 4::character(1) "
                 + "and o.tipo_oggetto = 4"; // 4 è il tipo oggetto fascicolo
         
               
         try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
-            // numerazione gerarchica
-            ps.setString(1, numerazioneGerarchica);
-            ps.setString(2, user);
+            ps.setString(1, user);
+            ps.setString(2, numerazioneGerarchica); // numerazione gerarchica
+            ps.setString(3, user);
         
         log.debug("sql: " + ps.toString());
         ResultSet results;
