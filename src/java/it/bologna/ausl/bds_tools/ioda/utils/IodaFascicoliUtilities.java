@@ -526,7 +526,7 @@ public class IodaFascicoliUtilities {
                 + "eredita_permessi, "
                 + "speciale, guid_fascicolo, "
                 + "id_tipo_fascicolo, codice_fascicolo, "
-                + "servizio_creazione, descrizione_iter) "
+                + "servizio_creazione, descrizione_iter, id_iter) "
                 + "VALUES (?, ?, ?, ?, "
                 + "?, ?, ?, "
                 + "?, ?, ?, "
@@ -534,7 +534,7 @@ public class IodaFascicoliUtilities {
                 + "?, "
                 + "?, ?, "
                 + "?, ?, "
-                + "?, ?)";
+                + "?, ?, ?)";
         
         // ======================= IFFONE ====
         // Faccio un iffone brutto perché se arrivo dall'Internauta devo ricavare id_utente tramite codice fiscale ed id_titolo tramite classificazione 
@@ -610,6 +610,7 @@ public class IodaFascicoliUtilities {
             // setto il servizio di creazione con valore API
             ps.setString(index++, Creazione.API.getName());
             ps.setString(index++, fascicolo.getDescrizioneIter());
+            ps.setInt(index++, fascicolo.getIdIter());
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
