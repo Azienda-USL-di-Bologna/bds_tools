@@ -103,7 +103,7 @@ public class InsertFascicolo extends HttpServlet {
 
             try {
                 dbConn.setAutoCommit(false);
-                String guidFascicoloCreato = fascicoliUtilities.insertFascicolo(dbConn);
+                String guidFascicoloCreato = fascicoliUtilities.insertFascicolo(dbConn, iodaRequest.getAdditionalData());
 
                 dbConn.commit();
 

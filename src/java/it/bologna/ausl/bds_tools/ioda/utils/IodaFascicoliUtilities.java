@@ -511,7 +511,7 @@ public class IodaFascicoliUtilities {
         return fascicolo;
     }
 
-    public String insertFascicolo(Connection dbConn) throws IOException, MalformedURLException, SendHttpMessageException, SQLException, ServletException {
+    public String insertFascicolo(Connection dbConn, Map<String, Object> collectionData) throws IOException, MalformedURLException, SendHttpMessageException, SQLException, ServletException {
 
 //        ottengo in ID di INDE
         String idInde = getIndeIdAndGuid().get(INDE_DOCUMENT_ID_PARAM_NAME);
@@ -619,7 +619,7 @@ public class IodaFascicoliUtilities {
                 throw new SQLException("Fascicolo non inserito");
             }
 
-            insertVicari(dbConn, idInde);
+            insertVicari(dbConn, idInde, collectionData);
 
             registraDocumento(dbConn, ps, guidInde, CODICE_REGISTRO_FASCICOLO);
 
@@ -685,12 +685,22 @@ public class IodaFascicoliUtilities {
         return null;
     }
 
-    public void insertVicari(Connection dbConn, String idFascicolo) throws SQLException {
+    public void insertVicari(Connection dbConn, String idFascicolo, Map<String, Object> collectionData) throws SQLException {
+        Boolean traduciVicari = false;
+        
+        if (collectionData != null) {
+            traduciVicari = (Boolean) collectionData.get(Fascicolo.InsertFascicolo.TRADUCI_VICARI.toString());
+        }
 
         String sqlText
                 = "INSERT INTO " + getFascicoliGdVicariTable() + "("
-                + "id_fascicolo, id_utente) "
-                + "VALUES (?, ?)";
+                + "id_fascicolo, id_utente) ";
+        
+        if (traduciVicari) {
+            sqlText = sqlText + "VALUES (?, (SELECT id_utente from procton.utenti where cf = ?))";
+        } else {
+            sqlText = sqlText + "VALUES (?, ?)";
+        }
 
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
 
