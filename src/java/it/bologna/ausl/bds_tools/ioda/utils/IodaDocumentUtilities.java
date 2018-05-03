@@ -499,6 +499,9 @@ public class IodaDocumentUtilities {
                     if (collection != null && ((String) collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
                         gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, true));
+                    } else if (collection != null && ((String) collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD_EXCLUDING_ITER.toString())) {
+                        log.debug("carico senza iter: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
+                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, true, true));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
@@ -647,8 +650,13 @@ public class IodaDocumentUtilities {
     }
 
     private static List<Fascicolazione> caricaFascicolazioni(Connection dbConn, SimpleDocument doc, String prefix, boolean escludiSpeciali) throws SQLException {
+        // IodaFascicolazioniUtilities fascicolazioniUtilities = new IodaFascicolazioniUtilities(doc, prefix);
+        return caricaFascicolazioni(dbConn, doc, prefix, escludiSpeciali, false);
+    }
+    
+    private static List<Fascicolazione> caricaFascicolazioni(Connection dbConn, SimpleDocument doc, String prefix, boolean escludiSpeciali, boolean escludiIter) throws SQLException {
         IodaFascicolazioniUtilities fascicolazioniUtilities = new IodaFascicolazioniUtilities(doc, prefix);
-        return fascicolazioniUtilities.getFascicolazioni(dbConn, escludiSpeciali);
+        return fascicolazioniUtilities.getFascicolazioni(dbConn, escludiSpeciali, escludiIter);
     }
 
     private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc, String idOggettoOrigine, boolean soloNumerate) throws SQLException {

@@ -72,12 +72,16 @@ public class IodaFascicolazioniUtilities {
         }
         return fascicolazioni;
     }
-
+    
     public List<Fascicolazione> getFascicolazioni(Connection dbConn, boolean escludiSpeciali) throws SQLException{
+        return getFascicolazioni(dbConn, escludiSpeciali, false);
+    }
+
+    public List<Fascicolazione> getFascicolazioni(Connection dbConn, boolean escludiSpeciali, boolean escludiIter) throws SQLException{
         List<Fascicolazione> fascicolazioni = new ArrayList<>();
 
         // estrazione dei fascicoli del documento
-        ArrayList<String> idFascicoli = this.getIdFascicoli(dbConn, escludiSpeciali);
+        ArrayList<String> idFascicoli = this.getIdFascicoli(dbConn, escludiSpeciali, escludiIter);
 
         // per ogni fascicolo calcolo la sua classificazione
         for (String idFascicolo : idFascicoli) {
@@ -133,8 +137,12 @@ public class IodaFascicolazioniUtilities {
         }
         return res;
     }
-
+    
     private ArrayList<String> getIdFascicoli(Connection dbConn, boolean escludiSpeciali) throws SQLException {
+        return getIdFascicoli(dbConn, escludiSpeciali, false);
+    }
+
+    private ArrayList<String> getIdFascicoli(Connection dbConn, boolean escludiSpeciali, boolean escludiIter) throws SQLException {
         
         ArrayList<String> res = new ArrayList<>(); 
         
@@ -148,7 +156,7 @@ public class IodaFascicolazioniUtilities {
             "AND g.tipo_oggetto_origine = ? " +
             "AND g.id_gddoc = fg.id_gddoc " +
             "AND f.id_fascicolo = fg.id_fascicolo " +
-            "AND f.speciale = 0";
+            "AND f.speciale = 0 ";
         }
         else{
             sqlText =
@@ -159,7 +167,34 @@ public class IodaFascicolazioniUtilities {
             "AND g.id_gddoc = fg.id_gddoc ";
         }
         
+//        if (escludiIter) {
+//            sqlText += " and ";
+//        }
         
+        if (escludiSpeciali || escludiIter) {
+            sqlText =
+            "SELECT fg.id_fascicolo " +
+            "FROM " + getGdDocTable() + " g, " + getFascicoliGdDocTable() + " fg,  " + getFascicoliTable() + " f " +
+            "WHERE g.id_oggetto_origine = ? " +
+            "AND g.tipo_oggetto_origine = ? " +
+            "AND g.id_gddoc = fg.id_gddoc " +
+            "AND f.id_fascicolo = fg.id_fascicolo ";
+            
+            if (escludiIter) {
+                sqlText += " AND f.id_iter IS NULL";
+            }
+            
+            if (escludiSpeciali) {
+                sqlText += " AND f.speciale = 0 ";
+            }
+        } else{
+            sqlText =
+            "SELECT fg.id_fascicolo " +
+            "FROM " + getGdDocTable() + " g, " + getFascicoliGdDocTable() + " fg " +
+            "WHERE g.id_oggetto_origine = ? " +
+            "AND g.tipo_oggetto_origine = ? " +
+            "AND g.id_gddoc = fg.id_gddoc ";
+        }
 
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
