@@ -135,9 +135,47 @@ public class IodaDocumentUtilities {
             }
         }
     }
-
-    public GdDoc getGdDoc() {
+    
+    public GdDoc getGdDoc() throws SQLException {
+        return getGdDoc(null);
+    }
+    
+    public GdDoc getGdDoc(Connection dbConn) throws SQLException {
+        // Per controlli precedenti so che id_oggetto_origine e tipo_oggetto_origine o li ho entrambi o nessuno dei due.
+        // Mi basta quindi controllare il tipo oggetto origine. Se è null allora devo caricare questi due campi tramite resistro, numero e anno registrazione.
+        if (dbConn != null && (gdDoc.getTipoOggettoOrigine() == null || gdDoc.getTipoOggettoOrigine().equals(""))) {
+            caricaIdETipoOggettoOrigine(dbConn);
+        }
         return gdDoc;
+    }
+    
+    private void caricaIdETipoOggettoOrigine(Connection dbConn) throws SQLException {
+        String q
+                = "SELECT id_oggetto_origine, tipo_oggetto_origine, count(*) over (partition by 1) total_rows "
+                + "FROM " + getGdDocTable() + " "
+                + "WHERE codice_registro = ? AND numero_registrazione = ? AND anno_registrazione = ?";
+
+        try (PreparedStatement ps = dbConn.prepareStatement(q)) {
+            int index = 1;
+            ps.setString(index++, gdDoc.getCodiceRegistro());
+            ps.setString(index++, gdDoc.getNumeroRegistrazione());
+            ps.setInt(index++, gdDoc.getAnno());
+            
+            
+            String query = ps.toString();
+            log.debug("eseguo la query: " + query + " ...");
+            ResultSet result = ps.executeQuery();
+            
+            if (result.next()) {
+                if (result.getInt("total_rows") > 1) {
+                    throw new SQLException("Trovate più righe per questo gddoc");                 
+                }
+                gdDoc.setIdOggettoOrigine(result.getString("id_oggetto_origine"));
+                gdDoc.setTipoOggettoOrigine(result.getString("tipo_oggetto_origine"));
+            } else {
+                throw new SQLException("Gddoc non trovato");
+            }
+        }
     }
 
     private JSONObject getNextIndeId() {
@@ -461,6 +499,9 @@ public class IodaDocumentUtilities {
                     if (collection != null && ((String) collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD.toString())) {
                         log.debug("carico: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
                         gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, true));
+                    } else if (collection != null && ((String) collection).equalsIgnoreCase(GdDoc.GdDocCollectionValues.LOAD_EXCLUDING_ITER.toString())) {
+                        log.debug("carico senza iter: " + GdDoc.GdDocCollectionNames.FASCICOLAZIONI.toString() + "...");
+                        gdDoc.setFascicolazioni(caricaFascicolazioni(dbConn, doc, prefix, true, true));
                     }
 
                     collection = collections.get(GdDoc.GdDocCollectionNames.PUBBLICAZIONI.toString());
@@ -609,8 +650,13 @@ public class IodaDocumentUtilities {
     }
 
     private static List<Fascicolazione> caricaFascicolazioni(Connection dbConn, SimpleDocument doc, String prefix, boolean escludiSpeciali) throws SQLException {
+        // IodaFascicolazioniUtilities fascicolazioniUtilities = new IodaFascicolazioniUtilities(doc, prefix);
+        return caricaFascicolazioni(dbConn, doc, prefix, escludiSpeciali, false);
+    }
+    
+    private static List<Fascicolazione> caricaFascicolazioni(Connection dbConn, SimpleDocument doc, String prefix, boolean escludiSpeciali, boolean escludiIter) throws SQLException {
         IodaFascicolazioniUtilities fascicolazioniUtilities = new IodaFascicolazioniUtilities(doc, prefix);
-        return fascicolazioniUtilities.getFascicolazioni(dbConn, escludiSpeciali);
+        return fascicolazioniUtilities.getFascicolazioni(dbConn, escludiSpeciali, escludiIter);
     }
 
     private static List<PubblicazioneIoda> caricaPubblicazioni(Connection dbConn, String idGdDoc, String idOggettoOrigine, boolean soloNumerate) throws SQLException {
@@ -1233,8 +1279,8 @@ public class IodaDocumentUtilities {
             }
         }
     }
-
-    public void deleteGdDoc(Connection dbConn) throws SQLException, IodaDocumentException {
+    
+       public void deleteGdDoc(Connection dbConn) throws SQLException, IodaDocumentException {
 //        String sqlText =
 //                "SELECT numero_registrazione " +
 //                "FROM " + getGdDocTable() + " " +
@@ -2251,6 +2297,7 @@ public class IodaDocumentUtilities {
                 + "d.cig_azienda, "
                 + "d.importo, "
                 + "d.fornitore, "
+                + "d.partita_iva_fornitore, "
                 + "d.ragioni_scelta_fornitore, "
                 + "d.check_fornitore_requisiti_generali, "
                 + "d.check_fornitore_requisiti_professionali, "
@@ -2262,6 +2309,7 @@ public class IodaDocumentUtilities {
                 + "d.operatori_economici_offerenti, "
                 + "d.data_aggiudicazione, "
                 + "d.guid_oggetto, "
+                + "d.importo_testuale, "
                 + "t.codice, "
                 + "t.testo "
                 + "FROM " + ApplicationParams.getDatiProfiloCommittenteTableName() + " d "
@@ -2300,6 +2348,8 @@ public class IodaDocumentUtilities {
                 datiProfiloCommittente.setProcedura(result.getString("procedura"));
                 datiProfiloCommittente.setRagioniSceltaFornitore(result.getString("ragioni_scelta_fornitore"));
                 datiProfiloCommittente.setTipologiaGara(result.getString("tipologia_gara"));
+                datiProfiloCommittente.setPartitaIvaCf(result.getString("partita_iva_fornitore"));
+                datiProfiloCommittente.setImportoTestuale(result.getString("importo_testuale"));
             }
             if (result.next()) {
                 log.error("troppi oggetto trovati, mi aspettavo una sola riga");

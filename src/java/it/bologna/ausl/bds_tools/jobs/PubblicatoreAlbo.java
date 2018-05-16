@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.naming.NamingException;
@@ -374,13 +375,15 @@ public class PubblicatoreAlbo implements Job {
             pubblicazioneCommittente.setDataAggiudicazione(dataAggiudicazione.toDate());
         }
         pubblicazioneCommittente.setFornitore(datiProfiloCommittente.getFornitore());
-        pubblicazioneCommittente.setImporto(datiProfiloCommittente.getImporto());
+        String importoTemp = datiProfiloCommittente.getImportoTestuale(); // Controllo se l'importo è stato inserito in Dete/Deli come testo
+        pubblicazioneCommittente.setImporto(importoTemp != null ? importoTemp : String.format(Locale.ITALY,"%,.2f", datiProfiloCommittente.getImporto())); // altrimenti lo converto
         pubblicazioneCommittente.setOggettoAffidamento(datiProfiloCommittente.getOggettoAffidamento());
         pubblicazioneCommittente.setOperatoriEconomiciInviati(datiProfiloCommittente.getOperatoriEconomiciInviati());
         pubblicazioneCommittente.setOperatoriEconomiciOfferenti(datiProfiloCommittente.getOperatoriEconomiciOfferenti());
         pubblicazioneCommittente.setProcedura(datiProfiloCommittente.getProcedura());
         pubblicazioneCommittente.setRagioniSceltaFornitore(datiProfiloCommittente.getRagioniSceltaFornitore());
         pubblicazioneCommittente.setTipologiaGara(datiProfiloCommittente.getTipologiaGara());
+        pubblicazioneCommittente.setPartitaIvaCf(datiProfiloCommittente.getPartitaIvaCf());
         
         // devo pubblicare solo i sotto documenti che hanno il flag "pubblicazione_albo" restituito da isPubblicazioneAlbo (mi aspetto che sia solo la stampa unica), se ne trovo zero o più di 1 dò errore
         // filtro solo i sottoducumenti da pubblicare
