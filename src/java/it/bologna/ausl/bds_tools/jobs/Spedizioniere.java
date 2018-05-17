@@ -669,7 +669,7 @@ public class Spedizioniere implements Job{
                     // errori della famiglia 400
                     log.debug("Eccezione nell'ottenimento del messageId dal percgw: " + ex);
                     String setStatoErroreInDb = "UPDATE " + ApplicationParams.getSpedizioniPecGlobaleTableName() + " " +
-                                                "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ?, numero_errori=? " +
+                                                "SET stato=?::bds_tools.stati_spedizione, da_ritentare = ?, numero_errori=?, verifica_timestamp=now() " +
                                                 "WHERE id = ?";
                     try (
                         Connection conn = UtilityFunctions.getDBConnection();
