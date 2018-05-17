@@ -128,7 +128,7 @@ public class IodaFascicoliUtilities {
                 + "f.numerazione_gerarchica, f.id_utente_responsabile, uResp.nome, uResp.cognome, "
                 + "f.stato_fascicolo, f.id_utente_responsabile_proposto, f.id_fascicolo_padre, "
                 + "f.id_titolo, f.speciale, t.codice_gerarchico || '' || t.codice_titolo || ' ' || t.titolo as titolo, "
-                + "f.id_fascicolo_importato, f.data_chiusura, f.note_importazione, "
+                + "f.id_fascicolo_importato, f.data_chiusura, f.note_importazione, f.id_iter, "
                 + "case when fv.id_fascicolo is null then 0 else -1 end as accesso "
                 + "from "
                 + "gd.fascicoligd f "
@@ -181,6 +181,7 @@ public class IodaFascicoliUtilities {
                 dataChiusura = DateTime.parse(tmp, formatter);
             }
             String noteImportazione = results.getString(index++);
+            int idIter = results.getInt(index++);
             int accesso = results.getInt(index++);
 
             String descrizioneUtenteResponsabile = nomeUtenteResponsabile + " " + cognomeUtenteResponsabile;
@@ -199,6 +200,7 @@ public class IodaFascicoliUtilities {
             f.setSpeciale(speciale);
             f.setTitolo(titolo);
             f.setAccesso(accesso);
+            f.setIdIter(idIter);
             f.setIdUtenteResponsabileProposto(idUtenteResponsabileProposto);
             f.setIdFascicoloImportato(idFascicoloImportato);
             f.setDataChiusura(dataChiusura);
