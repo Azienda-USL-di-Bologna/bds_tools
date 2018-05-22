@@ -59,6 +59,7 @@ import org.joda.time.DateTimeZone;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.springframework.util.StringUtils;
 
 /**
  *
@@ -202,15 +203,25 @@ public class IodaDocumentUtilities {
         String sqlText
                 = "INSERT INTO " + getFascicoliGdDocTable() + "("
                 + "id_fascicolo_gddoc, id_gddoc, id_fascicolo, data_assegnazione, id_utente_fascicolatore) "
-                + "VALUES (?, ?, (select id_fascicolo from gd.fascicoligd where numerazione_gerarchica = ?), ?, ?)";
-
+                + "VALUES (?, ?, (select id_fascicolo from gd.fascicoligd where numerazione_gerarchica = ?), ?, ";
+        
+        String identificativoFascicolatore;
+        
+        if (!StringUtils.hasText(fascicolazione.getIdUtenteFascicolatore()) && StringUtils.hasText(fascicolazione.getCfUtenteFascicolatore())) {
+            sqlText += "(select id_utente from procton.utenti where cf = ?))";
+            identificativoFascicolatore = fascicolazione.getCfUtenteFascicolatore();
+        } else {
+            sqlText += "?)";
+            identificativoFascicolatore = fascicolazione.getIdUtenteFascicolatore();
+        }
+                
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
             ps.setString(index++, idFascicoloGdDoc);
             ps.setString(index++, gdDoc.getId());
             ps.setString(index++, fascicolazione.getCodiceFascicolo());
             ps.setTimestamp(index++, new Timestamp(System.currentTimeMillis()));
-            ps.setString(index++, fascicolazione.getIdUtenteFascicolatore());
+            ps.setString(index++, identificativoFascicolatore);
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
