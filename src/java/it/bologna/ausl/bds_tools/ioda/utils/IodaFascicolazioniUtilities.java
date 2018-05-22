@@ -311,7 +311,7 @@ public class IodaFascicolazioniUtilities {
 "join gd.fascicoligd f on f.id_fascicolo = fr.id_fascicolo " +
 "where fr.id_utente_responsabile = ? and fr.id_fascicolo in (?) )" + 
 "SELECT f.numerazione_gerarchica, f.nome_fascicolo, fg.data_assegnazione, fg.id_utente_fascicolatore, fg.data_eliminazione, " +
-"	fg.id_utente_eliminazione, f.numero_fascicolo, f.anno_fascicolo, f.id_iter" +
+"	fg.id_utente_eliminazione, f.numero_fascicolo, f.anno_fascicolo, f.id_iter, " +
 "	CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) " +
 "		WHEN '3' THEN (select nome_fascicolo from gd.fascicoligd where id_fascicolo = (select id_fascicolo_padre from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo)) " +
 "		ELSE nome_fascicolo " +
