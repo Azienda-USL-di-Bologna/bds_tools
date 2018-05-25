@@ -681,6 +681,7 @@ public class Spedizioniere implements Job{
                         ps.setLong(4, id);
                         log.debug("Query: " + ps);
                         ps.executeUpdate();
+                        gestisciErrore(res);
                     }
                     catch(Exception e) {
                         log.debug("eccezione nell'update su eccezione della famiglia 400: ", e);
