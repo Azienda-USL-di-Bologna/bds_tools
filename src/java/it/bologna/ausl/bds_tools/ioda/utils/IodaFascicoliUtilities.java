@@ -49,7 +49,7 @@ public class IodaFascicoliUtilities {
     public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
     public static final String CODICE_REGISTRO_FASCICOLO = "FASCICOLO";
     
-    public static enum GetFascicoliUtente {TIPO_FASCICOLO, SOLO_ITER, CODICE_FISCALE}
+    public static enum GetFascicoli {TIPO_FASCICOLO, SOLO_ITER, CODICE_FISCALE, ANCHE_CHIUSI, DAMMI_PERMESSI}
 
 
     private String gdDocTable;
@@ -111,12 +111,29 @@ public class IodaFascicoliUtilities {
 
         String whereCondition;
 
-        if (matcha) {
-            whereCondition = "where f.numerazione_gerarchica ilike ('" + strToFind + "%')"; // In questo caso si vuole l'"inizia con"
+        if (matcha) {            
+            // E' una numerazione gerarchica completa?
+            if (strToFind.matches("(\\d+/\\d) | (\\d+\\-\\d+/\\d+) | (\\d+\\-\\d+\\-\\d+/\\d)")) {
+                whereCondition = "where f.numerazione_gerarchica = '" + strToFind + "' "; // In questo caso uso l'uguale
+            } else {
+                whereCondition = "where f.numerazione_gerarchica like ('" + strToFind + "%')"; // In questo caso si vuole l'"inizia con"
+            }
         } else {
             whereCondition = "where f.nome_fascicolo ilike ('%" + strToFind + "%')";
         }
-
+        
+//        Boolean soloIter = Boolean.parseBoolean((String) additionalData.get(GetFascicoli.SOLO_ITER.toString()));
+//        Boolean ancheChiusi = Boolean.parseBoolean((String) additionalData.get(GetFascicoli.ANCHE_CHIUSI.toString()));
+//        Boolean dammiPermessi = Boolean.parseBoolean((String) additionalData.get(GetFascicoli.DAMMI_PERMESSI.toString()));
+//        
+//        if (soloIter) {
+//            whereCondition += " and id_iter is not null ";
+//        }
+//        
+//        if (!ancheChiusi) {
+//            whereCondition += " and f.stato_fascicolo != 'p' ";
+//        }
+                
         // Preparo la query
         String sqlText = "select distinct(f.id_fascicolo), f.id_livello_fascicolo, "
                 + "CASE f.id_livello_fascicolo WHEN '2' THEN (select nome_fascicolo from gd.fascicoligd where f.id_fascicolo_padre = id_fascicolo) "
@@ -138,7 +155,7 @@ public class IodaFascicoliUtilities {
                 + "join procton.utenti uResp on uResp.id_utente=f.id_utente_responsabile "
                 + "join procton.utenti uCrea on f.id_utente_creazione=uCrea.id_utente "
                 + whereCondition + " "
-                + "and f.numero_fascicolo != '0' and f.speciale != -1 and f.stato_fascicolo != 'p' "
+                + "and f.numero_fascicolo != '0' and f.speciale != -1  "
                 + "and f.stato_fascicolo != 'c' order by f.nome_fascicolo";
 
         // controllo se ci sono limiti da applicare
@@ -205,9 +222,12 @@ public class IodaFascicoliUtilities {
             f.setIdFascicoloImportato(idFascicoloImportato);
             f.setDataChiusura(dataChiusura);
             f.setNoteImportazione(noteImportazione);
-
             f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
-
+            
+//            if (dammiPermessi) {
+//                f.setPermessi(getPermessiDelFascicolo(dbConn, ps, idFascicolo));
+//            }
+            
             res.addFascicolo(f);
         }
 
@@ -216,6 +236,202 @@ public class IodaFascicoliUtilities {
         }
 
         return res;
+    }
+    
+    
+    public Fascicoli getFascicoliConPermessi(Connection dbConn, PreparedStatement ps, Map<String, Object> additionalData) throws SQLException {
+        return getFascicoliConPermessi(dbConn, ps, researcher.getSearchString(), researcher.getLimiteDiRicerca(), additionalData);
+    }
+    
+    private Fascicoli getFascicoliConPermessi(Connection dbConn, PreparedStatement ps, String strToFind, int limit, Map<String, Object> additionalData) throws SQLException {
+        Fascicoli fascicoli = new Fascicoli();
+        String whereCondition;
+        
+        // La stringa cercata è una numerazione gerarchica? (Deve iniziare con un numero)
+        if (strToFind.matches("(\\d+-?)|(\\d+/\\d*)|(\\d+\\-\\d+/?)|(\\d+\\-\\d+/\\d+)|(\\d+\\-\\d+\\-\\d*)|(\\d+\\-\\d+\\-\\d+/\\d*)")) {            
+            // E' una numerazione gerarchica completa?
+            if (strToFind.matches("(\\d+/\\d{4})|(\\d+\\-\\d+/\\d{4})|(\\d+\\-\\d+\\-\\d+/\\d{4})")) {
+                whereCondition = "where f.numerazione_gerarchica = '" + strToFind + "' "; // In questo caso uso l'uguale
+            } else {
+                whereCondition = "where f.numerazione_gerarchica like ('" + strToFind + "%')"; // In questo caso si vuole l'"inizia con"
+            }
+        } else {
+            whereCondition = "where f.nome_fascicolo ilike ('%" + strToFind + "%')";
+        }
+        
+        Boolean soloIter = Boolean.parseBoolean((String) additionalData.get(GetFascicoli.SOLO_ITER.toString()));
+        Boolean ancheChiusi = Boolean.parseBoolean((String) additionalData.get(GetFascicoli.ANCHE_CHIUSI.toString()));
+//        Boolean dammiPermessi = Boolean.parseBoolean((String) additionalData.get(GetFascicoli.DAMMI_PERMESSI.toString()));
+        
+        if (soloIter) {
+            whereCondition += " and id_iter is not null ";
+        }
+        
+        if (!ancheChiusi) {
+            whereCondition += " and f.stato_fascicolo != 'p' and f.stato_fascicolo != 'c'";
+        }
+                
+        // Preparo la query
+        String sqlText = "select distinct f.id_fascicolo, f.id_livello_fascicolo, "
+                + "f.numero_fascicolo, "
+                + "f.nome_fascicolo,f.anno_fascicolo, f.id_utente_creazione, f.data_creazione, "
+                + "f.numerazione_gerarchica, f.id_utente_responsabile, "
+                + "f.stato_fascicolo, f.id_utente_responsabile_proposto, "
+                + "f.speciale, "
+                + "f.id_fascicolo_importato, f.data_chiusura, f.note_importazione, f.id_iter "
+                + "from "
+                + "gd.fascicoligd f "
+                + whereCondition + " "
+                + "and f.numero_fascicolo != '0' and f.speciale != -1  ";
+
+        // controllo se ci sono limiti da applicare
+        if (limit != 0) {
+            sqlText += " limit " + limit;
+        }
+
+        ps = dbConn.prepareStatement(sqlText);
+        log.debug("sql: " + ps.toString());
+
+        ResultSet results = ps.executeQuery();
+
+        while (results.next()) {
+            int index = 1;
+            String idFascicolo = results.getString(index++);
+            String idLivelloFascicolo = results.getString(index++);
+            int numeroFascicolo = results.getInt(index++);
+            String nomeFascicolo = results.getString(index++);
+            int annoFascicolo = results.getInt(index++);
+            String idUtenteCreazione = results.getString(index++);
+            DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd");
+            DateTime dataCreazione = DateTime.parse(results.getString(index++), formatter);
+            String numerazioneGerarchica = results.getString(index++);
+            String idUtenteResponsabile = results.getString(index++);
+            String statoFascicolo = results.getString(index++);
+            String idUtenteResponsabileProposto = results.getString(index++);
+            int speciale = results.getInt(index++);
+            String idFascicoloImportato = results.getString(index++);
+            DateTime dataChiusura = null;
+            String tmp = results.getString(index++);
+            if (tmp != null) {
+                dataChiusura = DateTime.parse(tmp, formatter);
+            }
+            String noteImportazione = results.getString(index++);
+            int idIter = results.getInt(index++);
+
+            Fascicolo f = new Fascicolo();
+            f.setCodiceFascicolo(numerazioneGerarchica);
+            f.setNumeroFascicolo(numeroFascicolo);
+            f.setNomeFascicolo(nomeFascicolo);
+            f.setIdUtenteResponsabile(idUtenteResponsabile);
+            f.setDataCreazione(dataCreazione);
+            f.setAnnoFascicolo(annoFascicolo);
+            f.setIdLivelloFascicolo(idLivelloFascicolo);
+            f.setIdUtenteCreazione(idUtenteCreazione);
+            f.setStatoFascicolo(statoFascicolo);
+            f.setSpeciale(speciale);
+            f.setIdIter(idIter);
+            f.setIdUtenteResponsabileProposto(idUtenteResponsabileProposto);
+            f.setIdFascicoloImportato(idFascicoloImportato);
+            f.setDataChiusura(dataChiusura);
+            f.setNoteImportazione(noteImportazione);
+            f.setClassificazioneFascicolo(getClassificazioneFascicolo(dbConn, ps, idFascicolo));
+            
+            f.setPermessi(getPermessiDelFascicolo(dbConn, ps, idFascicolo));
+            // TODO: Aggiungere i vicari, ma sono già ricavabili dai permessi in realtà..
+            //f.setVicari(vicari);
+            fascicoli.addFascicolo(f);
+        }
+
+        if (fascicoli.getSize() == 0) {
+            fascicoli.createFascicoli();
+        }
+
+        return fascicoli;
+    }
+          
+    public Map<String,String> getPermessiDelFascicolo(Connection dbConn, PreparedStatement ps, String idFascicolo) throws SQLException {
+               
+        String q = "with permessi as (\n" +
+            "select u.cf, 'RESPONSABILE' as permesso\n" +
+            "from gd.fascicoligd f\n" +
+            "join procton.utenti u on u.id_utente = f.id_utente_responsabile\n" +
+            "where f.id_fascicolo = ?\n" +
+            "UNION\n" +
+            "select u.cf, 'VICARIO' as permesso\n" +
+            "from gd.fascicoligd f\n" +
+            "join gd.fascicoli_gd_vicari v on f.id_fascicolo = v.id_fascicolo\n" +
+            "join procton.utenti u on u.id_utente = v.id_utente\n" +
+            "where f.id_fascicolo = ?\n" +
+            "UNION\n" +
+            "select u.cf, p.permesso\n" +
+            "from gd.fascicoligd f\n" +
+            "join procton_tools.oggetti o on o.id_oggetto = f.id_fascicolo\n" +
+            "join procton_tools.permessi p on p.id_oggetto = o.id\n" +
+            "join procton.utenti u on u.id_utente = p.id_utente\n" +
+            "where f.id_fascicolo = ?\n" +
+            "UNION ALL\n" +
+            "select u.cf, p.permesso\n" +
+            "from gd.fascicoligd f\n" +
+            "join procton_tools.oggetti o on o.id_oggetto = f.id_fascicolo\n" +
+            "join procton_tools.permessi p on p.id_oggetto = o.id\n" +
+            "join procton.strutture s on s.id_struttura = p.scope\n" +
+            "join procton.utenti u on u.id_struttura = s.id_struttura\n" +
+            "where f.id_fascicolo = ? and p.id_utente is null\n" +
+            "UNION ALL\n" +
+            "select u.cf, p.permesso\n" +
+            "from gd.fascicoligd f\n" +
+            "join procton_tools.oggetti o on o.id_oggetto = f.id_fascicolo\n" +
+            "join procton_tools.permessi p on p.id_oggetto = o.id\n" +
+            "join procton.strutture s on s.id_struttura = p.scope\n" +
+            "join procton.incarichi i on i.id_struttura = s.id_struttura\n" +
+            "join procton.utenti u on u.id_utente = i.id_utente\n" +
+            "where f.id_fascicolo = ? and p.id_utente is null\n" +
+            "UNION ALL\n" +
+            "select u.cf, p.permesso\n" +
+            "from gd.fascicoligd f\n" +
+            "join procton_tools.oggetti o on o.id_oggetto = f.id_fascicolo\n" +
+            "join procton_tools.permessi p on p.id_oggetto = o.id\n" +
+            "join procton.strutture s on s.id_struttura = p.scope\n" +
+            "join procton.appartenenze_funzionali a on a.id_struttura = s.id_struttura\n" +
+            "join procton.utenti u on u.id_utente = a.id_utente\n" +
+            "where f.id_fascicolo = ? and p.id_utente is null\n" +
+            ")\n" +
+            "select distinct on (cf) cf, case\n" +
+                    "	when permesso = '0' then 'NON_PERMESSO'\n" +
+                    "	when permesso = '4' then 'VISUALIZZA'\n" +
+                    "	when permesso = '6' then 'MODIFICA'\n" +
+                    "	when permesso = '7' then 'CANCELLA'\n" +
+                    "	else permesso end \n" +
+            "from permessi\n" +
+            "order by cf, case when permesso = 'RESPONSABILE' then 1 \n" +
+            "	when permesso = 'VICARIO' then 2 \n" +
+            "	when permesso = '7' then 3 \n" +
+            "	when permesso = '6' then 4 \n" +
+            "	when permesso = '4' then 5 \n" +
+            "	when permesso = '0' then 6 \n" +
+            "	end;";
+        
+        ps = dbConn.prepareStatement(q);
+        
+        int index = 1;
+        ps.setString(index++, idFascicolo);
+        ps.setString(index++, idFascicolo);
+        ps.setString(index++, idFascicolo);
+        ps.setString(index++, idFascicolo);
+        ps.setString(index++, idFascicolo);
+        ps.setString(index++, idFascicolo);
+
+        log.debug("sql: " + ps.toString());
+
+        ResultSet results = ps.executeQuery();
+        Map<String,String> permessi = new HashMap<String,String>();
+        
+        while (results.next()) {
+            index = 1;
+            permessi.put(results.getString(index++), results.getString(index++));
+        }
+        
+        return permessi;
     }
 
     public FascicoliPregressiMap getFascicoliPregressi(Connection dbConn, PreparedStatement ps) throws SQLException, JsonProcessingException {
@@ -844,13 +1060,13 @@ public class IodaFascicoliUtilities {
         
         Fascicoli res = new Fascicoli();
         String idUtente = researcher.getIdUtente();
-        Integer tipoFascicolo = Integer.parseInt((String) additionalData.get(GetFascicoliUtente.TIPO_FASCICOLO.toString()));
-        Boolean soloIter = Boolean.parseBoolean((String) additionalData.get(GetFascicoliUtente.SOLO_ITER.toString()));
+        Integer tipoFascicolo = Integer.parseInt((String) additionalData.get(GetFascicoli.TIPO_FASCICOLO.toString()));
+        Boolean soloIter = Boolean.parseBoolean((String) additionalData.get(GetFascicoli.SOLO_ITER.toString()));
         
         if (idUtente == null || idUtente.equals("")) {
             String q = "select id_utente, count(*) over (partition by 1) total_rows from procton.utenti where cf = ?";
             ps = dbConn.prepareStatement(q);
-            ps.setString(1, (String) additionalData.get(GetFascicoliUtente.CODICE_FISCALE.toString()));
+            ps.setString(1, (String) additionalData.get(GetFascicoli.CODICE_FISCALE.toString()));
             log.debug("sql: " + ps.toString());
             ResultSet result = ps.executeQuery();
             if (result.next()) {

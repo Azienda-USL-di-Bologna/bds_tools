@@ -125,6 +125,10 @@
         <servlet-name>HasUserAnyPermissionOnFascicolo</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.HasUserAnyPermissionOnFascicolo</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>GetFascicoliConPermessi</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.GetFascicoliConPermessi</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Init</servlet-name>
         <url-pattern>/Init</url-pattern>
@@ -589,6 +593,10 @@
     <servlet-mapping>
         <servlet-name>HasUserAnyPermissionOnFascicolo</servlet-name>
         <url-pattern>/ioda/api/fascicolo/HasUserAnyPermissionOnFascicolo</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GetFascicoliConPermessi</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/GetFascicoliConPermessi</url-pattern>
     </servlet-mapping>
     <!--    <context-param>
         <param-name>schedulatore.active</param-name>
