@@ -33,6 +33,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
+import java.sql.Types;
+import java.util.Collections;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -1174,7 +1176,170 @@ public class IodaFascicoliUtilities {
         return idUtente;
     }
     
+    public List<String> getIdUtentiByCodiciFiscali(Connection dbConn, PreparedStatement ps, List<String> cfs) throws SQLException{
+        log.info("Prendo gli id utente dai codici fiscali...");
+        log.debug("CODICI = " + cfs);
+        String q = "select id_utente, count(*) over (partition by 1) total_rows from procton.utenti where cf IN (";
+        q += String.join("", Collections.nCopies(cfs.size(), "?,"));
+        q = q.substring(0, q.length() - 1) + ")";
+        List<String> idUtenti = new ArrayList<>();
+        ps = dbConn.prepareStatement(q);
+ 
+        int index = 1;
+        for (String cf: cfs) {
+            ps.setString(index++, cf);
+        }
+       log.info("eseguo la query...");
+        ResultSet result = ps.executeQuery();
+        if (result.next()) {
+            if (result.getInt("total_rows") != cfs.size()) {
+                throw new SQLException("Previsti " + cfs.size() + " risultati. Trovati: "
+                    + result.getInt("total_rows"));                 
+            }
+            do {
+                idUtenti.add(result.getString("id_utente"));
+            } while (result.next());
+            log.info("Id utenti dei vicari = " + idUtenti.toString());
+        } else {
+            throw new SQLException("Nessun utente trovato.");
+        }
+        
+        return idUtenti;
+    }
     
+    public Boolean updateFascicolo(Connection dbConn, PreparedStatement ps, HashMap additionalData) throws SQLException {
+        
+        String sqlText
+                = "UPDATE " + getFascicoliTable() + " SET "
+                + "nome_fascicolo = coalesce(?, nome_fascicolo), "
+                + "numero_fascicolo = coalesce(?, numero_fascicolo), "
+                + "anno_fascicolo = coalesce(?, anno_fascicolo), "
+                + "stato_fascicolo = coalesce(?, stato_fascicolo), "
+                + "id_livello_fascicolo = coalesce(?, id_livello_fascicolo), "
+                + "id_struttura = coalesce(?, id_struttura), "
+                + "id_titolo = coalesce(?, id_titolo), "
+                + "id_utente_responsabile = coalesce(?, id_utente_responsabile), "
+                + "id_utente_creazione = coalesce(?, id_utente_creazione), "
+                + "id_utente_responsabile_proposto = coalesce(?, id_utente_responsabile_proposto), "
+                + "descrizione_iter = coalesce(?, descrizione_iter) "
+                + "WHERE numerazione_gerarchica = ? ";
+        ps = dbConn.prepareStatement(sqlText);
+        
+        int index = 1;
+
+        setStringOrNull(ps, index++, fascicolo.getNomeFascicolo());
+        setIntOrNull(ps, index++, fascicolo.getNumeroFascicolo());
+        setIntOrNull(ps, index++, fascicolo.getAnnoFascicolo());
+        setStringOrNull(ps, index++, fascicolo.getStatoFascicolo());
+        setStringOrNull(ps, index++, fascicolo.getIdLivelloFascicolo());
+        setStringOrNull(ps, index++, fascicolo.getIdStruttura());
+        setStringOrNull(ps, index++, fascicolo.getTitolo());         
+        setUtenteOrNull(ps, index++, fascicolo.getIdUtenteResponsabile(), dbConn);         
+        setUtenteOrNull(ps, index++, fascicolo.getIdUtenteCreazione(),dbConn);         
+        setUtenteOrNull(ps, index++, fascicolo.getIdUtenteResponsabileProposto(), dbConn);         
+        setStringOrNull(ps, index++, fascicolo.getDescrizioneIter());
+        ps.setString(index++, fascicolo.getCodiceFascicolo());
+
+        String query = ps.toString();
+        log.info("eseguo la query di update del fascicolo con numerazione gerarchica = "
+                + fascicolo.getCodiceFascicolo());
+        int result = ps.executeUpdate();
+        if (result == 0){
+            throw new SQLException("Fascicolo non trovato");
+        }
+        log.info("Prendo l'id fascicolo che servirà per aggiornare i vicari se richiesto ...");
+        String idFascicolo = getIdFascicolo(dbConn, ps);
+        
+        List<String> vicari = fascicolo.getVicari();
+        if (vicari != null && !vicari.isEmpty()) {
+            log.info("Aggiorno i vicari...");
+            List<String> idUtenteVicari = getIdUtentiByCodiciFiscali(dbConn, ps, vicari);
+            deleteVicari(dbConn, ps, idFascicolo);  // Elimino tutti i vicari
+            insertVicari(dbConn, ps, idFascicolo, idUtenteVicari);// E li riaggiungo
+        }
+        
+        return true;
+    }
+    
+    public void setIntOrNull(PreparedStatement pstmt, int column, int value) throws SQLException {
+        if (value != 0) {
+            pstmt.setInt(column, value);
+        } else {
+            pstmt.setNull(column, Types.INTEGER);
+        }
+    }
+    
+    public void setStringOrNull(PreparedStatement pstmt, int column, String value) throws SQLException {
+        if (value != null) {
+            pstmt.setString(column, value);
+        } else {
+            pstmt.setNull(column, Types.VARCHAR);
+        }
+    }
+    
+    public void setUtenteOrNull(PreparedStatement pstmt, int column, String value, Connection dbConn) throws SQLException {
+        if (value != null) {
+            value = getIdUtenteByCFFromAdditionalData(dbConn, value);
+            pstmt.setString(column, value);
+        } else {
+            pstmt.setNull(column, Types.VARCHAR);
+        }
+    }
+    
+    public void deleteVicari(Connection dbConn, PreparedStatement ps, String idFascicolo) throws SQLException {
+        String sqlText
+                = "DELETE FROM " + getFascicoliGdVicariTable() + " "
+                + "WHERE id_fascicolo = ?";
+        ps = dbConn.prepareStatement(sqlText);
+
+        ps.setString(1, idFascicolo);
+
+        String query = ps.toString();
+        log.info("eseguo la query di delete dei vicari ...");
+        int result = ps.executeUpdate();
+    }
+    
+    public void insertVicari(Connection dbConn, PreparedStatement ps, String idFascicolo, List<String> nuoviVicari) throws SQLException {
+        String sqlText
+                = "INSERT INTO " + getFascicoliGdVicariTable() + "("
+                + "id_fascicolo, id_utente) "
+                + "VALUES ";
+        sqlText += String.join("", Collections.nCopies(nuoviVicari.size(), "( ?, ?),"));
+        sqlText = sqlText.substring(0, sqlText.length() - 1);
+        ps = dbConn.prepareStatement(sqlText);
+
+        int index = 1;
+        for (String vicario: nuoviVicari) {
+            ps.setString(index++, idFascicolo);
+            ps.setString(index++, vicario);// DA CAMBIARE
+        }
+        String query = ps.toString();
+        log.info("eseguo la query di inserimento Vicari ...");
+        int result = ps.executeUpdate();
+        
+    }
+    
+    public String getIdFascicolo(Connection dbConn, PreparedStatement ps) throws SQLException {
+         String sqlText
+                = "SELECT id_fascicolo from " + getFascicoliTable() + " "
+                + "WHERE numerazione_gerarchica = ?";
+        String res = "";
+        ps = dbConn.prepareStatement(sqlText);
+
+        int index = 1;
+        ps.setString(index++, fascicolo.getCodiceFascicolo());
+
+        String query = ps.toString();
+        log.info("eseguo la query per trovare l'id ...");
+        ResultSet result = ps.executeQuery();
+        if (result.next()) {
+            res = result.getString(1);
+            log.info("Id fascicolo trovato = " + res);
+        } else {
+            throw new SQLException("ID fascicolo non trovato");
+        }
+        return res;
+    }
     // ricerca un generico permesso sul fascicolo (responsabilità, vicario, permessi)
     public boolean doesUserHaveAnyPermissionOnThisFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
         boolean hasSomePermission = false;

@@ -122,6 +122,10 @@
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.InsertFascicolo</servlet-class>
     </servlet>
     <servlet>
+        <servlet-name>UpdateFascicolo</servlet-name>
+        <servlet-class>it.bologna.ausl.bds_tools.ioda.api.UpdateFascicolo</servlet-class>
+    </servlet>
+    <servlet>
         <servlet-name>HasUserAnyPermissionOnFascicolo</servlet-name>
         <servlet-class>it.bologna.ausl.bds_tools.ioda.api.HasUserAnyPermissionOnFascicolo</servlet-class>
     </servlet>
@@ -593,6 +597,10 @@
     <servlet-mapping>
         <servlet-name>HasUserAnyPermissionOnFascicolo</servlet-name>
         <url-pattern>/ioda/api/fascicolo/HasUserAnyPermissionOnFascicolo</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>UpdateFascicolo</servlet-name>
+        <url-pattern>/ioda/api/fascicolo/UpdateFascicolo</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>GetFascicoliConPermessi</servlet-name>
