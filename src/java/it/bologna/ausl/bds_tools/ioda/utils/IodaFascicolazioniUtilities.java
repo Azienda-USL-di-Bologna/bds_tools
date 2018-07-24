@@ -321,7 +321,8 @@ public class IodaFascicolazioniUtilities {
 "		END as nome_fascicolo_interfaccia_omissis, " +
 "	CASE WHEN (select count(*) from permesso  ) = 0  THEN false " +
 "		ELSE true " +
-"		END as permesso " +
+"		END as permesso, " +
+"           f.visibile " +
 "FROM " + getFascicoliTable() + " f, " + getFascicoliGdDocTable() + " fg, "+ getGdDocTable() + " g " +
 "WHERE g.id_oggetto_origine = ? " +
 "AND g.tipo_oggetto_origine = ? " +
@@ -406,12 +407,14 @@ public class IodaFascicolazioniUtilities {
                 
                 String nomeFascicoloInterfacciaOmissis = res.getString(index++); 
                 boolean permessoFascicolo = res.getBoolean(index++);
+                boolean visibile = res.getBoolean(index++);
 
                 //fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
                 fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia, nomeFascicoloInterfacciaOmissis, permessoFascicolo);
                 fascicolazione.setAnno(annoFascicolo);
                 fascicolazione.setNumero(numeroFascicolo);
                 fascicolazione.setIdIter(idIter);
+                fascicolazione.setVisibile(visibile);
             }
         }
         return fascicolazione;
