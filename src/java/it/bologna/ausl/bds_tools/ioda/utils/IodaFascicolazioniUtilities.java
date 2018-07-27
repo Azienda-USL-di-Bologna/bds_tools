@@ -407,7 +407,7 @@ public class IodaFascicolazioniUtilities {
                 
                 String nomeFascicoloInterfacciaOmissis = res.getString(index++); 
                 boolean permessoFascicolo = res.getBoolean(index++);
-                boolean visibile = res.getBoolean(index++);
+                boolean visibile = res.getInt(index++) != 0;
 
                 //fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia);
                 fascicolazione = new Fascicolazione(numerazioneGerarchica, nomeFascicolo, idUtenteFascicolatore, descrizioneFascicolatore, dataAssegnazione, eliminato, dataEliminazione, idUtenteEliminatore, descrizioneEliminatore, classificazione, nomeFascicoloInterfaccia, nomeFascicoloInterfacciaOmissis, permessoFascicolo);
