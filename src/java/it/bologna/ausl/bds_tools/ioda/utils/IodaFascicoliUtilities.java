@@ -1360,73 +1360,77 @@ public class IodaFascicoliUtilities {
     }
     
     // cerca se l'utente ha permessi sul fascicolo (ricerca per numerazione_gerarchica)
-    public boolean hasUserPermissionOnFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
-        String idUtente = researcher.getIdUtente();
-        boolean trovato = false;
-        if (idUtente == null || idUtente.equals("")) 
-            idUtente  = getIdUtenteByCFFromAdditionalData(dbConn, (String) additionalData.get("user").toString());
-        
-        // Scelgo tutti i permessi facendo join tra permessi, oggetti, fascicoli
-        // "WHERE" il fascicolo ha quella numerazione gerarchica 
-        // e o l'utente loggato ha i permessi o ce li ha la sua struttura
-        // NB: solo la struttura di appartenenza dell'azienda
-        String sql = "select f.numerazione_gerarchica, p.scope as struttura, v.id_utente as utente_vedente, p.id_utente as utente_permesso from procton_tools.permessi "
-                + "join procton_tools.oggetti o on o.id = p.id_oggetto "
-                + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
-                + "join gd.fascicoli_visibili v on v.id_fascicolo = f.id_fascicolo "
-                + "where f.numerazione_gerarchica = ? and (p.id_utente = ? or v.id_utente = ? "
-                + "and p.permesso::bpchar>=4::character(1) "
-                + "and o.tipo_oggetto = 4 "; // 4 è il tipo oggetto fascicolo
-        
-              
-        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
-            ps.setString(1, additionalData.get("ng").toString()); // numerazione gerarchica
-            ps.setString(2, idUtente);
-            ps.setString(3, idUtente);
-        
-            String psToString = ps.toString();
-            System.out.println("ESEGUO " + psToString);
-            log.debug("****SQL****: " + ps.toString());
-            ResultSet results;
-                results = ps.executeQuery();
-                if(results.next())
-                    trovato = true; 
-                else
-                    System.out.println("L'utente non ha permessi sul fascicolo");
-        } 
-        catch (Exception ex) {
-            throw new SQLException("Problemi nel trovare i permessi dell'utente  " + ex);
-        }
-                
-        log.debug("trovatp: " + trovato);
-        return trovato;
-        
-    }
+//    public boolean hasUserPermissionOnFascicolo(Connection dbConn, HashMap additionalData) throws SQLException {
+//        String idUtente = researcher.getIdUtente();
+//        boolean trovato = false;
+//        if (idUtente == null || idUtente.equals("")) 
+//            idUtente  = getIdUtenteByCFFromAdditionalData(dbConn, (String) additionalData.get("user").toString());
+//        
+//        // Scelgo tutti i permessi facendo join tra permessi, oggetti, fascicoli
+//        // "WHERE" il fascicolo ha quella numerazione gerarchica 
+//        // e o l'utente loggato ha i permessi o ce li ha la sua struttura
+//        // NB: solo la struttura di appartenenza dell'azienda
+//        String sql = "select f.numerazione_gerarchica, p.scope as struttura, v.id_utente as utente_vedente, p.id_utente as utente_permesso from procton_tools.permessi "
+//                + "join procton_tools.oggetti o on o.id = p.id_oggetto "
+//                + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
+//                + "join gd.fascicoli_visibili v on v.id_fascicolo = f.id_fascicolo "
+//                + "where f.numerazione_gerarchica = ? and (p.id_utente = ? or v.id_utente = ? "
+//                + "and p.permesso::bpchar>=4::character(1) "
+//                + "and o.tipo_oggetto = 4 "; // 4 è il tipo oggetto fascicolo
+//        
+//              
+//        try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+//            ps.setString(1, additionalData.get("ng").toString()); // numerazione gerarchica
+//            ps.setString(2, idUtente);
+//            ps.setString(3, idUtente);
+//        
+//            String psToString = ps.toString();
+//            System.out.println("ESEGUO " + psToString);
+//            log.debug("****SQL****: " + ps.toString());
+//            ResultSet results;
+//                results = ps.executeQuery();
+//                if(results.next())
+//                    trovato = true; 
+//                else
+//                    System.out.println("L'utente non ha permessi sul fascicolo");
+//        } 
+//        catch (Exception ex) {
+//            throw new SQLException("Problemi nel trovare i permessi dell'utente  " + ex);
+//        }
+//                
+//        log.debug("trovatp: " + trovato);
+//        return trovato;
+//        
+//    }
     
     
-    // stesso metodo con firma diversa
     public boolean hasUserPermissionOnFascicolo(Connection dbConn, String numerazioneGerarchica, String user) throws SQLException{
         boolean hasPermission = false;
         
-        // Scelgo tutti i permessi facendo join tra permessi, oggetti, fascicoli
-        // "WHERE" il fascicolo ha quella numerazione gerarchica 
-        // e o l'utente loggato ha i permessi o ce li ha la sua struttura
-        // NB: solo la struttura di appartenenza dell'azienda
-        String sql = "select f.numerazione_gerarchica, p.scope as struttura, v.id_utente as utente_vedente, p.id_utente as utente_permesso "
-                + "from procton_tools.permessi p "
-                + "join procton_tools.oggetti o on o.id = p.id_oggetto "
-                + "join gd.fascicoligd f on f.id_fascicolo = o.id_oggetto "
-                + "join gd.fascicoli_visibili v on v.id_fascicolo = f.id_fascicolo "
-                + "where f.numerazione_gerarchica = ? and (p.id_utente = ? or v.id_utente = ? ) "
-                + "and p.permesso::bpchar>=4::character(1) "
-                + "and o.tipo_oggetto = 4 "; // 4 è il tipo oggetto fascicolo
-        
+        String sql = "with strutture_utente as (\n" +
+                "	select id_struttura\n" +
+                "	from procton.utenti\n" +
+                "	where id_utente = ?\n" +
+                "	union all\n" +
+                "	select id_struttura\n" +
+                "	from procton.appartenenze_funzionali\n" +
+                "	where id_utente = ?\n" +
+                ")\n" +
+                "select 1\n" +
+                "from gd.fascicoligd f\n" +
+                "join procton_tools.oggetti o on o.id_oggetto = f.id_fascicolo\n" +
+                "join procton_tools.permessi p on p.id_oggetto = o.id\n" +
+                "where numerazione_gerarchica = ? and\n" +
+                "(\n" +
+                "	(p.id_utente = ? or (p.scope in (select * from strutture_utente) and p.id_utente is null))\n" +
+                "	and p.permesso::bpchar>=4::character(1)\n" +
+                ")";
         
         try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
-            ps.setString(1, numerazioneGerarchica); // numerazione gerarchica
             ps.setString(2, user);
             ps.setString(3, user);
-        
+            ps.setString(1, numerazioneGerarchica);
+            ps.setString(2, user);
             
             String psToString = ps.toString();
             System.out.println("ESEGUO " + psToString);
@@ -1436,13 +1440,13 @@ public class IodaFascicoliUtilities {
                 if(results.next())
                     hasPermission = true;
                 else
-                    System.out.println("L'utente non ha permessi sul fascicolo");
-        } 
+                    log.debug("L'utente non ha permessi sul fascicolo");
+        }
         catch (Exception ex) {
             throw new SQLException("Problemi nel trovare i permessi dell'utente  " + ex);
         }
         
-        log.debug("trovatp: " + hasPermission);
+        log.debug("trovato: " + hasPermission);
         return hasPermission;
     }
     
