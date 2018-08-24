@@ -21,12 +21,35 @@
                 <Pattern>%d{yyyy MM dd HH:mm:ss,SSS} %p %t %c - %m%n</Pattern>
             </PatternLayout>
         </Console>
+        <!--Nuovo appender per generare un nuovo file con dimensione massima di 50mb sul quale vengono 
+            scritti i log fino ad un max di 40 file -->
+        <RollingFile name="spedizioniere" fileName="${sys:catalina.home}/logs/spedizioniere.log"
+            filePattern="${sys:catalina.home}/logs/spedizioniere.log.%i">
+             <PatternLayout>
+                <Pattern>%d{yyyy MM dd HH:mm:ss,SSS} %p %t %c - %m%n</Pattern>
+            </PatternLayout>
+            <Policies>   
+                <SizeBasedTriggeringPolicy size="50 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="40"/>
+        </RollingFile>
     </Appenders>
+   
     <Loggers>
         <Root level="debug">
             <!--<AppenderRef ref="FILEGDM" />-->
             <!--<AppenderRef ref="Console" />-->
             <AppenderRef ref="RollFile" />
         </Root>
+        <!--logger custom che scriverà nell'appender spedizioniere-->
+        <!--level è il livello del log (INFO, DEBUG, ERROR, ETC)-->
+        <!--additivity false indica che il messaggio di log non verrà propagato all'appender padre-->
+        <Logger name="spedizioniere-logger" level="all" additivity="false">
+            <AppenderRef ref="spedizioniere" level="all"/>
+        </Logger>
+        <!--logger per le classi nel package indicato in "name", scriverà nell'appender specificato nel ref-->
+        <Logger name="it.bologna.ausl.spedizioniereclient" level="all" additivity="false">
+            <AppenderRef ref="spedizioniere" level="all"/>
+        </Logger>
     </Loggers>
 </Configuration>

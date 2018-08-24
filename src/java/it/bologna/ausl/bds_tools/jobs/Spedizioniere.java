@@ -69,7 +69,7 @@ import org.quartz.JobExecutionException;
 @DisallowConcurrentExecution
 public class Spedizioniere implements Job{
     
-    private static final Logger log = LogManager.getLogger(Spedizioniere.class);
+    private static final Logger log = LogManager.getLogger("spedizioniere-logger");
     private ExecutorService pool;
     private int maxThread;
     private boolean testMode;
