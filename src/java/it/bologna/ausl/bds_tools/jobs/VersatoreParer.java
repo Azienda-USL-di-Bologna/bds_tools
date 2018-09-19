@@ -184,9 +184,10 @@ public class VersatoreParer implements Job {
         String idSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_ID_PARAM_NAME);
         String guidSessioneVersamento = idGuidINDE.get(INDE_DOCUMENT_GUID_PARAM_NAME);
         
+        // gddocs che possono essere versati
+        ArrayList<String> gdDocList = null;  
+        
         try {
-            // gddocs che possono essere versati
-            ArrayList<String> gdDocList = null;  
             
             if (content != null && !content.equals("")){
                 // sono nella modalità "a volere"
@@ -324,6 +325,10 @@ public class VersatoreParer implements Job {
                                         datiparer.setStatoVersamentoProposto("versato");
                                         datiparer.setStatoVersamentoEffettivo("versato");
                                     }
+                                    
+                                    datiparer.setEsitoUltimoVersamento(gdSessioneVersamento.getEsito());
+                                    datiparer.setCodiceErroreUltimoVersamento(gdSessioneVersamento.getCodiceErrore());
+                                    
                                     saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
                                 }
                                 catch(Exception e){
@@ -371,7 +376,8 @@ public class VersatoreParer implements Job {
             log.fatal("Versatore Parer: Errore ...", t);
         }
         finally {
-            setStopSessioneVersamento(idSessioneVersamento);
+            setStopSessioneVersamento(idSessioneVersamento, gdDocList);
+
             log.info("Job Versatore Parer finished");
             log.debug("Versatore ParER Finished");
         }
@@ -685,11 +691,18 @@ public class VersatoreParer implements Job {
      * imposta la fine della sessione versamento
      * @param idSessioneVersamento 
      */
-    private void setStopSessioneVersamento(String idSessioneVersamento){
+    private void setStopSessioneVersamento(String idSessioneVersamento, List<String> gddocList){
+        
+        String pattern = "yyyy-MM-dd'T'HH:mm:ss";
+        DateTime dateTime = DateTime.now();
+        String nowString = DatiParerGdDoc.toIsoDateFormatString(dateTime, pattern);
         
         String query = 
+//            "UPDATE " + ApplicationParams.getSessioniVersamentoParerTableName() + " " +
+//            "SET data_fine= date_trunc('sec', now()::timestamp) " + 
+//            "WHERE id_sessione_versamento_parer = ? ";
             "UPDATE " + ApplicationParams.getSessioniVersamentoParerTableName() + " " +
-            "SET data_fine= date_trunc('sec', now()::timestamp) " + 
+            "SET data_fine = ?::timestamp without time zone " + 
             "WHERE id_sessione_versamento_parer = ? ";
             
         try (
@@ -699,6 +712,7 @@ public class VersatoreParer implements Job {
             int index = 1;
             log.debug("setto ora fine sessione di versamento");
             
+            ps.setString(index++, nowString);
             ps.setString(index++, idSessioneVersamento);
             
             log.debug("eseguo la query: " + ps.toString() + " ...");
@@ -710,6 +724,34 @@ public class VersatoreParer implements Job {
         } catch (SQLException | NamingException ex) {
             log.fatal("errore inserimento data_fine nella tabella sessioni_versamento_parer: " + ex);
         }
+        
+        // aggiornamento dati parer gddoc con set data fine versamento
+       String listString = "'" + String.join("', '", gddocList) + "'";
+       
+        String queryUpdateDatiParer = "UPDATE " + ApplicationParams.getDatiParerGdDocTableName() + " " +
+                                      "SET data_ultimo_versamento = ?::timestamp without time zone " +
+                                      "WHERE id_gddoc in (?)"; 
+        
+          try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(queryUpdateDatiParer)
+        ) {  
+            int index = 1;
+            log.debug("setto ora fine sessione di versamento");
+            
+            ps.setString(index++, nowString);
+            ps.setString(index++, listString);
+            
+            log.debug("eseguo la query: " + ps.toString() + " ...");
+            int result = ps.executeUpdate();
+            if (result <= 0)
+                throw new SQLException("Errore inserimento data_ultimo_versamento in dati_parer_gddoc");
+            if (result == 0)
+                throw new SQLException("data_ultimo_versamento fine non inserita");
+        } catch (SQLException | NamingException ex) {
+            log.fatal("errore inserimento data_ultimo_versamento nella tabella dati_parer_gddoc: " + ex);
+        }
+                
     }
     
     /**
@@ -1653,7 +1695,10 @@ public class VersatoreParer implements Job {
                 "xml_specifico_parer = coalesce(?, xml_specifico_parer), " +
                 "forza_conservazione = coalesce(?, forza_conservazione), " +
                 "forza_accettazione = coalesce(?, forza_accettazione), " +
-                "forza_collegamento = coalesce(?, forza_collegamento) " +
+                "forza_collegamento = coalesce(?, forza_collegamento), " +
+                "esito_ultimo_versamento = coalesce(?, esito_ultimo_versamento), " +
+                "codice_errore_ultimo_versamento = coalesce(?, codice_errore_ultimo_versamento) " +
+                
                 "WHERE id_gddoc = ? ";
         
         try (
@@ -1686,6 +1731,18 @@ public class VersatoreParer implements Job {
                 ps.setInt(index++, -1);
             else
                 ps.setInt(index++, 0);
+            
+            // esito_ultimo_versamento
+            if (datiParer.getEsitoUltimoVersamento()!= null && !datiParer.getEsitoUltimoVersamento().equals("") )    
+                ps.setString(index++, datiParer.getEsitoUltimoVersamento());
+            else
+                ps.setString(index++, null);
+            
+            // codice_errore_ultimo_versamento
+            if (datiParer.getCodiceErroreUltimoVersamento()!= null && !datiParer.getCodiceErroreUltimoVersamento().equals(""))    
+                ps.setString(index++, datiParer.getCodiceErroreUltimoVersamento());
+            else
+                ps.setString(index++, null);
 
             ps.setString(index++, gddoc.getId());
 
