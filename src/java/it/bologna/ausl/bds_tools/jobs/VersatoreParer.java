@@ -322,22 +322,23 @@ public class VersatoreParer implements Job {
                                     datiparer.setEsitoUltimoVersamento(gdSessioneVersamento.getEsito());
                                     datiparer.setCodiceErroreUltimoVersamento(gdSessioneVersamento.getCodiceErrore());
                                     
-                                    // mi setto lo stato dell'ultimo versamento. I valori sono: OK, ERRORE_FORZABILE, ERRORE_NON_FORZABILE
-                                    if (datiparer.getEsitoUltimoVersamento().equals("ERRORE") && datiparer.getCodiceErroreUltimoVersamento().equals("UD-008-00") 
-                                            || (!datiparer.getCodiceErroreUltimoVersamento().equals("FIRMA-005-001") && datiparer.getCodiceErroreUltimoVersamento().startsWith("FIRMA"))) {
-                                        datiparer.setStatoUltimoVersamento("ERRORE_NON_FORZABILE");
-                                    } else if (datiparer.getEsitoUltimoVersamento().equals("ERRORE") 
-                                            && (datiparer.getCodiceErroreUltimoVersamento().equals("UD-008-001")
-                                                || !datiparer.getCodiceErroreUltimoVersamento().equals("UD-008-001") 
-                                                    && (!datiparer.getCodiceErroreUltimoVersamento().startsWith("FIRMA") || datiparer.getCodiceErroreUltimoVersamento().equals("FIRMA-005-001"))
-                                                || !datiparer.getCodiceErroreUltimoVersamento().equals("FIRMA-005-001") && datiparer.getCodiceErroreUltimoVersamento().startsWith("FIRMA")
-                                                )
-                                            ){                                              
-                                        datiparer.setStatoUltimoVersamento("ERRORE_FORZABILE");
-                                    } else if ( datiparer.getEsitoUltimoVersamento().equals("OK")){
-                                        datiparer.setStatoUltimoVersamento("OK");
-                                    }
-                                            
+                                    // non serve più sta parte. Mi calcolo lo stato quando estraggo i dati basandomi sul codice_errore e l'esito
+//                                    // mi setto lo stato dell'ultimo versamento. I valori sono: OK, ERRORE_FORZABILE, ERRORE_NON_FORZABILE
+//                                    if (datiparer.getEsitoUltimoVersamento().equals("ERRORE") && datiparer.getCodiceErroreUltimoVersamento().equals("UD-008-001") 
+//                                            || (!datiparer.getCodiceErroreUltimoVersamento().equals("FIRMA-005-001") && datiparer.getCodiceErroreUltimoVersamento().startsWith("FIRMA"))) {
+//                                        datiparer.setStatoUltimoVersamento("ERRORE_FORZABILE");
+//                                    } else if (datiparer.getEsitoUltimoVersamento().equals("ERRORE") 
+//                                            && (datiparer.getCodiceErroreUltimoVersamento().equals("UD-008-001")
+//                                                || !datiparer.getCodiceErroreUltimoVersamento().equals("UD-008-001") 
+//                                                    && (!datiparer.getCodiceErroreUltimoVersamento().startsWith("FIRMA") || datiparer.getCodiceErroreUltimoVersamento().equals("FIRMA-005-001"))
+//                                                || !datiparer.getCodiceErroreUltimoVersamento().equals("FIRMA-005-001") && datiparer.getCodiceErroreUltimoVersamento().startsWith("FIRMA")
+//                                                )
+//                                            ){                                              
+//                                        datiparer.setStatoUltimoVersamento("ERRORE_NON_FORZABILE");
+//                                    } else if ( datiparer.getEsitoUltimoVersamento().equals("OK")){
+//                                        datiparer.setStatoUltimoVersamento("OK");
+//                                    }
+//                                            
                                                                                                             
 
                                     saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
@@ -1726,8 +1727,8 @@ public class VersatoreParer implements Job {
                 + "forza_accettazione = coalesce(?, forza_accettazione), "
                 + "forza_collegamento = coalesce(?, forza_collegamento), "
                 + "esito_ultimo_versamento = coalesce(?, esito_ultimo_versamento), "
-                + "codice_errore_ultimo_versamento = coalesce(?, codice_errore_ultimo_versamento), "
-                + "stato_ultimo_versamento = coalesce(?, stato_ultimo_versamento) "
+                + "codice_errore_ultimo_versamento = coalesce(?, codice_errore_ultimo_versamento) "
+
                 
                 + "WHERE id_gddoc = ? ";
 
@@ -1779,13 +1780,6 @@ public class VersatoreParer implements Job {
                 ps.setString(index++, null);
             }
             
-            // stato_ultimo_versamento
-            if (datiParer.getStatoUltimoVersamento()!= null && !datiParer.getStatoUltimoVersamento().equals("")) {
-                ps.setString(index++, datiParer.getStatoUltimoVersamento());
-            } else {
-                ps.setString(index++, null);
-            }
-
             ps.setString(index++, gddoc.getId());
 
             String query = ps.toString();
