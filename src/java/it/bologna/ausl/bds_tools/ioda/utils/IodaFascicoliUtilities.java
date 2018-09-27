@@ -1432,10 +1432,10 @@ public class IodaFascicoliUtilities {
                 ")";
         
         try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+            ps.setString(1, user);
             ps.setString(2, user);
-            ps.setString(3, user);
-            ps.setString(1, numerazioneGerarchica);
-            ps.setString(2, user);
+            ps.setString(3, numerazioneGerarchica);
+            ps.setString(4, user);
             
             String psToString = ps.toString();
             System.out.println("ESEGUO " + psToString);
