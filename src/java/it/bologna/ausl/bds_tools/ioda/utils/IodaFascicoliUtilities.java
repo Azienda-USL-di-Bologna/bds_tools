@@ -779,7 +779,11 @@ public class IodaFascicoliUtilities {
             }
         }
         if (this.fascicolo.getIdStruttura() == null || this.fascicolo.getIdStruttura().equals("")) {
-            this.fascicolo.setIdStruttura(getIdStrutturaDaIdUtente(this.fascicolo.getIdUtenteResponsabile(), dbConn));
+            if (this.fascicolo.getIdStrutturaInternauta() == null) {
+                this.fascicolo.setIdStruttura(getIdStrutturaDaIdUtente(this.fascicolo.getIdUtenteResponsabile(), dbConn));
+            } else {
+                this.fascicolo.setIdStruttura(getIdStrutturaDaIdStrutturaInternauta(this.fascicolo.getIdStrutturaInternauta(), dbConn));
+            }
         }
         if (this.fascicolo.getTitolo() == null || this.fascicolo.getTitolo().equals("")) {
             this.fascicolo.setTitolo(getIdTitoloDaClassificazione(this.fascicolo.getClassificazione(), dbConn));
@@ -861,6 +865,24 @@ public class IodaFascicoliUtilities {
                 ResultSet res = ps.executeQuery();
                 if (!res.next()) {
                     throw new SQLException("utente non trovato");
+                } else {
+                    return res.getString(1);
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    private String getIdStrutturaDaIdStrutturaInternauta(Integer idStrutturaInternauta, Connection dbConn) throws SQLException {
+        if (idStrutturaInternauta != null) {
+            String q = "select id_struttura from ribaltone_utils.mappa_id_strutture where id_struttura_organigramma = ? limit 1";
+            try (PreparedStatement ps = dbConn.prepareStatement(q)) {
+                ps.setInt(1, idStrutturaInternauta);
+                log.debug("eseguo la query: " + q);
+                ResultSet res = ps.executeQuery();
+                if (!res.next()) {
+                    throw new SQLException("struttura non trovata");
                 } else {
                     return res.getString(1);
                 }
