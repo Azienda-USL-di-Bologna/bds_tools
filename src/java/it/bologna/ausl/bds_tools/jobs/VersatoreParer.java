@@ -5,6 +5,7 @@ import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.exceptions.VersatoreParerException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
+import it.bologna.ausl.bds_tools.jobs.utils.VersatoreParerUtils;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
 import it.bologna.ausl.ioda.iodaobjectlibrary.BagProfiloArchivistico;
@@ -40,7 +41,6 @@ import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +58,6 @@ import org.joda.time.format.DateTimeFormatter;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.quartz.CronExpression;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
@@ -208,6 +207,7 @@ public class VersatoreParer implements Job {
                     for (String idGdDoc : gdDocList) {
 
                         GdDoc gddoc = null;
+                        String xmlVersato = null;
 
                         try {
                             gddoc = getGdDocById(idGdDoc);
@@ -232,7 +232,6 @@ public class VersatoreParer implements Job {
                             isVersabile = isVersabile(gddoc);
 
                             if (isVersabile) {
-
                                 // ricarico gddoc
                                 //gddoc = getGdDocById(idGdDoc);
                                 // calcolo i dati
@@ -246,7 +245,7 @@ public class VersatoreParer implements Job {
                                 try {
                                     SendToParerParams sendToParerParams = getSendToParerParams(gddoc);
                                     log.debug("sendToParerParams creati");
-                                    String xmlVersato = sendToParerParams.getXmlDocument();
+                                    xmlVersato = sendToParerParams.getXmlDocument();
                                     String codiceErrore, descrizioneErrore, rapportoVersamento;
 
                                     gdSessioneVersamento.setXmlVersato(xmlVersato);
@@ -321,7 +320,7 @@ public class VersatoreParer implements Job {
 
                                     datiparer.setEsitoUltimoVersamento(gdSessioneVersamento.getEsito());
                                     datiparer.setCodiceErroreUltimoVersamento(gdSessioneVersamento.getCodiceErrore());
-                                    
+
                                     // non serve più sta parte. Mi calcolo lo stato quando estraggo i dati basandomi sul codice_errore e l'esito
 //                                    // mi setto lo stato dell'ultimo versamento. I valori sono: OK, ERRORE_FORZABILE, ERRORE_NON_FORZABILE
 //                                    if (datiparer.getEsitoUltimoVersamento().equals("ERRORE") && datiparer.getCodiceErroreUltimoVersamento().equals("UD-008-001") 
@@ -339,9 +338,7 @@ public class VersatoreParer implements Job {
 //                                        datiparer.setStatoUltimoVersamento("OK");
 //                                    }
 //                                            
-                                                                                                            
-
-                                    saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
+                                    saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer, xmlVersato);
                                 } catch (Exception e) {
                                     log.error("errore nel versamento: " + e);
 
@@ -354,7 +351,7 @@ public class VersatoreParer implements Job {
                                     datiparer.setStatoVersamentoEffettivo("errore_versamento");
 
                                     // persist
-                                    saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
+                                    saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer, xmlVersato);
                                 }
                             }
                         } catch (Exception ex) {
@@ -375,7 +372,7 @@ public class VersatoreParer implements Job {
                             datiparer.setStatoVersamentoEffettivo("errore_versamento");
 
                             // persist
-                            saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer);
+                            saveVersamentoAndGdDocInTransaction(gdSessioneVersamento, gddoc, datiparer, xmlVersato);
                         }
                     }
                 }
@@ -546,7 +543,7 @@ public class VersatoreParer implements Job {
      * @param gddoc
      * @param datiParer
      */
-    private void saveVersamentoAndGdDocInTransaction(GdDocSessioneVersamento g, GdDoc gddoc, DatiParerGdDoc datiParer) {
+    private void saveVersamentoAndGdDocInTransaction(GdDocSessioneVersamento g, GdDoc gddoc, DatiParerGdDoc datiParer, String xmlVersato) {
 
         String query
                 = "INSERT INTO " + ApplicationParams.getGdDocSessioniVersamentoParerTableName() + "( "
@@ -587,7 +584,7 @@ public class VersatoreParer implements Job {
                 throw new SQLException("record di gddoc_sessione_versamento non inserito");
             }
 
-            updateDatiParerGdDoc(datiParer, gddoc);
+            updateDatiParerGdDoc(datiParer, gddoc, xmlVersato, g.getDescrizioneErrore());
 
             dbConnection.commit();
 
@@ -1704,7 +1701,7 @@ public class VersatoreParer implements Job {
         // salvataggio su db
         DatiParerGdDoc dpg = gddoc.getDatiParerGdDoc();
         dpg.setXmlSpecifico(xmlSpecifico);
-        updateDatiParerGdDoc(dpg, gddoc);
+        updateDatiParerGdDoc(dpg, gddoc, null, null);
     }
 
     /**
@@ -1716,7 +1713,9 @@ public class VersatoreParer implements Job {
      * @throws SQLException
      * @throws NamingException
      */
-    private void updateDatiParerGdDoc(DatiParerGdDoc datiParer, GdDoc gddoc) throws SQLException, NamingException {
+    private void updateDatiParerGdDoc(DatiParerGdDoc datiParer, GdDoc gddoc, String xmlVersato, String errorMessage) throws SQLException, NamingException {
+
+        VersatoreParerUtils util = new VersatoreParerUtils();
 
         String sqlText
                 = "UPDATE " + ApplicationParams.getDatiParerGdDocTableName() + " SET "
@@ -1727,9 +1726,8 @@ public class VersatoreParer implements Job {
                 + "forza_accettazione = coalesce(?, forza_accettazione), "
                 + "forza_collegamento = coalesce(?, forza_collegamento), "
                 + "esito_ultimo_versamento = coalesce(?, esito_ultimo_versamento), "
-                + "codice_errore_ultimo_versamento = coalesce(?, codice_errore_ultimo_versamento) "
-
-                
+                + "codice_errore_ultimo_versamento = coalesce(?, codice_errore_ultimo_versamento), "
+                + "documento_in_errore = coalesce(?, documento_in_errore) "
                 + "WHERE id_gddoc = ? ";
 
         try (
@@ -1779,7 +1777,16 @@ public class VersatoreParer implements Job {
             } else {
                 ps.setString(index++, null);
             }
-            
+
+            // documento_in_errore
+            String documentoInErrore = util.getNomeDocumentoInErrore(xmlVersato, errorMessage);
+
+            if (documentoInErrore != null && !documentoInErrore.equals("")) {
+                ps.setString(index++, documentoInErrore);
+            } else {
+                ps.setString(index++, null);
+            }
+
             ps.setString(index++, gddoc.getId());
 
             String query = ps.toString();
