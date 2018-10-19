@@ -613,10 +613,10 @@ public class VersatoreParer implements Job {
                 = "INSERT INTO " + ApplicationParams.getGdDocSessioniVersamentoParerTableName() + "( "
                 + "id_gddoc_versamento, id_gddoc, id_sessione_versamento_parer, "
                 + "xml_versato, esito, codice_errore, descrizione_errore, "
-                + "rapporto_versamento, guid_gddoc_versamento) "
+                + "rapporto_versamento, guid_gddoc_versamento, documento_in_errore) "
                 + "VALUES (?, ?, ?, "
                 + "?, ?, ?, ?, "
-                + "?, ?)";
+                + "?, ?, ?)";
 
         try (
                 Connection dbConnection = UtilityFunctions.getDBConnection();
@@ -640,6 +640,7 @@ public class VersatoreParer implements Job {
             ps.setString(index++, g.getDescrizioneErrore());
             ps.setString(index++, g.getRapportoVersamento());
             ps.setString(index++, guidInde);
+            ps.setString(index++, g.getDocumentoInErrore());
 
             //log.debug("PrepareStatment: " + ps);                      
             int rowsUpdated = ps.executeUpdate();
