@@ -297,7 +297,7 @@ public class VersatoreParer implements Job {
 
                                             String documentoInErrore = versatoreParerUtils.getNomeDocumentoInErrore(xmlVersato, descrizioneErrore);
                                             if (documentoInErrore != null && !documentoInErrore.equals("")) {
-                                                gdSessioneVersamento.setDocumentoInErrore(descrizioneErrore);
+                                                gdSessioneVersamento.setDocumentoInErrore(documentoInErrore);
                                             }
 
                                             datiparer.setStatoVersamentoProposto("errore_versamento");
