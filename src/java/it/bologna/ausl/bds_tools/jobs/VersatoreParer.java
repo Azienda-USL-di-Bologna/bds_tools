@@ -174,6 +174,8 @@ public class VersatoreParer implements Job {
         JobDataMap dataMap = context.getJobDetail().getJobDataMap();
         String content = dataMap.getString("VersatoreParer");
 
+        VersatoreParerUtils versatoreParerUtils = new VersatoreParerUtils();
+
         log.debug("contenuto come versamento - a volere - : " + content);
 
         // setta parametri di sessione versamento (id e guid di INDE)
@@ -292,6 +294,11 @@ public class VersatoreParer implements Job {
                                         } else {
                                             gdSessioneVersamento.setDescrizioneErrore(descrizioneErrore);
                                             gdSessioneVersamento.setEsito("ERRORE");
+
+                                            String documentoInErrore = versatoreParerUtils.getNomeDocumentoInErrore(xmlVersato, descrizioneErrore);
+                                            if (documentoInErrore != null && !documentoInErrore.equals("")) {
+                                                gdSessioneVersamento.setDocumentoInErrore(descrizioneErrore);
+                                            }
 
                                             datiparer.setStatoVersamentoProposto("errore_versamento");
                                             datiparer.setStatoVersamentoEffettivo("errore_versamento");
@@ -549,10 +556,10 @@ public class VersatoreParer implements Job {
                 = "INSERT INTO " + ApplicationParams.getGdDocSessioniVersamentoParerTableName() + "( "
                 + "id_gddoc_versamento, id_gddoc, id_sessione_versamento_parer, "
                 + "xml_versato, esito, codice_errore, descrizione_errore, "
-                + "rapporto_versamento, guid_gddoc_versamento) "
+                + "rapporto_versamento, guid_gddoc_versamento, documento_in_errore) "
                 + "VALUES (?, ?, ?, "
                 + "?, ?, ?, ?, "
-                + "?, ?)";
+                + "?, ?, ?)";
 
         try (
                 Connection dbConnection = UtilityFunctions.getDBConnection();
@@ -576,6 +583,7 @@ public class VersatoreParer implements Job {
             ps.setString(index++, g.getDescrizioneErrore());
             ps.setString(index++, g.getRapportoVersamento());
             ps.setString(index++, guidInde);
+            ps.setString(index++, g.getDocumentoInErrore());
 
             int rowsUpdated = ps.executeUpdate();
             log.debug("eseguita");
