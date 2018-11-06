@@ -779,6 +779,8 @@ public class VersatoreParer implements Job {
             log.fatal("errore inserimento data_ultimo_versamento nella tabella dati_parer_gddoc: " + ex);
         }
 
+        riversaErroriInTabellaCheck(nowString);
+        
     }
 
     /**
@@ -2254,6 +2256,54 @@ public class VersatoreParer implements Job {
             if (res == 0) {
                 throw new SQLException("errore nell'aggiornamento delle date inizio/fine, l'update ha tornato 0");
             }
+        }
+    }
+    
+    /**
+     * Popola la tabella diagnostica.report. Prende gli errori tecnici dell'ultimo versamento 
+     * e li inserisce in questa tabella che sarà utilizzata dal checkMK usando la
+     * tipologia PARER_ERR_TECNICO
+     *
+     * @param dataInserimento in formato stringa
+     */
+    private void riversaErroriInTabellaCheck(String dataInserimento) {
+
+        String qNew
+                = "INSERT INTO diagnostica.report(tipologia, data_inserimento_riga, additional_data) "
+                + "select 'PARER_ERR_TECNICO' as tipologia, now() as data_inserimento_riga, json_build_object('id_gddoc', sv.id_gddoc,'id_ses_vers', vp.id_sessione_versamento_parer, 'cod_err', sv.codice_errore, 'desc_err', sv.descrizione_errore, 'data_fin_vers', ?) "
+                + "from gd.gddocs g, gd.gddocs_sessioni_versamento sv, gd.sessioni_versamento_parer vp "
+                + "where sv.id_sessione_versamento_parer = vp.id_sessione_versamento_parer "
+                + "and sv.id_gddoc = g.id_gddoc "
+                + "and sv.id_sessione_versamento_parer = ( "
+                + "select id_sessione_versamento_parer "
+                + "from gd.sessioni_versamento_parer "
+                + "where data_fine is not null "
+                + "order by data_inizio DESC "
+                + "limit 1 "
+                + ") "
+                + "and g.codice_registro != 'PGI' "
+                + "and ((sv.esito = 'ERRORE' and g.forzato_da_utente != 0 and g.forzato_da_utente is not null) "
+                + "or (sv.esito = 'ERRORE' and g.forzato_da_utente = 0 and sv.codice_errore != 'UD-008-001' and " 
+                + "(sv.codice_errore = 'FIRMA-005-001' or left(sv.codice_errore, 5) != 'FIRMA')))";
+        
+        
+        try (Connection dbConnection = UtilityFunctions.getDBConnection(); PreparedStatement ps = dbConnection.prepareStatement(qNew)) {
+            dbConnection.setAutoCommit(false);
+            log.debug("riversamento errori in tabella check");
+            
+            int index = 1;
+            ps.setString(index++, dataInserimento);
+            //ps.setTimestamp(index++, new Timestamp(dataInserimento.getMillis()));
+                    
+            int rowsUpdated = ps.executeUpdate();
+            log.debug("eseguita");
+            if (rowsUpdated == 0) {
+                dbConnection.rollback();
+                throw new SQLException("record di gddoc_sessione_versamento non inserito");
+            }
+            dbConnection.commit();
+        } catch (SQLException | NamingException ex) {
+            log.fatal("errore in riversaErroriInTabellaCheck: " + ex);
         }
     }
 
