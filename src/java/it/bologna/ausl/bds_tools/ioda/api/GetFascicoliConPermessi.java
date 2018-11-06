@@ -31,7 +31,7 @@ import org.apache.logging.log4j.Logger;
  * @author utente
  */
 public class GetFascicoliConPermessi extends HttpServlet {
-private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
+private static final Logger log = LogManager.getLogger(GetFascicoliConPermessi.class);
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -124,6 +124,7 @@ private static final Logger log = LogManager.getLogger(DeleteGdDoc.class);
             
            
         } catch (Exception ex) {
+            log.error("Errore nella richiesta", ex);
             throw new ServletException(ex);
         }
 
