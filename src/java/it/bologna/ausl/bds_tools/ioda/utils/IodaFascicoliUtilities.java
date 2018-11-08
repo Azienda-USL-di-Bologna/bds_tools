@@ -936,7 +936,7 @@ public class IodaFascicoliUtilities {
         Boolean traduciVicari = false;
         
         if (collectionData != null) {
-            traduciVicari = (Boolean) collectionData.get(Fascicolo.InsertFascicolo.TRADUCI_VICARI.toString());
+            traduciVicari = (Boolean) collectionData.get(Fascicolo.OperazioniFascicolo.TRADUCI_VICARI.toString());
         }
 
         String sqlText
@@ -1235,6 +1235,24 @@ public class IodaFascicoliUtilities {
     }
     
     public Boolean updateFascicolo(Connection dbConn, PreparedStatement ps, HashMap additionalData) throws SQLException {
+       boolean deletePrecedente = false;
+       boolean vengoDaGipi = false;
+       Integer idIterPrecedente = null;
+       
+       
+       if (additionalData != null) {
+           if ((Boolean) additionalData.get(Fascicolo.OperazioniFascicolo.DELETE_ITER_PRECEDENTE.toString()) != null){
+               deletePrecedente = true;
+           } 
+           
+           if ((Boolean) additionalData.get(Fascicolo.OperazioniFascicolo.PROVENIENZA_GIPI.toString()) != null){
+               vengoDaGipi = true;
+           } 
+           
+           if ((Integer) additionalData.get(Fascicolo.OperazioniFascicolo.ID_ITER_PRECEDENTE.toString()) != null){
+               idIterPrecedente = (Integer) additionalData.get(Fascicolo.OperazioniFascicolo.ID_ITER_PRECEDENTE.toString());
+           } 
+        }
         
         String sqlText
                 = "UPDATE " + getFascicoliTable() + " SET "
@@ -1248,8 +1266,10 @@ public class IodaFascicoliUtilities {
                 + "id_utente_responsabile = coalesce(?, id_utente_responsabile), "
                 + "id_utente_creazione = coalesce(?, id_utente_creazione), "
                 + "id_utente_responsabile_proposto = coalesce(?, id_utente_responsabile_proposto), "
-                + "descrizione_iter = coalesce(?, descrizione_iter) "
-                + "WHERE numerazione_gerarchica = ? ";
+                + "descrizione_iter = coalesce(?, descrizione_iter), "
+                + (deletePrecedente ? "id_padre_catena_fascicolare = ? " : "id_padre_catena_fascicolare = coalesce(?, id_padre_catena_fascicolare) ") 
+                + (vengoDaGipi ? "WHERE id_iter = ? " : "WHERE numerazione_gerarchica = ? ") ;
+        
         ps = dbConn.prepareStatement(sqlText);
         
         int index = 1;
@@ -1265,7 +1285,14 @@ public class IodaFascicoliUtilities {
         setUtenteOrNull(ps, index++, fascicolo.getIdUtenteCreazione(),dbConn);         
         setUtenteOrNull(ps, index++, fascicolo.getIdUtenteResponsabileProposto(), dbConn);         
         setStringOrNull(ps, index++, fascicolo.getDescrizioneIter());
-        ps.setString(index++, fascicolo.getCodiceFascicolo());
+        setStringOrNull(ps, index++, getIdFascicoloByIter(dbConn, idIterPrecedente));
+        if (vengoDaGipi){
+            ps.setInt(index++, fascicolo.getIdIter());
+        } else {
+            ps.setString(index++, fascicolo.getCodiceFascicolo());
+        }
+        
+        
 
         String query = ps.toString();
         log.info("eseguo la query di update del fascicolo con numerazione gerarchica = "
@@ -1274,17 +1301,20 @@ public class IodaFascicoliUtilities {
         if (result == 0){
             throw new SQLException("Fascicolo non trovato");
         }
-        log.info("Prendo l'id fascicolo che servirà per aggiornare i vicari se richiesto ...");
-        String idFascicolo = getIdFascicolo(dbConn, ps);
         
-        List<String> vicari = fascicolo.getVicari();
-        if (vicari != null && !vicari.isEmpty()) {
-            log.info("Aggiorno i vicari...");
-            List<String> idUtenteVicari = getIdUtentiByCodiciFiscali(dbConn, ps, vicari);
-            deleteVicari(dbConn, ps, idFascicolo);  // Elimino tutti i vicari
-            insertVicari(dbConn, ps, idFascicolo, idUtenteVicari);// E li riaggiungo
+        if (!vengoDaGipi){
+        
+            log.info("Prendo l'id fascicolo che servirà per aggiornare i vicari se richiesto ...");
+            String idFascicolo = getIdFascicolo(dbConn, ps);
+
+            List<String> vicari = fascicolo.getVicari();
+            if (vicari != null && !vicari.isEmpty()) {
+                log.info("Aggiorno i vicari...");
+                List<String> idUtenteVicari = getIdUtentiByCodiciFiscali(dbConn, ps, vicari);
+                deleteVicari(dbConn, ps, idFascicolo);  // Elimino tutti i vicari
+                insertVicari(dbConn, ps, idFascicolo, idUtenteVicari);// E li riaggiungo
+            }
         }
-        
         return true;
     }
     
@@ -1617,5 +1647,33 @@ public class IodaFascicoliUtilities {
         log.debug("hasPermission: " + hasPermission);
         
         return hasPermission;
+    }
+    
+    public String getIdFascicoloByIter(Connection dbConn, Integer idIter) throws SQLException{
+
+        String res = null;
+        
+        if (idIter != null){
+           String sql = "select f.id_fascicolo "
+               + "from  gd.fascicoligd f "
+               + "where id_iter = ? ";
+
+              
+            try (PreparedStatement ps = dbConn.prepareStatement(sql)) {
+
+                ps.setInt(1, idIter);
+
+                ResultSet result;
+                    result = ps.executeQuery();
+                    if(result.next())
+                        res = result.getString(1);
+                    else
+                        System.out.println("non esiste fascicolo con id_iter: " + idIter);
+            } 
+            catch (Exception ex) {
+                throw new SQLException("ricerca fascicolo con id_iter non andata a buon fine" + ex);
+            } 
+        }
+        return res;
     }
 }
