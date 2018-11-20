@@ -1,10 +1,13 @@
 package it.bologna.ausl.bds_tools.jobs;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import it.bologna.ausl.bds_tools.exceptions.ConvertPdfExeption;
 import it.bologna.ausl.bds_tools.exceptions.NotAuthorizedException;
 import it.bologna.ausl.bds_tools.exceptions.SendHttpMessageException;
 import it.bologna.ausl.bds_tools.exceptions.VersatoreParerException;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaDocumentUtilities;
 import it.bologna.ausl.bds_tools.ioda.utils.IodaFascicolazioniUtilities;
+import it.bologna.ausl.bds_tools.jobs.utils.ServiceRequestInformation;
 import it.bologna.ausl.bds_tools.jobs.utils.VersatoreParerUtils;
 import it.bologna.ausl.bds_tools.utils.ApplicationParams;
 import it.bologna.ausl.bds_tools.utils.UtilityFunctions;
@@ -17,11 +20,13 @@ import it.bologna.ausl.ioda.iodaobjectlibrary.PubblicazioneIoda;
 import it.bologna.ausl.ioda.iodaobjectlibrary.exceptions.IodaDocumentException;
 import it.bologna.ausl.masterchefclient.SendToParerParams;
 import it.bologna.ausl.masterchefclient.SendToParerResult;
+import it.bologna.ausl.masterchefclient.UpdateBabelParams;
 import it.bologna.ausl.masterchefclient.WorkerData;
 import it.bologna.ausl.masterchefclient.WorkerResponse;
 import it.bologna.ausl.masterchefclient.WorkerResult;
 import it.bologna.ausl.masterchefclient.errors.ErrorDetails;
 import it.bologna.ausl.masterchefclient.errors.SendToParerErrorDetails;
+import it.bologna.ausl.masterchefclient.exceptions.MasterChefClientException;
 import it.bologna.ausl.redis.RedisClient;
 import it.bologna.ausl.riversamento.builder.IdentityFile;
 import it.bologna.ausl.riversamento.builder.InfoDocumento;
@@ -46,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import javax.naming.NamingException;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
@@ -95,6 +101,10 @@ public class VersatoreParer implements Job {
     private final String ID_APPLICAZIONE = "gedi";
     private final String SERVIZIO_IDONEITA = "IdoneitaParerService";
     private final String NOME_SERVIZIO = "VersatoreParer";
+    
+    private final String SCHEDULATO = "SCHEDULATO";
+    private final String AMMINISTRATIVO = "AMMINISTRATIVO";
+    private final String CRUSCOTTO_PARER = "CRUSCOTTO_PARER";
 
     /**
      * Questo è il metodo di partenza che determina se il servizio deve girare
@@ -112,9 +122,15 @@ public class VersatoreParer implements Job {
         try (Connection dbConn = UtilityFunctions.getDBConnection();) {
 
             // controllo se è un verasmento "a volere" fuori dalla schedulazione
-            if (versamentoRichiestoFuoriServizio(context)) {
-                log.info("servizio versamento chiamato a volere");
-                doJob(context);
+            ServiceRequestInformation serviceRequestInformation = getServiceRequestInformation(context);
+            
+            if (serviceRequestInformation.getModalitaAccesso() == ServiceRequestInformation.ModalitaAccesso.AMMINISTRAZIONE) {
+                log.info("servizio versamento chiamato su richiesta in modalita amministrativa");
+                doJob(context, serviceRequestInformation);
+                log.info("Versatore ParER Finished");
+            } else if (serviceRequestInformation.getModalitaAccesso() == ServiceRequestInformation.ModalitaAccesso.APPLICAZIONE) {
+                log.info("servizio versamento chiamato su richiesta in modalita applicazione");
+                doJob(context, serviceRequestInformation);
                 log.info("Versatore ParER Finished");
             } else {
                 // parte schedulata, controllo se il servizio è già stato eseguito oggi
@@ -124,7 +140,7 @@ public class VersatoreParer implements Job {
                     // controllo che i servizi applicativi (attivi) che forniscono dati per l'invio al ParER sono terminati
                     if (serviziApplicativiFiniti(dbConn)) {
                         updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
-                        doJob(context);
+                        doJob(context, serviceRequestInformation);
                         updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
                         log.info("Versatore ParER Finished");
                     } else {
@@ -136,6 +152,32 @@ public class VersatoreParer implements Job {
                     log.debug("Versatore ParER Finished");
                 }
             }
+            
+            
+//            if (versamentoRichiestoFuoriServizio(context)) {
+//                log.info("servizio versamento chiamato a volere");
+//                doJob(context);
+//                log.info("Versatore ParER Finished");
+//            } else {
+//                // parte schedulata, controllo se il servizio è già stato eseguito oggi
+//                log.info("servizio versamento schedulato");
+//
+//                if (nonFattoOggi(dbConn)) {
+//                    // controllo che i servizi applicativi (attivi) che forniscono dati per l'invio al ParER sono terminati
+//                    if (serviziApplicativiFiniti(dbConn)) {
+//                        updateDataInizioDataFine(dbConn, Timestamp.valueOf(LocalDateTime.now()), null);
+//                        doJob(context);
+//                        updateDataInizioDataFine(dbConn, null, Timestamp.valueOf(LocalDateTime.now()));
+//                        log.info("Versatore ParER Finished");
+//                    } else {
+//                        log.info("servizi calcolo idoneita applicazioni non tutti finiti");
+//                        log.debug("Versatore ParER Finished");
+//                    }
+//                } else {
+//                    log.info("servizio versatore ParER già eseguito oggi");
+//                    log.debug("Versatore ParER Finished");
+//                }
+//            }
         } catch (Exception ex) {
             log.error("Errore nel servizio di versatore al ParER: ", ex);
             log.debug("Versatore ParER Finished");
@@ -154,12 +196,54 @@ public class VersatoreParer implements Job {
     public boolean versamentoRichiestoFuoriServizio(JobExecutionContext context) {
         log.info("versamentoRichiestoFuoriServizio");
         String data = context.getJobDetail().getJobDataMap().getString(NOME_SERVIZIO);
+        JSONObject parse = (JSONObject) JSONValue.parse(data);
+        String idUtente = (String) parse.get("idUtente");
+        List<String> documenti = (List<String>) parse.get("documenti");
         if (data != null && !data.equals("")) {
             log.info("data != null -> servizio chiamato a volere");
             return true;
         }
         log.info("data = null -> parte il servizio schedulato");
         return false;
+        
+    }
+    
+    
+    /**
+     * determina, in base al contesto passato, se il servizio è chiamato dallo
+     * schedulatore, dalla pagina amministrativa di bds_tools oppure dal cruscotto ParER
+     * su Babel
+     *
+     * @param context
+     * @return ServiceRequestInformation: informazioni ottenute dalla richiesta
+     */
+    public ServiceRequestInformation getServiceRequestInformation(JobExecutionContext context) {
+        
+        ServiceRequestInformation res = new ServiceRequestInformation();
+        
+        String data = context.getJobDetail().getJobDataMap().getString(NOME_SERVIZIO);
+        
+         if (data != null && !data.equals("")) {
+            log.info("servizio chiamato su richiesta");
+            JSONObject parse = (JSONObject) JSONValue.parse(data);
+            String idUtente = (String) parse.get("idUtente");
+            
+            if (idUtente != null && !idUtente.equals("")) {
+                log.info("modalita richiesta: APPLICAZIONE");
+                res.setModalitaAccesso(ServiceRequestInformation.ModalitaAccesso.APPLICAZIONE);
+                res.setIdUtente(idUtente);
+            } else {
+                log.info("modalita richiesta: AMMINISTRAZIONE");
+                res.setModalitaAccesso(ServiceRequestInformation.ModalitaAccesso.AMMINISTRAZIONE);
+            }
+            
+            List<String> documenti = (List<String>) parse.get("documenti");
+            res.setContent(documenti);
+        } else {
+            log.info("modalita richiesta: SERVIZIO_SCHEDULATO");
+            res.setModalitaAccesso(ServiceRequestInformation.ModalitaAccesso.SCHEDULATO);
+         }
+        return res;
     }
 
     /**
@@ -168,7 +252,7 @@ public class VersatoreParer implements Job {
      *
      * @param context
      */
-    public void doJob(JobExecutionContext context) {
+    public void doJob(JobExecutionContext context, ServiceRequestInformation serviceRequestInformation) throws MasterChefClientException {
 
         // estrazione dei dati passati al servizio (se ci sono) se è stato richiesto un versamento "a volere"
         JobDataMap dataMap = context.getJobDetail().getJobDataMap();
@@ -188,13 +272,21 @@ public class VersatoreParer implements Job {
 
         try {
 
-            if (content != null && !content.equals("")) {
-                // sono nella modalità "a volere"
-                gdDocList = getIdFromGuid(getIdGdDocFromString(content));
-            } else {
+            if (serviceRequestInformation.getModalitaAccesso() == ServiceRequestInformation.ModalitaAccesso.SCHEDULATO) {
                 // sono nella modalità schedulata
-                gdDocList = getIdGdDocDaVersate();
+                gdDocList = getIdGdDocDaVersate();  
+            } else {
+                 // sono nella modalità "a volere"
+                gdDocList = getIdFromGuid((ArrayList<String>) serviceRequestInformation.getContent());
             }
+            
+//            if (content != null && !content.equals("")) {
+//                // sono nella modalità "a volere"
+//                gdDocList = getIdFromGuid(getIdGdDocFromString(content));
+//            } else {
+//                // sono nella modalità schedulata
+//                gdDocList = getIdGdDocDaVersate();
+//            }
 
             // se la lista dei gddocs da versare non è nulla o vuota allora si procede a versarli
             if (gdDocList != null && gdDocList.size() > 0) {
@@ -389,7 +481,7 @@ public class VersatoreParer implements Job {
         } catch (Throwable t) {
             log.fatal("Versatore Parer: Errore ...", t);
         } finally {
-            setStopSessioneVersamento(idSessioneVersamento, gdDocList);
+            setStopSessioneVersamento(idSessioneVersamento, gdDocList, serviceRequestInformation);
 
             log.info("Job Versatore Parer finished");
             log.debug("Versatore ParER Finished");
@@ -707,7 +799,7 @@ public class VersatoreParer implements Job {
      *
      * @param idSessioneVersamento
      */
-    private void setStopSessioneVersamento(String idSessioneVersamento, List<String> gddocList) {
+    private void setStopSessioneVersamento(String idSessioneVersamento, List<String> gddocList, ServiceRequestInformation serviceRequestInformation) throws MasterChefClientException {
 
         String pattern = "yyyy-MM-dd'T'HH:mm:ss";
         DateTime dateTime = DateTime.now();
@@ -780,6 +872,11 @@ public class VersatoreParer implements Job {
         }
 
         riversaErroriInTabellaCheck(nowString);
+        
+        if (serviceRequestInformation.getModalitaAccesso() == ServiceRequestInformation.ModalitaAccesso.APPLICAZIONE){
+            inviaNotificaSuScrivania(serviceRequestInformation, idSessioneVersamento, nowString);
+        }
+        
         
     }
 
@@ -2305,6 +2402,127 @@ public class VersatoreParer implements Job {
         } catch (SQLException | NamingException ex) {
             log.fatal("errore in riversaErroriInTabellaCheck: " + ex);
         }
+    }
+    
+    
+    
+    public void inviaNotificaSuScrivania(ServiceRequestInformation serviceRequestInformation, String idSessioneVersamento, String dataFineVersamento) throws MasterChefClientException{
+       
+        UpdateBabelParams updateBabelParams = new UpdateBabelParams("babel", "babel", null, "false", "false", "insert");
+        String idAttivita = UUID.randomUUID().toString();
+        
+        List<String> content = (List<String>) serviceRequestInformation.getContent();
+        int documentiTotaliSelezionatiDaUtente = content.size();
+        
+        int esitoOK = 0;
+        int esitoERRORE = 0;
+        
+        String sqlTextOK
+                = "SELECT count(id_gddoc) "
+                + "FROM gd.gddocs_sessioni_versamento "
+                + "WHERE id_sessione_versamento_parer = ? "
+                + "and esito = 'OK'";
+  
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(sqlTextOK)) {
+            ps.setString(1, idSessioneVersamento);
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
+            while (res.next()) {
+                esitoOK = res.getInt("count");
+            }
+        } catch (SQLException | NamingException ex) {
+            log.fatal("errore nel reperire id_gdoc da guid_gddoc " + ex);
+        }
+        
+        
+        String sqlTextERRORE
+                = "SELECT count(id_gddoc) "
+                + "FROM gd.gddocs_sessioni_versamento "
+                + "WHERE id_sessione_versamento_parer = ? "
+                + "and esito = 'ERRORE'";
+  
+        try (
+            Connection dbConnection = UtilityFunctions.getDBConnection();
+            PreparedStatement ps = dbConnection.prepareStatement(sqlTextERRORE)) {
+            ps.setString(1, idSessioneVersamento);
+            log.debug("eseguo la query: " + ps.toString() + "...");
+            ResultSet res = ps.executeQuery();
+            log.debug("eseguita");
+            while (res.next()) {
+                esitoERRORE = res.getInt("count");
+            }
+        } catch (SQLException | NamingException ex) {
+            log.fatal("errore nel reperire id_gdoc da guid_gddoc " + ex);
+        }
+        
+        updateBabelParams.addAttivita(
+                idAttivita, 
+                null,
+                serviceRequestInformation.getIdUtente(),
+                "3", 
+                "Versamento del " + dataFineVersamento,
+                calcolaMessaggioNotificaParer(documentiTotaliSelezionatiDaUtente, esitoOK, esitoERRORE), 
+                null, 
+                "Versatore ParER",
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                null, 
+                "group_" + idAttivita, 
+                null
+                );
+        
+        
+         String retQueue = "notifica_versamento" + "_" + ApplicationParams.getAppId() + "_updateBabelRetQueue_" + ApplicationParams.getServerId();
+            log.debug("Creazione Worker..");
+            WorkerData wd = new WorkerData(ApplicationParams.getAppId(), "1", retQueue);
+            log.debug("Worker creato");
+            wd.addNewJob("1", null, updateBabelParams);
+
+//          RedisClient rd = new RedisClient("gdml", null);
+//          rd.put(wd.getStringForRedis(), "chefingdml");
+            RedisClient rd = new RedisClient(ApplicationParams.getRedisHost(), null);
+            log.debug("Add Worker to redis..");
+            rd.put(wd.getStringForRedis(), ApplicationParams.getRedisInQueue());
+            log.debug("Worker added to redis");
+
+            String extractedValue = rd.bpop(retQueue, 86400);
+            WorkerResponse wr = new WorkerResponse(extractedValue);
+            if (wr.getStatus().equalsIgnoreCase("ok")) {
+                log.debug("invio notifica versamento effettuata con successo");
+            }
+            else {
+                log.debug("errore tornato da masterchef: " + wr.getError());
+            }
+    }
+    
+    private String calcolaMessaggioNotificaParer(int documentiTot, int documentiOK, int documentiERRORE){
+              
+        String res = documentiTot
+                + " documenti presi in carico. Esito di versamento: " 
+                + documentiOK 
+                + " documenti versati correttamente e " 
+                + documentiERRORE 
+                + " documenti in errore";
+        return res;
     }
 
     // trasformo la classificazione nella rappresentazione accettata dal PaER

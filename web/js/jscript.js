@@ -366,7 +366,7 @@ $(document).ready(function(){
     function attacheFunctionsToButtons(sevice){
       switch (service.name) {
         case 'VersatoreParer':
-          var innerBox =  '<textarea id="guidList" class="form-control borderRadius" placeholder="Inserire qui i guid in formato JSON. Esempio: [&quot;guid_gddoc1&quot;,&quot;guid_gddoc2&quot;]" rows="10"></textarea>' +
+          var innerBox =  '<textarea id="guidList" class="form-control borderRadius" placeholder="Inserire qui i guid in formato JSON. Esempio: {&quot;documenti&quot;:[&quot;guid_gddoc1&quot,&quot;guid_gddoc2&quot;]}" rows="10"></textarea>' +
                           '<div class="row">' +
                             '<button id="fireVersatoreParer" type="button" class="btn btn-link noDecoretionOnHover col-lg-6 col-md-6 col-sm-6 col-xs-6">Versa</button>' +
                             '<button id="closeVersatoreParer" type="button" class="btn btn-link noDecoretionOnHover col-lg-6 col-md-6 col-sm-6 col-xs-6">Annulla</button>' +
