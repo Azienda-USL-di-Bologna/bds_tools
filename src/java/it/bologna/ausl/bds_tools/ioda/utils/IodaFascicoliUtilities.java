@@ -1238,6 +1238,7 @@ public class IodaFascicoliUtilities {
        boolean deletePrecedente = false;
        boolean vengoDaGipi = false;
        Integer idIterPrecedente = null;
+       boolean iterAnnullato = false;
        
        
        if (additionalData != null) {
@@ -1251,7 +1252,12 @@ public class IodaFascicoliUtilities {
            
            if ((Integer) additionalData.get(Fascicolo.OperazioniFascicolo.ID_ITER_PRECEDENTE.toString()) != null){
                idIterPrecedente = (Integer) additionalData.get(Fascicolo.OperazioniFascicolo.ID_ITER_PRECEDENTE.toString());
-           } 
+           }
+           
+           if ((Boolean) additionalData.get(Fascicolo.OperazioniFascicolo.UPDATE_PER_ANNULLAMENTO_ITER.toString()) != null){
+               deletePrecedente = true;
+               iterAnnullato = true;
+           }
         }
         
         String sqlText
@@ -1267,7 +1273,8 @@ public class IodaFascicoliUtilities {
                 + "id_utente_creazione = coalesce(?, id_utente_creazione), "
                 + "id_utente_responsabile_proposto = coalesce(?, id_utente_responsabile_proposto), "
                 + "descrizione_iter = coalesce(?, descrizione_iter), "
-                + (deletePrecedente ? "id_padre_catena_fascicolare = ? " : "id_padre_catena_fascicolare = coalesce(?, id_padre_catena_fascicolare) ") 
+                + (deletePrecedente ? "id_padre_catena_fascicolare = ? " : "id_padre_catena_fascicolare = coalesce(?, id_padre_catena_fascicolare) ")
+                + (iterAnnullato ? ", id_iter = NULL, id_tipo_fascicolo = 1 " : "") // lo faccio solo se sto annullando l'iter
                 + (vengoDaGipi ? "WHERE id_iter = ? " : "WHERE numerazione_gerarchica = ? ") ;
         
         ps = dbConn.prepareStatement(sqlText);
