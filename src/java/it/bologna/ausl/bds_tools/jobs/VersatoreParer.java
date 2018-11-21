@@ -82,7 +82,10 @@ public class VersatoreParer implements Job {
     private static final String GENERATE_INDE_NUMBER_PARAM_NAME = "generateidnumber";
     private static final String INDE_DOCUMENT_ID_PARAM_NAME = "document_id";
     public static final String INDE_DOCUMENT_GUID_PARAM_NAME = "document_guid";
-
+    
+    public static final String DATE_PATTERN_STANDARD = "yyyy-MM-dd'T'HH:mm:ss";
+    public static final String DATE_PATTERN_FOR_USER = "dd-MM-yyyy HH:mm:ss";
+  
     private boolean canSendPicoUscita, canSendPicoEntrata, canSendDete, canSendDeli;
     private boolean canSendRegistroGiornaliero, canSendRegistroAnnuale;
     private boolean canSendRgPico, canSendRgDete, canSendRgDeli;
@@ -804,9 +807,9 @@ public class VersatoreParer implements Job {
      */
     private void setStopSessioneVersamento(String idSessioneVersamento, List<String> gddocList, ServiceRequestInformation serviceRequestInformation) throws MasterChefClientException {
 
-        String pattern = "yyyy-MM-dd'T'HH:mm:ss";
+        //String pattern = "yyyy-MM-dd'T'HH:mm:ss";
         DateTime dateTime = DateTime.now();
-        String nowString = DatiParerGdDoc.toIsoDateFormatString(dateTime, pattern);
+        String nowString = DatiParerGdDoc.toIsoDateFormatString(dateTime, DATE_PATTERN_STANDARD);
 
         String query
                 = //            "UPDATE " + ApplicationParams.getSessioniVersamentoParerTableName() + " " +
@@ -2466,8 +2469,8 @@ public class VersatoreParer implements Job {
                 null,
                 serviceRequestInformation.getIdUtente(),
                 "3", 
-                "Versamento del " + dataFineVersamento,
-                calcolaMessaggioNotificaParer(documentiTotaliSelezionatiDaUtente, esitoOK, esitoERRORE), 
+                "esito versamento",
+                calcolaMessaggioNotificaParer(documentiTotaliSelezionatiDaUtente, esitoOK, esitoERRORE, dataFineVersamento), 
                 null, 
                 "Versatore ParER",
                 null, 
@@ -2517,15 +2520,34 @@ public class VersatoreParer implements Job {
             }
     }
     
-    private String calcolaMessaggioNotificaParer(int documentiTot, int documentiOK, int documentiERRORE){
+    private String calcolaMessaggioNotificaParer(int documentiTot, int documentiOK, int documentiERRORE, String dataStr){
               
-        String res = documentiTot
-                + " documenti presi in carico. Esito di versamento: " 
-                + documentiOK 
-                + " documenti versati correttamente e " 
-                + documentiERRORE 
-                + " documenti in errore";
+        String dataOra = changePatternDateString(DATE_PATTERN_STANDARD, DATE_PATTERN_FOR_USER, dataStr);
+        
+        
+        String res = "E' terminata l'esecuzione del versamento forzato richiesto il "
+                + "[" + dataOra + "], con esito: " 
+                + documentiERRORE + " documenti in errore, "
+                + documentiOK + " documenti versati correttamente";
+        
+//        String res = documentiTot
+//                + " documenti presi in carico. Esito di versamento: " 
+//                + documentiOK 
+//                + " documenti versati correttamente e " 
+//                + documentiERRORE 
+//                + " documenti in errore";
         return res;
+    }
+
+    private String changePatternDateString(String patternIn, String patternOut, String dataOraStr) {
+        // formato di input
+        DateTimeFormatter dtf = DateTimeFormat.forPattern(patternIn);
+        // Parsing della data
+        DateTime jodatime = dtf.parseDateTime(dataOraStr);
+        // formato di putput
+        DateTimeFormatter dtfOut = DateTimeFormat.forPattern(patternOut);
+        // ritorna la data in stringa
+        return dtfOut.print(jodatime);
     }
 
     // trasformo la classificazione nella rappresentazione accettata dal PaER
