@@ -34,7 +34,8 @@ public class VersatoreParerUtils {
         factory.setNamespaceAware(true);
         DocumentBuilder builder;
         Document doc = null;
-        String regex = "^.*-(\\w*)-(\\d+):(\\d):(\\d+):";
+        String regexComponente = "^.*-(\\w*)-(\\d+):(\\d):(\\d+):";
+        String regexUnitaDocumentaria = "^.* (\\w*)-(\\d+)-(\\d+):";
         
         if (xmlVersato != null && !xmlVersato.equals("") && errorMessage != null && !errorMessage.equals("")) {
             log.info("getNomeDocumentoInErrore: xmlVersato e errorMessage settati");
@@ -43,7 +44,7 @@ public class VersatoreParerUtils {
                 InputStream documentIS = new ByteArrayInputStream(xmlVersato.getBytes(StandardCharsets.UTF_8));
                 doc = builder.parse(documentIS);
                 
-                Pattern pattern = Pattern.compile(regex);
+                Pattern pattern = Pattern.compile(regexComponente);
                 Matcher matcher = pattern.matcher(errorMessage);
                 
                 String tipoDocumento = null;
@@ -55,7 +56,19 @@ public class VersatoreParerUtils {
                     numeroDocumento = Integer.valueOf(matcher.group(2));
                     numeroOrdineComponente = Integer.valueOf(matcher.group(4));
                 }
-
+                
+                if (tipoDocumento == null && numeroDocumento == null && numeroOrdineComponente == null) {
+                    // prova il secondo parsing
+                    pattern = Pattern.compile(regexUnitaDocumentaria);
+                    matcher = pattern.matcher(errorMessage);
+                    
+                    while (matcher.find()) {
+                        tipoDocumento = matcher.group(1);
+                        numeroDocumento = Integer.valueOf(matcher.group(2));
+                        numeroOrdineComponente = Integer.valueOf(matcher.group(4));
+                    }
+                }
+                    
                 // Crea oggetto XPathFactory
                 XPathFactory xpathFactory = XPathFactory.newInstance();
 
@@ -65,8 +78,7 @@ public class VersatoreParerUtils {
                 // numero ordine struttura viene omesso perchè attualmente si ha solo ordine struttura = 1
                 log.info("calcolo del nome del componente in errore");
                 res = getNomeComponente(doc, xpath, tipoDocumento, numeroDocumento, numeroOrdineComponente);
-                
-            } catch (ParserConfigurationException | SAXException | IOException ex) {
+            } catch (Exception ex) {
                 log.error("errore nel parsing: ", ex);
             }
         }

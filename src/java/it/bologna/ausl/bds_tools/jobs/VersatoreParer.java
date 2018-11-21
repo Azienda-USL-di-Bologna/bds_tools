@@ -443,9 +443,12 @@ public class VersatoreParer implements Job {
 
                                     // imposto gli stati di errore
                                     gdSessioneVersamento.setEsito("ERRORE");
-                                    gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
-                                    gdSessioneVersamento.setDescrizioneErrore(e.toString());
+//                                    gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
+//                                    gdSessioneVersamento.setDescrizioneErrore(e.toString());
 
+                                    datiparer.setEsitoUltimoVersamento(gdSessioneVersamento.getEsito());
+                                    datiparer.setCodiceErroreUltimoVersamento(gdSessioneVersamento.getCodiceErrore());
+                                    
                                     datiparer.setStatoVersamentoProposto("errore_versamento");
                                     datiparer.setStatoVersamentoEffettivo("errore_versamento");
 
