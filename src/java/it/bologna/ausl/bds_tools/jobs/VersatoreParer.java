@@ -1840,7 +1840,8 @@ public class VersatoreParer implements Job {
                 + "forza_accettazione = coalesce(?, forza_accettazione), "
                 + "forza_collegamento = coalesce(?, forza_collegamento), "
                 + "esito_ultimo_versamento = coalesce(?, esito_ultimo_versamento), "
-                + "codice_errore_ultimo_versamento = coalesce(?, codice_errore_ultimo_versamento), "
+                //+ "codice_errore_ultimo_versamento = coalesce(?, codice_errore_ultimo_versamento), "
+                + "codice_errore_ultimo_versamento = ?, "
                 + "documento_in_errore = coalesce(?, documento_in_errore) "
                 + "WHERE id_gddoc = ? ";
 
