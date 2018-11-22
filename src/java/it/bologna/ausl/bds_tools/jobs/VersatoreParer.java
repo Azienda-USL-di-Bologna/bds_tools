@@ -2525,11 +2525,18 @@ public class VersatoreParer implements Job {
               
         String dataOra = changePatternDateString(DATE_PATTERN_STANDARD, DATE_PATTERN_FOR_USER, dataStr);
         
-        
-        String res = "E' terminata l'esecuzione del versamento forzato richiesto il "
-                + "[" + dataOra + "], con esito: " 
-                + documentiERRORE + " documenti in errore, "
+        String res = "Esito versamento forzato del " 
+                + dataOra 
+                + ": " 
+                +  documentiERRORE 
+                + " documenti in errore, " 
                 + documentiOK + " documenti versati correttamente";
+        
+        
+//        String res = "E' terminata l'esecuzione del versamento forzato richiesto il "
+//                + "[" + dataOra + "], con esito: " 
+//                + documentiERRORE + " documenti in errore, "
+//                + documentiOK + " documenti versati correttamente";
         
 //        String res = documentiTot
 //                + " documenti presi in carico. Esito di versamento: " 
