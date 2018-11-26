@@ -2374,7 +2374,7 @@ public class VersatoreParer implements Job {
 
         String qNew
                 = "INSERT INTO diagnostica.report(tipologia, data_inserimento_riga, additional_data) "
-                + "select 'PARER_ERR_TECNICO' as tipologia, now() as data_inserimento_riga, json_build_object('id_gddoc', sv.id_gddoc,'id_ses_vers', vp.id_sessione_versamento_parer, 'cod_err', sv.codice_errore, 'desc_err', sv.descrizione_errore, 'data_fin_vers', ?) "
+                + "select 'PARER_ERR_TECNICO' as tipologia, now() as data_inserimento_riga, json_build_object('guid_gddoc', g.guid_gddoc,'guid_ses_vers', vp.guid_sessione_versamento_parer, 'cod_err', sv.codice_errore, 'desc_err', sv.descrizione_errore, 'data_fin_vers', ?, 'cod_reg', g.codice_registro) "
                 + "from gd.gddocs g, gd.gddocs_sessioni_versamento sv, gd.sessioni_versamento_parer vp "
                 + "where sv.id_sessione_versamento_parer = vp.id_sessione_versamento_parer "
                 + "and sv.id_gddoc = g.id_gddoc "
