@@ -230,11 +230,18 @@ public class VersatoreParer implements Job {
             log.info("servizio chiamato su richiesta");
             JSONObject parse = (JSONObject) JSONValue.parse(data);
             String idUtente = (String) parse.get("idUtente");
+            String azione = (String) parse.get("azione");
+            String motivazioneAzione = (String) parse.get("motivazioneAzione");
             
             if (idUtente != null && !idUtente.equals("")) {
                 log.info("modalita richiesta: APPLICAZIONE");
                 res.setModalitaAccesso(ServiceRequestInformation.ModalitaAccesso.APPLICAZIONE);
                 res.setIdUtente(idUtente);
+                
+                if (azione != null && !azione.equals("") && motivazioneAzione != null && !motivazioneAzione.equals("")) {
+                    res.setAzione(azione);
+                    res.setMotivazioneAzione(motivazioneAzione);
+                }
             } else {
                 log.info("modalita richiesta: AMMINISTRAZIONE");
                 res.setModalitaAccesso(ServiceRequestInformation.ModalitaAccesso.AMMINISTRAZIONE);
@@ -320,6 +327,8 @@ public class VersatoreParer implements Job {
                             // il valore di codice errore = 0 è stato scelto arbitrariamente perchè diverso dagli errori che ritornano dal ParER
                             gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
                             gdSessioneVersamento.setDescrizioneErrore("fallita ricostruzione del gddoc con errore: " + e);
+                            gdSessioneVersamento.setAzione(serviceRequestInformation.getAzione());
+                            gdSessioneVersamento.setMotivazioneAzione(serviceRequestInformation.getMotivazioneAzione());
                             saveVersamento(gdSessioneVersamento, idGdDoc);
                             continue;
                         }
@@ -346,6 +355,9 @@ public class VersatoreParer implements Job {
                                     String codiceErrore, descrizioneErrore, rapportoVersamento;
 
                                     gdSessioneVersamento.setXmlVersato(xmlVersato);
+                                    
+                                    gdSessioneVersamento.setAzione(serviceRequestInformation.getAzione());
+                                    gdSessioneVersamento.setMotivazioneAzione(serviceRequestInformation.getMotivazioneAzione());
 
                                     // lancio del mestiere
                                     String retQueue = "notifica_errore" + "_" + ApplicationParams.getAppId() + "_sendToParerRetQueue_" + ApplicationParams.getServerId();
@@ -415,6 +427,8 @@ public class VersatoreParer implements Job {
                                         gdSessioneVersamento.setEsito("OK");
                                         gdSessioneVersamento.setCodiceErrore(null);
                                         gdSessioneVersamento.setDescrizioneErrore(null);
+                                        gdSessioneVersamento.setAzione(serviceRequestInformation.getAzione());
+                                        gdSessioneVersamento.setMotivazioneAzione(serviceRequestInformation.getMotivazioneAzione());
 
                                         datiparer.setStatoVersamentoProposto("versato");
                                         datiparer.setStatoVersamentoEffettivo("versato");
@@ -446,6 +460,8 @@ public class VersatoreParer implements Job {
 
                                     // imposto gli stati di errore
                                     gdSessioneVersamento.setEsito("ERRORE");
+                                    gdSessioneVersamento.setAzione(serviceRequestInformation.getAzione());
+                                    gdSessioneVersamento.setMotivazioneAzione(serviceRequestInformation.getMotivazioneAzione());
 //                                    gdSessioneVersamento.setCodiceErrore(String.valueOf(0));
 //                                    gdSessioneVersamento.setDescrizioneErrore(e.toString());
 
@@ -654,10 +670,10 @@ public class VersatoreParer implements Job {
                 = "INSERT INTO " + ApplicationParams.getGdDocSessioniVersamentoParerTableName() + "( "
                 + "id_gddoc_versamento, id_gddoc, id_sessione_versamento_parer, "
                 + "xml_versato, esito, codice_errore, descrizione_errore, "
-                + "rapporto_versamento, guid_gddoc_versamento, documento_in_errore) "
+                + "rapporto_versamento, guid_gddoc_versamento, documento_in_errore, azione, motivazione_azione) "
                 + "VALUES (?, ?, ?, "
                 + "?, ?, ?, ?, "
-                + "?, ?, ?)";
+                + "?, ?, ?, ?, ?)";
 
         try (
                 Connection dbConnection = UtilityFunctions.getDBConnection();
@@ -682,6 +698,8 @@ public class VersatoreParer implements Job {
             ps.setString(index++, g.getRapportoVersamento());
             ps.setString(index++, guidInde);
             ps.setString(index++, g.getDocumentoInErrore());
+            ps.setString(index++, g.getAzione());
+            ps.setString(index++, g.getMotivazioneAzione());
 
             int rowsUpdated = ps.executeUpdate();
             log.debug("eseguita");

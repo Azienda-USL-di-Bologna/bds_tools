@@ -1137,6 +1137,7 @@ public class IodaDocumentUtilities {
 
             // data_registrazione
             Timestamp dataRegistrazione = (gdDoc.getDataRegistrazione() != null) ? new Timestamp(gdDoc.getDataRegistrazione().getMillis()) : null;
+            log.debug("TEST_dataRegistrazione: " + gdDoc.getDataRegistrazione());
             if (dataRegistrazione != null) {
                 ps.setTimestamp(index++, dataRegistrazione);
             } else {

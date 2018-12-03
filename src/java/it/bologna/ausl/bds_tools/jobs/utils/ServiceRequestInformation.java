@@ -15,6 +15,8 @@ public class ServiceRequestInformation {
     private String serviceName;
     private ModalitaAccesso modalitaAccesso;
     private String idUtente;
+    private String azione;
+    private String motivazioneAzione;
     private Object content;
 
     public ServiceRequestInformation() {
@@ -59,5 +61,19 @@ public class ServiceRequestInformation {
         this.content = content;
     }
 
-    
+    public String getAzione() {
+        return azione;
+    }
+
+    public void setAzione(String azione) {
+        this.azione = azione;
+    }
+
+    public String getMotivazioneAzione() {
+        return motivazioneAzione;
+    }
+
+    public void setMotivazioneAzione(String motivazioneAzione) {
+        this.motivazioneAzione = motivazioneAzione;
+    }
 }
