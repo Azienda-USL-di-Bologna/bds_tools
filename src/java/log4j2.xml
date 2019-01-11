@@ -23,6 +23,9 @@
         </Console>
         <RollingFile name="spedizioniere" fileName="${sys:catalina.home}/logs/spedizioniere.log"
             filePattern="${sys:catalina.home}/logs/spedizioniere_%d{MM-dd-yyyy}.log.gz">
+            <PatternLayout>
+                <Pattern>%d{yyyy MM dd HH:mm:ss,SSS} %p %t %c - %m%n</Pattern>
+            </PatternLayout>
             <Policies>
                 <TimeBasedTriggeringPolicy />
             </Policies>
