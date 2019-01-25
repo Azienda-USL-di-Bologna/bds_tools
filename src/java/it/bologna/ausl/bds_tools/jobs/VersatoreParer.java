@@ -36,6 +36,7 @@ import it.bologna.ausl.riversamento.builder.oggetti.DatiSpecifici;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URLDecoder;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -220,7 +221,7 @@ public class VersatoreParer implements Job {
      * @param context
      * @return ServiceRequestInformation: informazioni ottenute dalla richiesta
      */
-    public ServiceRequestInformation getServiceRequestInformation(JobExecutionContext context) {
+    public ServiceRequestInformation getServiceRequestInformation(JobExecutionContext context) throws UnsupportedEncodingException {
         
         ServiceRequestInformation res = new ServiceRequestInformation();
         
@@ -228,7 +229,8 @@ public class VersatoreParer implements Job {
         
          if (data != null && !data.equals("")) {
             log.info("servizio chiamato su richiesta");
-            JSONObject parse = (JSONObject) JSONValue.parse(data);
+            String newData = URLDecoder.decode(data, "ISO-8859-1");
+            JSONObject parse = (JSONObject) JSONValue.parse(newData);
             String idUtente = (String) parse.get("idUtente");
             String azione = (String) parse.get("azione");
             String motivazioneAzione = (String) parse.get("motivazioneAzione");
