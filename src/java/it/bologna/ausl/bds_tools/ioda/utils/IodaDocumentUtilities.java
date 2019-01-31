@@ -32,20 +32,16 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLType;
 import java.sql.Savepoint;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.naming.NamingException;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.Part;
@@ -1985,14 +1981,14 @@ public class IodaDocumentUtilities {
         }
     }
 
-    public static void UpdatePubblicazioneByNumeroAndAnno(Connection dbConn, long numeroPubblicazione, int annoPubblicazione, PubblicazioneIoda p) throws NamingException, ServletException, SQLException {
+    public static void UpdatePubblicazioneByNumeroAndAnno(Connection dbConn, long numeroPubblicazione, int annoPubblicazione, PubblicazioneIoda p, String tipologia) throws NamingException, ServletException, SQLException {
 
         String sqlText
                 = "UPDATE " + ApplicationParams.getPubblicazioniAlboTableName() + " SET "
                 + "data_defissione = coalesce(?, data_defissione), "
                 + "data_esecutivita = coalesce(?, data_esecutivita), "
                 + "pubblicatore = coalesce(?, pubblicatore) "
-                + "WHERE numero_pubblicazione = ? AND anno_pubblicazione = ? AND tipo_pubblicazione = ALBO";
+                + "WHERE numero_pubblicazione = ? AND anno_pubblicazione = ? AND tipo_pubblicazione = ?";
 
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
@@ -2019,6 +2015,9 @@ public class IodaDocumentUtilities {
 
             // anno
             ps.setInt(index++, annoPubblicazione);
+            
+            // tipologia
+            ps.setString(index++, tipologia);
 
             String query = ps.toString();
             log.debug("eseguo la query: " + query + " ...");
