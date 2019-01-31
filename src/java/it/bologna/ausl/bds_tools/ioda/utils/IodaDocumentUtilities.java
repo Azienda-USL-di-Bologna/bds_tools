@@ -1992,7 +1992,7 @@ public class IodaDocumentUtilities {
                 + "data_defissione = coalesce(?, data_defissione), "
                 + "data_esecutivita = coalesce(?, data_esecutivita), "
                 + "pubblicatore = coalesce(?, pubblicatore) "
-                + "WHERE numero_pubblicazione = ? AND anno_pubblicazione = ?";
+                + "WHERE numero_pubblicazione = ? AND anno_pubblicazione = ? AND tipo_pubblicazione = ALBO";
 
         try (PreparedStatement ps = dbConn.prepareStatement(sqlText)) {
             int index = 1;
