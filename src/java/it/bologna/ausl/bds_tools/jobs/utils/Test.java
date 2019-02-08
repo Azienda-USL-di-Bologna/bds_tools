@@ -42,6 +42,15 @@ public class Test {
 
     public static void main(String[] args) throws JsonProcessingException, FileNotFoundException, IOException, SQLException, NamingException, NotAuthorizedException, IodaDocumentException, ParseException {
         
+
+        try (Connection connection = DriverManager.getConnection("jdbc:postgresql://gdml:5432/argo","argo", "siamofreschi");) {
+            if (nonFattoOggi(connection)){
+                System.out.println("OK");
+            } else{
+                System.out.println("KO");
+            }
+        }
+        
         
                 
         System.exit(0);
@@ -134,6 +143,53 @@ public class Test {
 
     }
     
+    
+    public static boolean nonFattoOggi(Connection dbConn) throws SQLException {
+        String query = ""
+                + "select data_fine, data_inizio "
+                + "from bds_tools.servizi "
+                + "where nome_servizio = ? and id_applicazione = ?";
+        try (PreparedStatement ps = dbConn.prepareStatement(query)) {
+            ps.setString(1, "VersatoreParer");
+            ps.setString(2, "gedi");
+            System.out.println(String.format("eseguo la query: %s", ps.toString()));
+            ResultSet res = ps.executeQuery();
+            if (res.next()) {
+                java.sql.Date dataFine = null;
+                java.sql.Date dataInizio = null;
+                try {
+                    dataFine = res.getDate(1);
+                    dataInizio = res.getDate(2);
+                    if (dataFine != null && dataInizio != null) {
+                        System.out.println(String.format("data_inizio letta: %s", dataInizio));
+                        System.out.println(String.format("data_fine letta: %s", dataFine));
+
+                        //in milliseconds
+                        long diffFine = System.currentTimeMillis() - dataFine.getTime();
+                        long diffDaysFine = diffFine / (24 * 60 * 60 * 1000);
+                        
+                        long diffInizio = dataFine.getTime() - dataInizio.getTime();
+                        long diffDaysInizio = diffInizio / (24 * 60 * 60 * 1000);
+
+                        if ( (diffDaysFine >= 1) || (diffDaysFine < 1 && diffDaysInizio >= 1) ) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                } catch (Exception ex) {
+                    System.out.println("nonFattoOggi - errore nel reperimento della data_fine: " + ex);
+                    return false;
+                }
+
+            } else {
+                System.out.println("servizio non trovato");
+            }
+        }
+        return false;
+    }
     
     private static GdDoc getGdDocById(String idGdDoc) throws SQLException, NamingException, NotAuthorizedException, IodaDocumentException{
         

@@ -2223,7 +2223,7 @@ public class VersatoreParer implements Job {
      */
     private boolean nonFattoOggi(Connection dbConn) throws SQLException {
         String query = ""
-                + "select data_fine "
+                + "select data_fine, data_inizio "
                 + "from bds_tools.servizi "
                 + "where nome_servizio = ? and id_applicazione = ?";
         try (PreparedStatement ps = dbConn.prepareStatement(query)) {
@@ -2232,20 +2232,41 @@ public class VersatoreParer implements Job {
             log.debug(String.format("eseguo la query: %s", ps.toString()));
             ResultSet res = ps.executeQuery();
             if (res.next()) {
-                Date date = null;
+                Date dataFine = null;
+                Date dataInizio = null;
                 try {
-                    date = res.getDate(1);
-                    if (date != null) {
-                        log.debug(String.format("data letta: %s", date));
+                    dataFine = res.getDate(1);
+                    dataInizio = res.getDate(2);
+                    if (dataFine != null && dataInizio != null) {
+                        log.debug(String.format("data_inizio letta: %s", dataInizio));
+                        log.debug(String.format("data_fine letta: %s", dataFine));
 
                         //in milliseconds
-                        long diff = System.currentTimeMillis() - date.getTime();
-                        long diffDays = diff / (24 * 60 * 60 * 1000);
+                        long diffFine = System.currentTimeMillis() - dataFine.getTime();
+                        long diffDaysFine = diffFine / (24 * 60 * 60 * 1000);
+                        
+                        long diffInizio = dataFine.getTime() - dataInizio.getTime();
+                        long diffDaysInizio = diffInizio / (24 * 60 * 60 * 1000);
 
-                        return diffDays > 0;
+                        if ( (diffDaysFine >= 1) || (diffDaysFine < 1 && diffDaysInizio >= 1) ) {
+                            return true;
+                        } else {
+                            return false;
+                        }
                     } else {
                         return false;
                     }
+//                    if (dataFine != null) {
+//                        log.debug(String.format("data letta: %s", dataFine));
+//
+//                        //in milliseconds
+//                        long diff = System.currentTimeMillis() - dataFine.getTime();
+//                        long diffDays = diff / (24 * 60 * 60 * 1000);
+//
+//                        return diffDays > 0;
+//                    } else {
+//                        return false;
+//                    }
                 } catch (Exception ex) {
                     log.debug("nonFattoOggi - errore nel reperimento della data_fine: " + ex);
                     return false;
