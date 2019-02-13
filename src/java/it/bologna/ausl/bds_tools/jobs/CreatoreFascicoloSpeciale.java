@@ -126,7 +126,7 @@ public class CreatoreFascicoloSpeciale implements Job{
             ps.setString(i++, idClassificazioneFascicoloSpeciale);
             ps.setString(i++, idUtenteResponsabileFascicoloSpeciale);
             ps.setString(i++, idUtenteResponsabileFascicoloSpeciale);
-            ps.setString(i++, idVicarioFascicoloSpeciale);
+            ps.setString(i++, idVicarioFascicoloSpeciale);// Molto probabilmente questo campo non è usato ma per sicurezza lo compiliamo
             ps.setDate(i++, new Date(Calendar.getInstance().getTimeInMillis()));
             ps.setDate(i++, new Date(Calendar.getInstance().getTimeInMillis()));
             ps.setInt(i++, 1);
@@ -137,18 +137,14 @@ public class CreatoreFascicoloSpeciale implements Job{
             ps.setString(i++, guidFascicolo);
             ps.setString(i++, getClass().getSimpleName());
 //            String numerazioneGerarchica = getNumerazioneGerarchica(idFascicoloPadre);
-            // Caso fascicolo atti dell'azienda stacco il numero
-            if (idFascicoloPadre ==  null || idFascicoloPadre.equals("")) {
+//             Caso fascicolo atti dell'azienda stacco il numero
 //                E' stato introdotto un trigger che mette in automatico la numerazione gerarchica
-//                ps.setString(i++, numeroFascicolo + "/" + anno);
-                log.debug("QUERY INSERT: " + ps);
-                ps.executeUpdate();
+            log.debug("QUERY INSERT: " + ps);
+            ps.executeUpdate();
+            if (idFascicoloPadre ==  null || idFascicoloPadre.equals("")) {
                 SetDocumentNumber.setNumber(dbConnection, guidFascicolo, sequenceName);
-            }else{
-//                ps.setString(i++, numerazioneGerarchica + "-" + numeroFascicolo + "/" + anno);
-                log.debug("QUERY INSERT: " + ps);
-                ps.executeUpdate();
             }
+            setVicario(idFascicolo, idVicarioFascicoloSpeciale, dbConnection);
         } catch (SQLException ex) {
 //            log.error("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
             throw new SQLException("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
@@ -258,6 +254,25 @@ public class CreatoreFascicoloSpeciale implements Job{
         } catch (SQLException ex) {
 //            log.error("Errore nel ottenimento dell'id del fascicolo: " + numerazioneGerarchica, ex);
             throw new SQLException("Errore nel ottenimento dell'id del fascicolo: " + numerazioneGerarchica, ex);
+        }
+        return null;
+    }
+    
+    public static String setVicario(String idFascicolo, String idUtente, Connection connection) throws SQLException{
+        if ( idFascicolo == null || idFascicolo.equals("")) {
+            return null;
+        }
+        String querySetVicario = "INSERT INTO gd.fascicoli_gd_vicari (id_fascicolo,id_utente)" +
+                                            "VALUES (?,?);";
+        try (
+//                PreparedStatement psSetVicario = dbConnection.prepareStatement(querySetVicario);
+                PreparedStatement psSetVicario = connection.prepareStatement(querySetVicario);
+           ) {
+            psSetVicario.setString(1, idFascicolo);
+//            log.debug("Query setVicario: " + psSetVicario);
+            psSetVicario.executeUpdate();
+        } catch (SQLException ex) {
+            throw new SQLException("Errore nell'inserimento del vicario " + idUtente + " per il fascicolo " + idFascicolo, ex);
         }
         return null;
     }
