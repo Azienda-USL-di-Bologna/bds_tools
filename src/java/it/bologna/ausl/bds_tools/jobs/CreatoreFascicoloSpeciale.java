@@ -144,7 +144,7 @@ public class CreatoreFascicoloSpeciale implements Job{
             if (idFascicoloPadre ==  null || idFascicoloPadre.equals("")) {
                 SetDocumentNumber.setNumber(dbConnection, guidFascicolo, sequenceName);
             }
-            setVicario(idFascicolo, idVicarioFascicoloSpeciale, dbConnection);
+            setVicario(idFascicolo, idVicarioFascicoloSpeciale);
         } catch (SQLException ex) {
 //            log.error("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
             throw new SQLException("Errore nella creazione del fascicolo speciale: " + nomeFascicoloSpeciale, ex);
@@ -258,7 +258,7 @@ public class CreatoreFascicoloSpeciale implements Job{
         return null;
     }
     
-    public static String setVicario(String idFascicolo, String idUtente, Connection connection) throws SQLException{
+    private String setVicario(String idFascicolo, String idUtente) throws SQLException{
         if ( idFascicolo == null || idFascicolo.equals("")) {
             return null;
         }
@@ -266,7 +266,7 @@ public class CreatoreFascicoloSpeciale implements Job{
                                             "VALUES (?,?);";
         try (
 //                PreparedStatement psSetVicario = dbConnection.prepareStatement(querySetVicario);
-                PreparedStatement psSetVicario = connection.prepareStatement(querySetVicario);
+                PreparedStatement psSetVicario = dbConnection.prepareStatement(querySetVicario);
            ) {
             psSetVicario.setString(1, idFascicolo);
 //            log.debug("Query setVicario: " + psSetVicario);

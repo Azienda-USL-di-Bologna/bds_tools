@@ -28,9 +28,9 @@ public class Runner {
     public static void main(String[] args) throws SQLException, IOException, URISyntaxException {
         // TODO code application logic here
         getDbConnection();
-        buildUriDb("localhost", 5432, "argo", "postgres", "siamofreschi");
+        buildUriDb("gdml", 5432, "argo", "postgres", "siamofreschi");
         Connection connection = dataSource.getConnection();
-        CreatoreFascicoloSpeciale.setVicario("FascicoloSpecial2017", "s.fayssel", connection);
+//        CreatoreFascicoloSpeciale.setVicario("FascicoloSpecial2017", "s.fayssel", connection);
     }
     
     public static void buildUriDb(String hostDb, int portaDb, String nomeDb, String username, String password){
