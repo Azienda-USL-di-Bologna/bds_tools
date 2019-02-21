@@ -269,6 +269,7 @@ public class CreatoreFascicoloSpeciale implements Job{
                 PreparedStatement psSetVicario = dbConnection.prepareStatement(querySetVicario);
            ) {
             psSetVicario.setString(1, idFascicolo);
+            psSetVicario.setString(2, idUtente);
 //            log.debug("Query setVicario: " + psSetVicario);
             psSetVicario.executeUpdate();
         } catch (SQLException ex) {
