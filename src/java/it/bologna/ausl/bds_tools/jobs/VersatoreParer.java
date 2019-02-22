@@ -2535,8 +2535,8 @@ public class VersatoreParer implements Job {
                 null, 
                 null, 
                 "group_" + idAttivita, 
-                null
-                );
+                null, 
+                null);
         
         
          String retQueue = "notifica_versamento" + "_" + ApplicationParams.getAppId() + "_updateBabelRetQueue_" + ApplicationParams.getServerId();

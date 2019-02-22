@@ -958,6 +958,7 @@ public class Spedizioniere implements Job{
                         res.getString("id_oggetto_origine"), 
                         res.getString("tipo_oggetto_origine"), 
                         "group_" + res.getString("id_oggetto_origine"), 
+                        null, 
                         null);
             }
 
