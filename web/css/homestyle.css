@@ -1,0 +1,262 @@
+html,
+body{
+  width: 100%;
+  padding-bottom: 60px;
+  background-color: rgb(239, 239, 239);
+  color: #ffffff;
+  font-family: 'Roboto', sans-serif !important;
+}
+.wrapper{
+  margin-top: 60px;
+  color: black;
+  /*position: relative;*/
+}
+.boxShadow{
+  box-shadow:  0 1px 3px 0 rgba(0,0,0,.2),0 1px 1px 0 rgba(0,0,0,.14),0 2px 1px -1px rgba(0,0,0,.12); /*0 16px 24px 2px rgba(0, 0, 0, 0.14), 0 6px 30px 5px rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba(0, 0, 0, 0.2); 2px 2px 7px rgba(0, 0, 0, 0.2)*/
+}
+.boxShadowNav{
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+}
+.padding15{
+  padding: 15px;
+}
+.fillParent{
+  width: 100%;
+  height: 100%;
+}
+.fillWidth{
+  width: 100%;
+}
+.displayTable{
+  display: table;
+}
+.displayTableCell{
+  text-align: center;
+}
+.borderRadius{
+  border-radius: 2px;
+}
+.singleBox{
+  background-color: #fff;
+  color: #000000;
+}
+.singleBoxTop{
+  width: 100%;
+  height: 33px;
+  display: table-row;
+  text-align: left;
+}
+.singleBoxBody{
+  width: 100%;
+  height: 178px;
+  text-align: center;
+  display: table-cell;
+  vertical-align: middle;
+}
+.singleBoxInnerBody{
+  display: inline-block;
+  width: 100%;
+}
+.singleBoxBottom{
+  width: 100%;
+  /*padding: 15px;
+  display: table-row;*/
+  color: rgba(0,0,0,0.54);
+  text-transform: uppercase;
+  text-align: center;
+  background-color: #FAFAFA;
+  border-top: 1px solid rgba(0,0,0,.12);
+}
+.marginLeft8{
+  margin-left: 8px;
+}
+.glyStyle{
+  font-size: 30px;
+  color: #EFEFEF;
+}
+.temporaryMessage{
+  position: absolute;
+  right: 15px;
+  top: 67px;
+  border-radius: 3px;
+  box-shadow: 1px 1px 6px rgba(185, 183, 183, 0.2);
+}
+.textAlignCenter{
+  text-align: center;
+}
+.clearBoth{
+  clear: both;
+}
+.margin0{
+  margin: 0;
+}
+.colorBlack{
+  color: black;
+}
+.whiteBackground{
+  background-color: white;
+}
+.padding0{
+  padding: 0;
+}
+.marginTop50{
+    margin-top: 50px;
+}
+.lineHeight84{
+  line-height: 84px;
+}
+.marginTop15{
+  margin-top: 15px
+}
+.fontSize130{
+  font-size: 130px;
+}
+.padding30{
+  padding: 30px;
+}
+@-moz-document url-prefix() {
+  fieldset { display: table-cell; }
+}
+.displayBlock{
+  display: block;
+}
+.fontSize90{
+  font-size: 90px;
+}
+.snsBox{
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: table;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+.innerSnsBox{
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+.glyStart{
+  fill: green;
+}
+.glyShutdown{
+  fill: red;
+}
+.glyReboot{
+  fill: yellow;
+}
+.displayInlineBlock{
+  display: inline-block;
+}
+.floatNone{
+  float: none;
+}
+.paddingTop8{
+  padding-top: 8px;
+}
+.verticalAlignMiddle{
+  vertical-align: middle;
+}
+.heightNWidth90{
+  height: 90px;
+  width: 90px;
+}
+.paddingTop15{
+  padding-top: 15px;
+}
+.borderTopSolidGrey{
+  border-top: 1px solid rgba(0,0,0,.12);
+}
+.colorLightGrey{
+  color: rgba(0,0,0,0.54);
+}
+.fillOpacBlue{
+  fill: #607D8B;
+}
+.serviceNameStyle{
+  text-transform: uppercase;
+  /*letter-spacing: .010em;*/
+  color: rgba(0, 0, 0, 0.870588);
+}
+.borderTopNBottom{
+  border-top: 1px solid rgba(0,0,0,.12);
+  border-bottom: 1px solid rgba(0,0,0,.12);
+}
+.noDecoretionOnHover:hover{
+  text-decoration: none;
+}
+.dashboardIconStyle{
+  position: absolute;
+  top: 13px;
+}
+/*
+#externalTopDiv{
+    width: 100%;
+    height: 300px;
+    background-color: #100c0a;
+
+}
+.floatLeft{
+  float: left;
+}
+.noListStyle{
+  list-style: none;
+}
+
+.textCentered{
+  text-align: center;
+}
+
+
+.verticalPadding{
+  padding: 15px 0;
+}
+.whiteBackground{
+  background-color: #ffffff;
+}
+.contentDiv{
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+.innerContentDiv{
+  position: absolute;
+  top: -88px;
+
+  height: 452px;
+}
+.mainContent{
+  position: absolute;
+  top: -133px;
+
+  height: 542px;
+}
+
+
+
+.margin8{
+  margin: 8px;
+}
+@media screen and (min-width: 480px) {
+    body {
+        background-color: lightgreen;
+    }
+}
+
+ Home test
+.contentDivTest{
+  height: 52%;
+}
+.innerContentDivTest{
+  width: 100%;
+  height: 100%;
+  padding: -30px;
+}
+.mainContentTest{
+  width: 100%;
+  height: 100%;
+  padding: -30px
+}
+
+*/
